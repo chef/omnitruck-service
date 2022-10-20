@@ -1,6 +1,7 @@
 package opensource
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"sync"
@@ -16,15 +17,17 @@ import (
 
 type OpensourceService struct {
 	sync.Mutex
-	config services.Config
-	log    *logrus.Entry
-	f      *fiber.App
+	config    services.Config
+	omnitruck omnitruck.Omnitruck
+	log       *logrus.Entry
+	f         *fiber.App
 }
 
 func NewOpensourceServer(c services.Config) *OpensourceService {
 	return &OpensourceService{
-		log:    log.WithField("pkg", "OpensourceService"),
-		config: c,
+		omnitruck: omnitruck.NewOmnitruckClient(),
+		log:       log.WithField("pkg", "OpensourceService"),
+		config:    c,
 	}
 }
 
@@ -50,8 +53,19 @@ func (server *OpensourceService) Name() string {
 }
 
 func (server *OpensourceService) productHandler(c *fiber.Ctx) error {
-	ot := omnitruck.NewOmnitruckClient()
-	code, body, err := ot.Products()
+	code, body, err := server.omnitruck.Products()
+	if err != nil {
+		server.log.WithError(err).Error("Unable to fetch data from Omnitruck API")
+	}
+	if server.omnitruck.IsSuccess(code) {
+		return c.SendString("Unable to fetch data from Omnitruck API")
+	}
+
+	return c.JSON(body)
+}
+
+func (server *OpensourceService) platformHandler(c *fiber.Ctx) error {
+	code, body, err := server.omnitruck.Platforms()
 	if err != nil {
 		server.log.WithError(err).Error("Unable to fetch data from Omnitruck API")
 	}
@@ -62,14 +76,30 @@ func (server *OpensourceService) productHandler(c *fiber.Ctx) error {
 	return c.JSON(body)
 }
 
-func (server *OpensourceService) platformHandler(c *fiber.Ctx) error {
-	ot := omnitruck.NewOmnitruckClient()
-	code, body, err := ot.Platforms()
+func (server *OpensourceService) architectureHandler(c *fiber.Ctx) error {
+	code, body, err := server.omnitruck.Architectures()
 	if err != nil {
 		server.log.WithError(err).Error("Unable to fetch data from Omnitruck API")
 	}
 	if code != 200 {
 		return c.SendString("Unable to fetch data from Omnitruck API")
+	}
+
+	return c.JSON(body)
+}
+
+func (server *OpensourceService) latestVersionHandler(c *fiber.Ctx) error {
+	code, body, err := server.omnitruck.LatestVersion(
+		c.Params("channel"),
+		c.Params("product"),
+	)
+
+	if err != nil {
+		server.log.WithError(err).Error("Error fetching data from Omnitruck API")
+	}
+	if code != 200 {
+		msg := fmt.Sprintf("%s", err)
+		return c.SendString(msg)
 	}
 
 	return c.JSON(body)
@@ -83,6 +113,8 @@ func (server *OpensourceService) buildRouter(lw io.Writer) {
 
 	server.f.Get("/products", server.productHandler)
 	server.f.Get("/platforms", server.platformHandler)
+	server.f.Get("/architectures", server.architectureHandler)
+	server.f.Get("/:channel/:product/versions/latest", server.latestVersionHandler)
 }
 
 func (server *OpensourceService) startOpensourceService() {
