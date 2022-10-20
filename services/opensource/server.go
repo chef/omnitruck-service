@@ -23,6 +23,12 @@ type OpensourceService struct {
 	f         *fiber.App
 }
 
+type ErrorResponse struct {
+	Code       int    `json:"code"`
+	StatusText string `json:"status_text"`
+	Message    string `json:"message"`
+}
+
 func NewOpensourceServer(c services.Config) *OpensourceService {
 	return &OpensourceService{
 		omnitruck: omnitruck.NewOmnitruckClient(),
@@ -52,57 +58,79 @@ func (server *OpensourceService) Name() string {
 	return "OpensourceService"
 }
 
-func (server *OpensourceService) productHandler(c *fiber.Ctx) error {
-	code, body, err := server.omnitruck.Products()
-	if err != nil {
-		server.log.WithError(err).Error("Unable to fetch data from Omnitruck API")
-	}
-	if server.omnitruck.IsSuccess(code) {
-		return c.SendString("Unable to fetch data from Omnitruck API")
+func (server *OpensourceService) sendResponse(c *fiber.Ctx, success bool, code int, body omnitruck.ResponseInterface) error {
+	if !success {
+		errorMsg := fmt.Sprintf("%v", body)
+		// If we aren't given a custom message for the error
+		// then pull a standard one for the http code
+		if len(errorMsg) == 0 {
+			errorMsg = http.StatusText(code)
+		}
+
+		return c.Status(code).JSON(ErrorResponse{
+			Code:       code,
+			StatusText: http.StatusText(code),
+			Message:    errorMsg,
+		})
 	}
 
 	return c.JSON(body)
 }
 
-func (server *OpensourceService) platformHandler(c *fiber.Ctx) error {
-	code, body, err := server.omnitruck.Platforms()
-	if err != nil {
-		server.log.WithError(err).Error("Unable to fetch data from Omnitruck API")
-	}
-	if code != 200 {
-		return c.SendString("Unable to fetch data from Omnitruck API")
-	}
-
-	return c.JSON(body)
+func (server *OpensourceService) productsHandler(c *fiber.Ctx) error {
+	code, body, success := server.omnitruck.Products()
+	return server.sendResponse(c, success, code, body)
 }
 
-func (server *OpensourceService) architectureHandler(c *fiber.Ctx) error {
-	code, body, err := server.omnitruck.Architectures()
-	if err != nil {
-		server.log.WithError(err).Error("Unable to fetch data from Omnitruck API")
-	}
-	if code != 200 {
-		return c.SendString("Unable to fetch data from Omnitruck API")
-	}
+func (server *OpensourceService) platformsHandler(c *fiber.Ctx) error {
+	code, body, success := server.omnitruck.Platforms()
+	return server.sendResponse(c, success, code, body)
+}
 
-	return c.JSON(body)
+func (server *OpensourceService) architecturesHandler(c *fiber.Ctx) error {
+	code, body, success := server.omnitruck.Architectures()
+	return server.sendResponse(c, success, code, body)
 }
 
 func (server *OpensourceService) latestVersionHandler(c *fiber.Ctx) error {
-	code, body, err := server.omnitruck.LatestVersion(
+	code, body, success := server.omnitruck.LatestVersion(
 		c.Params("channel"),
 		c.Params("product"),
 	)
 
-	if err != nil {
-		server.log.WithError(err).Error("Error fetching data from Omnitruck API")
-	}
-	if code != 200 {
-		msg := fmt.Sprintf("%s", err)
-		return c.SendString(msg)
-	}
+	return server.sendResponse(c, success, code, body)
+}
 
-	return c.JSON(body)
+func (server *OpensourceService) productVersionsHandler(c *fiber.Ctx) error {
+	code, body, success := server.omnitruck.ProductVersions(
+		c.Params("channel"),
+		c.Params("product"),
+	)
+
+	return server.sendResponse(c, success, code, body)
+}
+
+func (server *OpensourceService) productPackagesHandler(c *fiber.Ctx) error {
+	code, body, success := server.omnitruck.ProductPackages(
+		c.Params("channel"),
+		c.Params("product"),
+		c.Query("v"),
+	)
+
+	return server.sendResponse(c, success, code, body)
+}
+
+func (server *OpensourceService) productMetadataHandler(c *fiber.Ctx) error {
+	code, body, success := server.omnitruck.ProductMetadata(
+		c.Params("channel"),
+		c.Params("product"),
+		c.Query("p"),
+		c.Query("pv"),
+		c.Query("m"),
+		c.Query("v"),
+	)
+
+	return server.sendResponse(c, success, code, body)
 }
 
 func (server *OpensourceService) buildRouter(lw io.Writer) {
@@ -111,10 +139,13 @@ func (server *OpensourceService) buildRouter(lw io.Writer) {
 		Output: lw,
 	}))
 
-	server.f.Get("/products", server.productHandler)
-	server.f.Get("/platforms", server.platformHandler)
-	server.f.Get("/architectures", server.architectureHandler)
+	server.f.Get("/products", server.productsHandler)
+	server.f.Get("/platforms", server.platformsHandler)
+	server.f.Get("/architectures", server.architecturesHandler)
 	server.f.Get("/:channel/:product/versions/latest", server.latestVersionHandler)
+	server.f.Get("/:channel/:product/versions/all", server.productVersionsHandler)
+	server.f.Get("/:channel/:product/packages", server.productPackagesHandler)
+	server.f.Get("/:channel/:product/metadata", server.productMetadataHandler)
 }
 
 func (server *OpensourceService) startOpensourceService() {
