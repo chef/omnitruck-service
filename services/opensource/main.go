@@ -218,7 +218,7 @@ func (server *OpensourceService) productMetadataHandler(c *fiber.Ctx) error {
 // @Param v				query	string	false	"Version of the product to be installed. A version always takes the form `x.y.z`"			Default(latest)
 // @Param license_id 	header 	string 	false 	"License ID"
 // @Param eol			query 	bool 	false 	"EOL Products" Default(false)
-// @Success 200 {object} omnitruck.PackageMetadata
+// @Success 302
 // @Failure 400 {object} opensource.ErrorResponse
 // @Router /{channel}/{product}/download [get]
 func (server *OpensourceService) productDownloadHandler(c *fiber.Ctx) error {

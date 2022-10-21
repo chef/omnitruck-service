@@ -98,10 +98,10 @@ paths:
         name: eol
         type: boolean
       responses:
-        "200":
-          description: OK
+        "302":
+          description: Found
           schema:
-            $ref: '#/definitions/omnitruck_client.PackageMetadata'
+            type: string
         "400":
           description: Bad Request
           schema:

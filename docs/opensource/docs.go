@@ -151,10 +151,10 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "302": {
+                        "description": "Found",
                         "schema": {
-                            "$ref": "#/definitions/omnitruck_client.PackageMetadata"
+                            "type": "string"
                         }
                     },
                     "400": {
