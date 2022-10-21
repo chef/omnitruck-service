@@ -8,16 +8,22 @@ Omnitruck API service that provides license validation and entitlement checking 
 
 ## Getting Started
 
-Building the service
+Building the service and swagger documentation
 
+```bash
+make all
 ```
-go build
+
+To just build the service without updating the swagger documentation
+
+```bash
+make build
 ```
 
 Running the service
 
-```
-$ ./omnitruck-service start
+```bash
+$ bin/omnitruck-service start
 INFO[0000] Starting OpensourceServer                     pkg=cmd/opensource
 ```
 
