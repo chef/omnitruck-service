@@ -30,6 +30,7 @@ type ArchitectureList ItemList
 type PackageList map[string]PlatformVersionList
 type PlatformVersionList map[string]ArchList
 type ArchList map[string]PackageMetadata
+type ProductVersion string
 type PackageMetadata struct {
 	Sha1    string `json:"sha1"`
 	Sha256  string `json:"sha256"`
@@ -156,7 +157,7 @@ func (ot *Omnitruck) Architectures() (int, ResponseInterface, bool) {
 func (ot *Omnitruck) LatestVersion(channel string, product string) (int, ResponseInterface, bool) {
 	url := fmt.Sprintf("%s/%s/%s/versions/latest", omnitruckApi, channel, product)
 
-	var data string
+	var data ProductVersion
 
 	ot.log.Infof("fetching latest version from %s", url)
 	code, msg, success := ot.Get(url, &data)
@@ -199,6 +200,21 @@ func (ot *Omnitruck) ProductPackages(channel string, product string, version str
 }
 
 func (ot *Omnitruck) ProductMetadata(channel string, product string, p string, pv string, m string, v string) (int, ResponseInterface, bool) {
+	url := fmt.Sprintf("%s/%s/%s/metadata?v=%s&p=%s&pv=%s&m=%s", omnitruckApi, channel, product, v, p, pv, m)
+
+	var data PackageMetadata
+
+	ot.log.Infof("fetching packages from %s", url)
+	code, msg, success := ot.Get(url, &data)
+
+	if success {
+		return code, data, success
+	} else {
+		return code, msg, success
+	}
+}
+
+func (ot *Omnitruck) ProductDownload(channel string, product string, p string, pv string, m string, v string) (int, ResponseInterface, bool) {
 	url := fmt.Sprintf("%s/%s/%s/metadata?v=%s&p=%s&pv=%s&m=%s", omnitruckApi, channel, product, v, p, pv, m)
 
 	var data PackageMetadata
