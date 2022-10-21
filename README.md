@@ -1,15 +1,28 @@
-# MY PROJECT
+# Licensed Omnitruck API
 Include badges for your CI system and and package repositories such as RubyGems so the community can easily see the released version.
 
-Give a brief description of what the repository contains. What this application or library. Sell it.
+New Omnitruck API that provides license validation and entitlement checking
 
 ## Requirements
 
-Are there any runtimes or other software required to use this application. List them out including their versions
+* golang 1.19+
+
 ## Getting Started
 
 How does someone use the library or application. This may just be a link to a docs site. That's fine.
 
+Building the service
+
+```
+go build
+```
+
+Running the service
+
+```
+$ ./omnitruck-service server
+INFO[0000] Starting OpensourceServer                     pkg=cmd/opensource
+```
 
 ## License
 
