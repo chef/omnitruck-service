@@ -1,4 +1,4 @@
-package request_validator
+package request_validators
 
 import (
 	"fmt"
