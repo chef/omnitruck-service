@@ -9,6 +9,7 @@ import (
 
 	_ "github.com/chef/omnitruck-service/docs/opensource"
 	omnitruck "github.com/chef/omnitruck-service/omnitruck-client"
+	rv "github.com/chef/omnitruck-service/request_validators"
 	"github.com/chef/omnitruck-service/services"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -22,6 +23,7 @@ import (
 type OpensourceService struct {
 	sync.Mutex
 	config    services.Config
+	validator rv.OpensourceValidator
 	omnitruck omnitruck.Omnitruck
 	log       *logrus.Entry
 	app       *fiber.App
@@ -33,6 +35,39 @@ type ErrorResponse struct {
 	Message    string `json:"message"`
 }
 
+// RequestParams is used to setup validation for the request parameters
+type RequestParams struct {
+	Channel         string `validate:"required,eq=stable"`
+	Product         string `validate:"required"`
+	Version         string
+	Platform        string `validate:"required_with=PlatformVersion"`
+	PlatformVersion string `validate:"required_with=Platform"`
+	Architecture    string `validate:"required_with_all=PlatformVersion Platform"`
+}
+
+// Because the params objects gets passed back to the omnitruck client as an interface object
+// we need to create a getter to fetch the data out of it
+//
+// TODO: Figure out if there is a better way to implement this so we don't need the getter method
+func (rp *RequestParams) Get(name string) string {
+	switch name {
+	case "channel":
+		return rp.Channel
+	case "product":
+		return rp.Product
+	case "version":
+		return rp.Version
+	case "platform":
+		return rp.Platform
+	case "platformVersion":
+		return rp.PlatformVersion
+	case "architecture":
+		return rp.Architecture
+	default:
+		return ""
+	}
+}
+
 // @title			Licensed Omnitruck API for opensource products
 // @version			1.0
 // @description 	Licensed Omnitruck API for opensource products
@@ -41,6 +76,7 @@ type ErrorResponse struct {
 // @host localhost:3000
 func NewOpensourceServer(c services.Config) *OpensourceService {
 	return &OpensourceService{
+		validator: rv.NewOpensourceValidator(),
 		omnitruck: omnitruck.NewOmnitruckClient(),
 		log:       log.WithField("pkg", "OpensourceService"),
 		config:    c,
@@ -98,6 +134,21 @@ func (server *OpensourceService) sendResponse(c *fiber.Ctx, success bool, code i
 	return c.JSON(body)
 }
 
+func (server *OpensourceService) ValidateRequest(params *RequestParams, c *fiber.Ctx) (error, bool) {
+	errors := server.validator.ValidateParams(params)
+	if errors != nil {
+		msgs, code := server.validator.ErrorMessages(errors)
+
+		server.log.WithField("errors", msgs).Error("Error validating request")
+		return c.Status(code).JSON(ErrorResponse{
+			Code:       code,
+			StatusText: http.StatusText(code),
+			Message:    msgs,
+		}), false
+	}
+	return nil, true
+}
+
 // @description Returns a valid list of valid product keys.
 // @description Any of these product keys can be used in the <PRODUCT> value of other endpoints. Please note many of these products are used for internal tools only and many have been EOL’d.
 // @Success 200 {object} omnitruck.ProductList
@@ -135,12 +186,19 @@ func (server *OpensourceService) architecturesHandler(c *fiber.Ctx) error {
 // @Param eol			query 	bool 	false 	"EOL Products"
 // @Success 200 {object} omnitruck.ProductVersion
 // @Failure 400 {object} opensource.ErrorResponse
+// @Failure 403 {object} opensource.ErrorResponse
 // @Router /{channel}/{product}/versions/latest [get]
 func (server *OpensourceService) latestVersionHandler(c *fiber.Ctx) error {
-	code, body, success := server.omnitruck.LatestVersion(
-		c.Params("channel"),
-		c.Params("product"),
-	)
+	params := &RequestParams{
+		Channel: c.Params("channel"),
+		Product: c.Params("product"),
+	}
+	err, ok := server.ValidateRequest(params, c)
+	if err != nil || !ok {
+		return err
+	}
+
+	code, body, success := server.omnitruck.LatestVersion(params)
 
 	return server.sendResponse(c, success, code, body)
 }
@@ -152,12 +210,19 @@ func (server *OpensourceService) latestVersionHandler(c *fiber.Ctx) error {
 // @Param eol			query 	bool 	false 	"EOL Products" Default(false)
 // @Success 200 {object} omnitruck.VersionList
 // @Failure 400 {object} opensource.ErrorResponse
+// @Failure 403 {object} opensource.ErrorResponse
 // @Router /{channel}/{product}/versions/all [get]
 func (server *OpensourceService) productVersionsHandler(c *fiber.Ctx) error {
-	code, body, success := server.omnitruck.ProductVersions(
-		c.Params("channel"),
-		c.Params("product"),
-	)
+	params := &RequestParams{
+		Channel: c.Params("channel"),
+		Product: c.Params("product"),
+	}
+	err, ok := server.ValidateRequest(params, c)
+	if err != nil || !ok {
+		return err
+	}
+
+	code, body, success := server.omnitruck.ProductVersions(params)
 
 	return server.sendResponse(c, success, code, body)
 }
@@ -171,13 +236,20 @@ func (server *OpensourceService) productVersionsHandler(c *fiber.Ctx) error {
 // @Param eol			query 	bool 	false 	"EOL Products" Default(false)
 // @Success 200 {object} omnitruck.PackageList
 // @Failure 400 {object} opensource.ErrorResponse
+// @Failure 403 {object} opensource.ErrorResponse
 // @Router /{channel}/{product}/packages [get]
 func (server *OpensourceService) productPackagesHandler(c *fiber.Ctx) error {
-	code, body, success := server.omnitruck.ProductPackages(
-		c.Params("channel"),
-		c.Params("product"),
-		c.Query("v"),
-	)
+	params := &RequestParams{
+		Channel: c.Params("channel"),
+		Product: c.Params("product"),
+		Version: c.Query("v"),
+	}
+	err, ok := server.ValidateRequest(params, c)
+	if err != nil || !ok {
+		return err
+	}
+
+	code, body, success := server.omnitruck.ProductPackages(params)
 
 	return server.sendResponse(c, success, code, body)
 }
@@ -194,16 +266,23 @@ func (server *OpensourceService) productPackagesHandler(c *fiber.Ctx) error {
 // @Param eol			query 	bool 	false 	"EOL Products" Default(false)
 // @Success 200 {object} omnitruck.PackageMetadata
 // @Failure 400 {object} opensource.ErrorResponse
+// @Failure 403 {object} opensource.ErrorResponse
 // @Router /{channel}/{product}/metadata [get]
 func (server *OpensourceService) productMetadataHandler(c *fiber.Ctx) error {
-	code, body, success := server.omnitruck.ProductMetadata(
-		c.Params("channel"),
-		c.Params("product"),
-		c.Query("p"),
-		c.Query("pv"),
-		c.Query("m"),
-		c.Query("v"),
-	)
+	params := &RequestParams{
+		Channel:         c.Params("channel"),
+		Product:         c.Params("product"),
+		Version:         c.Query("v"),
+		Platform:        c.Query("p"),
+		PlatformVersion: c.Query("pv"),
+		Architecture:    c.Query("m"),
+	}
+	err, ok := server.ValidateRequest(params, c)
+	if err != nil || !ok {
+		return err
+	}
+
+	code, body, success := server.omnitruck.ProductMetadata(params)
 
 	return server.sendResponse(c, success, code, body)
 }
@@ -220,16 +299,23 @@ func (server *OpensourceService) productMetadataHandler(c *fiber.Ctx) error {
 // @Param eol			query 	bool 	false 	"EOL Products" Default(false)
 // @Success 302
 // @Failure 400 {object} opensource.ErrorResponse
+// @Failure 403 {object} opensource.ErrorResponse
 // @Router /{channel}/{product}/download [get]
 func (server *OpensourceService) productDownloadHandler(c *fiber.Ctx) error {
-	code, body, success := server.omnitruck.ProductDownload(
-		c.Params("channel"),
-		c.Params("product"),
-		c.Query("p"),
-		c.Query("pv"),
-		c.Query("m"),
-		c.Query("v"),
-	)
+	params := &RequestParams{
+		Channel:         c.Params("channel"),
+		Product:         c.Params("product"),
+		Version:         c.Query("v"),
+		Platform:        c.Query("p"),
+		PlatformVersion: c.Query("pv"),
+		Architecture:    c.Query("m"),
+	}
+	err, ok := server.ValidateRequest(params, c)
+	if err != nil || !ok {
+		return err
+	}
+
+	code, body, success := server.omnitruck.ProductDownload(params)
 
 	switch v := body.(type) {
 	case omnitruck.PackageMetadata:

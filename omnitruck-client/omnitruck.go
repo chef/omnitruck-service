@@ -19,6 +19,9 @@ type Omnitruck struct {
 	log              *logrus.Entry
 }
 
+type RequestParamsInterface interface {
+	Get(string) string
+}
 type ResponseInterface interface {
 }
 type ResponseError string
@@ -114,9 +117,8 @@ func (ot *Omnitruck) Products() (int, ResponseInterface, bool) {
 	url := fmt.Sprintf("%s/products", omnitruckApi)
 
 	var data ProductList
-	ot.log.Infof("fetching products from %s", url)
-	code, msg, success := ot.Get(url, &data)
 
+	code, msg, success := ot.Get(url, &data)
 	if success {
 		return code, data, success
 	} else {
@@ -129,9 +131,7 @@ func (ot *Omnitruck) Platforms() (int, ResponseInterface, bool) {
 
 	var data PlatformList
 
-	ot.log.Infof("fetching platforms from %s", url)
 	code, msg, success := ot.Get(url, &data)
-
 	if success {
 		return code, data, success
 	} else {
@@ -144,9 +144,7 @@ func (ot *Omnitruck) Architectures() (int, ResponseInterface, bool) {
 
 	var data ArchitectureList
 
-	ot.log.Infof("fetching architectures from %s", url)
 	code, msg, success := ot.Get(url, &data)
-
 	if success {
 		return code, data, success
 	} else {
@@ -154,14 +152,12 @@ func (ot *Omnitruck) Architectures() (int, ResponseInterface, bool) {
 	}
 }
 
-func (ot *Omnitruck) LatestVersion(channel string, product string) (int, ResponseInterface, bool) {
-	url := fmt.Sprintf("%s/%s/%s/versions/latest", omnitruckApi, channel, product)
+func (ot *Omnitruck) LatestVersion(p RequestParamsInterface) (int, ResponseInterface, bool) {
+	url := fmt.Sprintf("%s/%s/%s/versions/latest", omnitruckApi, p.Get("channel"), p.Get("product"))
 
 	var data ProductVersion
 
-	ot.log.Infof("fetching latest version from %s", url)
 	code, msg, success := ot.Get(url, &data)
-
 	if success {
 		return code, data, success
 	} else {
@@ -169,14 +165,12 @@ func (ot *Omnitruck) LatestVersion(channel string, product string) (int, Respons
 	}
 }
 
-func (ot *Omnitruck) ProductVersions(channel string, product string) (int, ResponseInterface, bool) {
-	url := fmt.Sprintf("%s/%s/%s/versions/all", omnitruckApi, channel, product)
+func (ot *Omnitruck) ProductVersions(p RequestParamsInterface) (int, ResponseInterface, bool) {
+	url := fmt.Sprintf("%s/%s/%s/versions/all", omnitruckApi, p.Get("channel"), p.Get("product"))
 
 	var data VersionList
 
-	ot.log.Infof("fetching all versions from %s", url)
 	code, msg, success := ot.Get(url, &data)
-
 	if success {
 		return code, data, success
 	} else {
@@ -184,14 +178,12 @@ func (ot *Omnitruck) ProductVersions(channel string, product string) (int, Respo
 	}
 }
 
-func (ot *Omnitruck) ProductPackages(channel string, product string, version string) (int, ResponseInterface, bool) {
-	url := fmt.Sprintf("%s/%s/%s/packages?v=%s", omnitruckApi, channel, product, version)
+func (ot *Omnitruck) ProductPackages(p RequestParamsInterface) (int, ResponseInterface, bool) {
+	url := fmt.Sprintf("%s/%s/%s/packages?v=%s", omnitruckApi, p.Get("channel"), p.Get("product"), p.Get("version"))
 
 	var data PackageList
 
-	ot.log.Infof("fetching packages from %s", url)
 	code, msg, success := ot.Get(url, &data)
-
 	if success {
 		return code, data, success
 	} else {
@@ -199,14 +191,19 @@ func (ot *Omnitruck) ProductPackages(channel string, product string, version str
 	}
 }
 
-func (ot *Omnitruck) ProductMetadata(channel string, product string, p string, pv string, m string, v string) (int, ResponseInterface, bool) {
-	url := fmt.Sprintf("%s/%s/%s/metadata?v=%s&p=%s&pv=%s&m=%s", omnitruckApi, channel, product, v, p, pv, m)
+func (ot *Omnitruck) ProductMetadata(p RequestParamsInterface) (int, ResponseInterface, bool) {
+	url := fmt.Sprintf("%s/%s/%s/metadata?v=%s&p=%s&pv=%s&m=%s", omnitruckApi,
+		p.Get("channel"),
+		p.Get("product"),
+		p.Get("version"),
+		p.Get("platform"),
+		p.Get("platformVersion"),
+		p.Get("architecture"),
+	)
 
 	var data PackageMetadata
 
-	ot.log.Infof("fetching packages from %s", url)
 	code, msg, success := ot.Get(url, &data)
-
 	if success {
 		return code, data, success
 	} else {
@@ -214,14 +211,19 @@ func (ot *Omnitruck) ProductMetadata(channel string, product string, p string, p
 	}
 }
 
-func (ot *Omnitruck) ProductDownload(channel string, product string, p string, pv string, m string, v string) (int, ResponseInterface, bool) {
-	url := fmt.Sprintf("%s/%s/%s/metadata?v=%s&p=%s&pv=%s&m=%s", omnitruckApi, channel, product, v, p, pv, m)
+func (ot *Omnitruck) ProductDownload(p RequestParamsInterface) (int, ResponseInterface, bool) {
+	url := fmt.Sprintf("%s/%s/%s/metadata?v=%s&p=%s&pv=%s&m=%s", omnitruckApi,
+		p.Get("channel"),
+		p.Get("product"),
+		p.Get("version"),
+		p.Get("platform"),
+		p.Get("platformVersion"),
+		p.Get("architecture"),
+	)
 
 	var data PackageMetadata
 
-	ot.log.Infof("fetching packages from %s", url)
 	code, msg, success := ot.Get(url, &data)
-
 	if success {
 		return code, data, success
 	} else {

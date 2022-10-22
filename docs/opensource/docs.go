@@ -152,10 +152,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "302": {
-                        "description": "Found",
-                        "schema": {
-                            "type": "string"
-                        }
+                        "description": "Found"
                     },
                     "400": {
                         "description": "Bad Request",

@@ -100,8 +100,6 @@ paths:
       responses:
         "302":
           description: Found
-          schema:
-            type: string
         "400":
           description: Bad Request
           schema:
