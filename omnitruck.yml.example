@@ -1,0 +1,8 @@
+opensource:
+  name: Opensource Omnitruck API
+  enabled: true
+  listen: ":3000"
+trial:
+  name: Trial Omnitruck API
+  enabled: true
+  listen: ":3001"

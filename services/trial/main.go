@@ -1,7 +1,6 @@
-package opensource
+package trial
 
 import (
-	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -13,27 +12,9 @@ import (
 	"github.com/chef/omnitruck-service/services"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/swagger"
-	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 )
-
-type OpensourceService struct {
-	sync.Mutex
-	config    services.Config
-	validator rv.OpensourceValidator
-	omnitruck omnitruck.Omnitruck
-	log       *logrus.Entry
-	app       *fiber.App
-}
-
-type ErrorResponse struct {
-	Code       int    `json:"code" example:200`
-	StatusText string `json:"status_text" example:OK`
-	Message    string `json:"message"`
-}
 
 // RequestParams is used to setup validation for the request parameters
 type RequestParams struct {
@@ -71,42 +52,48 @@ func (rp *RequestParams) Get(name string) string {
 	}
 }
 
-// @title			Licensed Omnitruck API for opensource products
-// @version			1.0
-// @description 	Licensed Omnitruck API for opensource products
-// @license.name	Apache 2.0
-// @license.url 	http://www.apache.org/licenses/LICENSE-2.0.html
-// @host localhost:3000
-func NewServer(c services.Config) *OpensourceService {
-	return &OpensourceService{
-		validator: rv.NewOpensourceValidator(),
-		omnitruck: omnitruck.NewOmnitruckClient(),
-		log:       log.WithField("pkg", "OpensourceService"),
-		config:    c,
-	}
+type TrialService struct {
+	services.ApiService
+	sync.Mutex
+
+	Validator rv.OpensourceValidator
 }
 
-func (server *OpensourceService) Start(wg *sync.WaitGroup) error {
+func NewServer(c services.Config) *TrialService {
+	service := TrialService{}
+	service.New(c)
+	return &service
+}
+
+// @title			Licensed Trial Omnitruck API
+// @version			1.0
+// @description 	Licensed Trial Omnitruck API
+// @license.name	Apache 2.0
+// @license.url 	http://www.apache.org/licenses/LICENSE-2.0.html
+// @host localhost:3001
+func (server *TrialService) Start(wg *sync.WaitGroup) error {
 	server.Lock()
 	defer server.Unlock()
 
-	server.app = fiber.New(fiber.Config{
+	server.App = fiber.New(fiber.Config{
 		DisableStartupMessage: true,
 		EnablePrintRoutes:     false,
 		ReadTimeout:           300 * time.Second,
 		WriteTimeout:          300 * time.Second,
 	})
 
-	server.app.Use(cors.New())
-	server.app.Use(recover.New())
+	server.App.Use(cors.New())
+	server.App.Use(recover.New())
+
+	server.buildRouter()
 
 	wg.Add(1)
-	go server.startService()
+	go server.StartService()
 
 	return nil
 }
 
-func (server *OpensourceService) HealthCheck(c *fiber.Ctx) error {
+func (server *TrialService) HealthCheck(c *fiber.Ctx) error {
 	res := map[string]interface{}{
 		"data": "Server is up and running",
 	}
@@ -114,29 +101,13 @@ func (server *OpensourceService) HealthCheck(c *fiber.Ctx) error {
 	return c.JSON(res)
 }
 
-func (server *OpensourceService) Name() string {
-	return "OpensourceService"
-}
-
-func (server *OpensourceService) sendResponse(c *fiber.Ctx, data omnitruck.RequestDataInterface) error {
-	return c.JSON(data)
-}
-
-func (server *OpensourceService) sendError(c *fiber.Ctx, request *omnitruck.Request) error {
-	return c.Status(request.Code).JSON(ErrorResponse{
-		Code:       request.Code,
-		StatusText: http.StatusText(request.Code),
-		Message:    request.Message,
-	})
-}
-
-func (server *OpensourceService) ValidateRequest(params *RequestParams, c *fiber.Ctx) (error, bool) {
-	errors := server.validator.ValidateParams(params)
+func (server *TrialService) ValidateRequest(params *RequestParams, c *fiber.Ctx) (error, bool) {
+	errors := server.Validator.ValidateParams(params)
 	if errors != nil {
-		msgs, code := server.validator.ErrorMessages(errors)
+		msgs, code := server.Validator.ErrorMessages(errors)
 
-		server.log.WithField("errors", msgs).Error("Error validating request")
-		return c.Status(code).JSON(ErrorResponse{
+		server.Log.WithField("errors", msgs).Error("Error validating request")
+		return c.Status(code).JSON(services.ErrorResponse{
 			Code:       code,
 			StatusText: http.StatusText(code),
 			Message:    msgs,
@@ -147,23 +118,26 @@ func (server *OpensourceService) ValidateRequest(params *RequestParams, c *fiber
 
 // @description Returns a valid list of valid product keys.
 // @description Any of these product keys can be used in the <PRODUCT> value of other endpoints. Please note many of these products are used for internal tools only and many have been EOL’d.
-// @Success 200 {object} omnitruck.ItemList
+// @Param eol			query 	bool 	false 	"EOL Products"
+// @Success 200 {object} omnitruck.ProductList
 // @Failure 500 {object} opensource.ErrorResponse
 // @Router /products [get]
-func (server *OpensourceService) productsHandler(c *fiber.Ctx) error {
+func (server *TrialService) productsHandler(c *fiber.Ctx) error {
 	params := &RequestParams{
 		Eol: c.Query("eol", "false"),
 	}
 
 	var data omnitruck.ItemList
-	request := server.omnitruck.Products(params, &data)
+	request := server.Omnitruck.Products(params, &data)
 
-	data = filters.FilterList(data, filters.OsProduct)
+	if params.Eol != "true" {
+		data = filters.FilterList(data, filters.EolProduct)
+	}
 
 	if request.Ok {
-		return server.sendResponse(c, &data)
+		return server.SendResponse(c, &data)
 	} else {
-		return server.sendError(c, request)
+		return server.SendError(c, request)
 	}
 }
 
@@ -172,31 +146,31 @@ func (server *OpensourceService) productsHandler(c *fiber.Ctx) error {
 // @Success 200 {object} omnitruck.PlatformList
 // @Failure 500 {object} opensource.ErrorResponse
 // @Router /platforms [get]
-func (server *OpensourceService) platformsHandler(c *fiber.Ctx) error {
+func (server *TrialService) platformsHandler(c *fiber.Ctx) error {
 	var data omnitruck.PlatformList
-	request := server.omnitruck.Platforms().ParseData(&data)
+	request := server.Omnitruck.Platforms().ParseData(&data)
 
 	if request.Ok {
-		return server.sendResponse(c, &data)
+		return server.SendResponse(c, &data)
 	} else {
-		return server.sendError(c, request)
+		return server.SendError(c, request)
 	}
 }
 
 // @description Returns a valid list of valid platform keys along with friendly names.
 // @description Any of these architecture keys can be used in the p query string value in various endpoints below.
-// @Success 200 {object} omnitruck.ItemList
+// @Success 200 {object} omnitruck.ArchitectureList
 // @Failure 500 {object} opensource.ErrorResponse
 // @Router /architectures [get]
-func (server *OpensourceService) architecturesHandler(c *fiber.Ctx) error {
+func (server *TrialService) architecturesHandler(c *fiber.Ctx) error {
 
 	var data omnitruck.ItemList
-	request := server.omnitruck.Architectures().ParseData(&data)
+	request := server.Omnitruck.Architectures().ParseData(&data)
 
 	if request.Ok {
-		return server.sendResponse(c, &data)
+		return server.SendResponse(c, &data)
 	} else {
-		return server.sendError(c, request)
+		return server.SendError(c, request)
 	}
 }
 
@@ -209,7 +183,7 @@ func (server *OpensourceService) architecturesHandler(c *fiber.Ctx) error {
 // @Failure 400 {object} opensource.ErrorResponse
 // @Failure 403 {object} opensource.ErrorResponse
 // @Router /{channel}/{product}/versions/latest [get]
-func (server *OpensourceService) latestVersionHandler(c *fiber.Ctx) error {
+func (server *TrialService) latestVersionHandler(c *fiber.Ctx) error {
 	params := &RequestParams{
 		Channel: c.Params("channel"),
 		Product: c.Params("product"),
@@ -220,12 +194,12 @@ func (server *OpensourceService) latestVersionHandler(c *fiber.Ctx) error {
 	}
 
 	var data omnitruck.ProductVersion
-	request := server.omnitruck.LatestVersion(params).ParseData(&data)
+	request := server.Omnitruck.LatestVersion(params).ParseData(&data)
 
 	if request.Ok {
-		return server.sendResponse(c, &data)
+		return server.SendResponse(c, &data)
 	} else {
-		return server.sendError(c, request)
+		return server.SendError(c, request)
 	}
 
 }
@@ -235,11 +209,11 @@ func (server *OpensourceService) latestVersionHandler(c *fiber.Ctx) error {
 // @Param product   	path 	string 	true 	"Product"
 // @Param license_id 	header 	string 	false 	"License ID"
 // @Param eol			query 	bool 	false 	"EOL Products" Default(false)
-// @Success 200 {object} omnitruck.ItemList
+// @Success 200 {object} omnitruck.VersionList
 // @Failure 400 {object} opensource.ErrorResponse
 // @Failure 403 {object} opensource.ErrorResponse
 // @Router /{channel}/{product}/versions/all [get]
-func (server *OpensourceService) productVersionsHandler(c *fiber.Ctx) error {
+func (server *TrialService) productVersionsHandler(c *fiber.Ctx) error {
 	params := &RequestParams{
 		Channel: c.Params("channel"),
 		Product: c.Params("product"),
@@ -250,11 +224,11 @@ func (server *OpensourceService) productVersionsHandler(c *fiber.Ctx) error {
 	}
 
 	var data []omnitruck.ProductVersion
-	request := server.omnitruck.ProductVersions(params).ParseData(&data)
+	request := server.Omnitruck.ProductVersions(params).ParseData(&data)
 	if request.Ok {
-		return server.sendResponse(c, &data)
+		return server.SendResponse(c, &data)
 	} else {
-		return server.sendError(c, request)
+		return server.SendError(c, request)
 	}
 
 }
@@ -270,7 +244,7 @@ func (server *OpensourceService) productVersionsHandler(c *fiber.Ctx) error {
 // @Failure 400 {object} opensource.ErrorResponse
 // @Failure 403 {object} opensource.ErrorResponse
 // @Router /{channel}/{product}/packages [get]
-func (server *OpensourceService) productPackagesHandler(c *fiber.Ctx) error {
+func (server *TrialService) productPackagesHandler(c *fiber.Ctx) error {
 	params := &RequestParams{
 		Channel: c.Params("channel"),
 		Product: c.Params("product"),
@@ -282,11 +256,11 @@ func (server *OpensourceService) productPackagesHandler(c *fiber.Ctx) error {
 	}
 
 	var data omnitruck.PackageList
-	request := server.omnitruck.ProductPackages(params).ParseData(&data)
+	request := server.Omnitruck.ProductPackages(params).ParseData(&data)
 	if request.Ok {
-		return server.sendResponse(c, &data)
+		return server.SendResponse(c, &data)
 	} else {
-		return server.sendError(c, request)
+		return server.SendError(c, request)
 	}
 
 }
@@ -305,7 +279,7 @@ func (server *OpensourceService) productPackagesHandler(c *fiber.Ctx) error {
 // @Failure 400 {object} opensource.ErrorResponse
 // @Failure 403 {object} opensource.ErrorResponse
 // @Router /{channel}/{product}/metadata [get]
-func (server *OpensourceService) productMetadataHandler(c *fiber.Ctx) error {
+func (server *TrialService) productMetadataHandler(c *fiber.Ctx) error {
 	params := &RequestParams{
 		Channel:         c.Params("channel"),
 		Product:         c.Params("product"),
@@ -320,12 +294,12 @@ func (server *OpensourceService) productMetadataHandler(c *fiber.Ctx) error {
 	}
 
 	var data omnitruck.PackageMetadata
-	request := server.omnitruck.ProductMetadata(params).ParseData(&data)
+	request := server.Omnitruck.ProductMetadata(params).ParseData(&data)
 
 	if request.Ok {
-		return server.sendResponse(c, &data)
+		return server.SendResponse(c, &data)
 	} else {
-		return server.sendError(c, request)
+		return server.SendError(c, request)
 	}
 
 }
@@ -344,7 +318,7 @@ func (server *OpensourceService) productMetadataHandler(c *fiber.Ctx) error {
 // @Failure 400 {object} opensource.ErrorResponse
 // @Failure 403 {object} opensource.ErrorResponse
 // @Router /{channel}/{product}/download [get]
-func (server *OpensourceService) productDownloadHandler(c *fiber.Ctx) error {
+func (server *TrialService) productDownloadHandler(c *fiber.Ctx) error {
 	params := &RequestParams{
 		Channel:         c.Params("channel"),
 		Product:         c.Params("product"),
@@ -359,49 +333,26 @@ func (server *OpensourceService) productDownloadHandler(c *fiber.Ctx) error {
 	}
 
 	var data omnitruck.PackageMetadata
-	request := server.omnitruck.ProductDownload(params).ParseData(&data)
+	request := server.Omnitruck.ProductDownload(params).ParseData(&data)
 
 	if request.Ok {
-		server.log.Infof("Redirecting user to %s", data.Url)
+		server.Log.Infof("Redirecting user to %s", data.Url)
 		return c.Redirect(data.Url, 302)
 	} else {
-		return server.sendError(c, request)
+		return server.SendError(c, request)
 	}
 }
 
-func (server *OpensourceService) buildRouter(lw io.Writer) {
-	server.app.Use(logger.New(logger.Config{
-		Format: "[${ip}]:${port} ${status} - ${method} ${path}\n",
-		Output: lw,
-	}))
+func (server *TrialService) buildRouter() {
+	server.App.Get("/swagger/*", swagger.HandlerDefault)
 
-	server.app.Get("/swagger/*", swagger.HandlerDefault)
-
-	server.app.Get("/", server.HealthCheck)
-	server.app.Get("/products", server.productsHandler)
-	server.app.Get("/platforms", server.platformsHandler)
-	server.app.Get("/architectures", server.architecturesHandler)
-	server.app.Get("/:channel/:product/versions/latest", server.latestVersionHandler)
-	server.app.Get("/:channel/:product/versions/all", server.productVersionsHandler)
-	server.app.Get("/:channel/:product/packages", server.productPackagesHandler)
-	server.app.Get("/:channel/:product/metadata", server.productMetadataHandler)
-	server.app.Get("/:channel/:product/download", server.productDownloadHandler)
-}
-
-func (server *OpensourceService) startService() {
-	// Setup io writer for the logger
-	lw := server.log.Writer()
-	defer lw.Close()
-
-	server.buildRouter(lw)
-
-	server.log.Infof("Starting %s server at: %s", server.Name(), server.config.Listen)
-	err := server.app.Listen(server.config.Listen)
-	if err != nil {
-		if err == http.ErrServerClosed {
-			server.log.WithError(err).Error("Unable to start service")
-		} else {
-			server.log.WithError(err).Fatal("Service stopped")
-		}
-	}
+	server.App.Get("/", server.HealthCheck)
+	server.App.Get("/products", server.productsHandler)
+	server.App.Get("/platforms", server.platformsHandler)
+	server.App.Get("/architectures", server.architecturesHandler)
+	server.App.Get("/:channel/:product/versions/latest", server.latestVersionHandler)
+	server.App.Get("/:channel/:product/versions/all", server.productVersionsHandler)
+	server.App.Get("/:channel/:product/packages", server.productPackagesHandler)
+	server.App.Get("/:channel/:product/metadata", server.productMetadataHandler)
+	server.App.Get("/:channel/:product/download", server.productDownloadHandler)
 }

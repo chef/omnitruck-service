@@ -7,4 +7,4 @@ build:
 
 
 start:
-	bin/omnitruck-service start
+	bin/omnitruck-service start --all

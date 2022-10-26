@@ -1,7 +1,6 @@
 package omnitruck_client
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -14,22 +13,18 @@ import (
 const omnitruckApi = "https://omnitruck.chef.io"
 
 type Omnitruck struct {
-	successResponses []int
-	client           *http.Client
-	log              *logrus.Entry
+	client *http.Client
+	log    *logrus.Entry
 }
 
 type RequestParamsInterface interface {
 	Get(string) string
 }
-type ResponseInterface interface {
+type RequestDataInterface interface {
 }
-type ResponseError string
+
 type ItemList []string
-type ProductList ItemList
-type VersionList ItemList
 type PlatformList map[string]string
-type ArchitectureList ItemList
 type PackageList map[string]PlatformVersionList
 type PlatformVersionList map[string]ArchList
 type ArchList map[string]PackageMetadata
@@ -43,7 +38,6 @@ type PackageMetadata struct {
 
 func NewOmnitruckClient() Omnitruck {
 	return Omnitruck{
-		successResponses: []int{200},
 		client: &http.Client{
 			Timeout: 10 * time.Second,
 		},
@@ -51,147 +45,88 @@ func NewOmnitruckClient() Omnitruck {
 	}
 }
 
-func (ot *Omnitruck) IsSuccess(code int) bool {
-	for _, value := range ot.successResponses {
-		if value == code {
-			return true
-		}
-	}
-	return false
-}
-
-func (ot *Omnitruck) handleRequestError(msg string, code int, body string, err error) {
+func (ot *Omnitruck) logRequestError(msg string, request *Request, err error) {
 	ot.log.WithError(err).
-		WithField("status", code).
-		WithField("body", body).
+		WithField("status", request.Code).
+		WithField("body", string(request.Body)).
 		Error(msg)
 }
 
-func (ot *Omnitruck) Get(url string, data ResponseInterface) (int, string, bool) {
-	req, err := http.NewRequest("GET", url, nil)
+func (ot *Omnitruck) Get(url string) *Request {
+	request := Request{
+		Url: url,
+	}
+
+	req, err := http.NewRequest("GET", request.Url, nil)
 
 	if err != nil {
-		ot.log.WithError(err).Error("Error creating request")
-		// Return 900 if it was an error on our side vs remote issue
-		return 900, "Internal error creating API request", false
+		ot.logRequestError("Error creating request", &request, err)
+		return request.Failure(900, "Error creating request")
 	}
 
 	ot.log.Infof("Fetching data from %s", url)
-
 	req.Header.Add("Accept", "application/json")
 	resp, err := ot.client.Do(req)
+	request.Code = resp.StatusCode
+
 	if err != nil {
-		ot.handleRequestError(
-			"Error fetching omnitruck data",
-			resp.StatusCode, "", err)
-		return resp.StatusCode, "", false
+		ot.logRequestError("Error fetching omnitruck data", &request, err)
+		return request.Failure(request.Code, "Error fetching omnitruck data")
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	request.Body, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
-		ot.handleRequestError(
-			"Error reading reponse body from omnitruck api",
-			resp.StatusCode, string(body), err)
-		return resp.StatusCode, "Error reading response body from Omnitruck API", false
+		ot.logRequestError("Error reading response body from omnitruck api", &request, err)
+		return request.Failure(900, "Error reading response body from omnitruck api")
 	}
 
-	if !ot.IsSuccess(resp.StatusCode) {
-		ot.handleRequestError(
-			fmt.Sprintf("Omnitruck API returned %d", resp.StatusCode),
-			resp.StatusCode, string(body), err)
-		return resp.StatusCode, string(body), false
+	if request.Code >= 400 {
+		ot.logRequestError(fmt.Sprintf("Omnitruck returned failure response %d", request.Code), &request, nil)
+		// Set our response message to what the server responsed with
+		// so we pass on the omnitruck error message to the user
+		return request.Failure(request.Code, string(request.Body))
 	}
 
-	err = json.Unmarshal(body, data)
-	if err != nil {
-		ot.handleRequestError(
-			"Error parsing JSON response from Omnitruck",
-			resp.StatusCode, string(body), err)
-		return resp.StatusCode, "", false
-	}
-
-	return resp.StatusCode, "", true
+	return request.Success()
 }
 
-func (ot *Omnitruck) Products() (int, ResponseInterface, bool) {
+func (ot *Omnitruck) Products(p RequestParamsInterface, data RequestDataInterface) *Request {
 	url := fmt.Sprintf("%s/products", omnitruckApi)
 
-	var data ProductList
-
-	code, msg, success := ot.Get(url, &data)
-	if success {
-		return code, data, success
-	} else {
-		return code, msg, success
-	}
+	return ot.Get(url).ParseData(data)
 }
 
-func (ot *Omnitruck) Platforms() (int, ResponseInterface, bool) {
+func (ot *Omnitruck) Platforms() *Request {
 	url := fmt.Sprintf("%s/platforms", omnitruckApi)
 
-	var data PlatformList
-
-	code, msg, success := ot.Get(url, &data)
-	if success {
-		return code, data, success
-	} else {
-		return code, msg, success
-	}
+	return ot.Get(url)
 }
 
-func (ot *Omnitruck) Architectures() (int, ResponseInterface, bool) {
+func (ot *Omnitruck) Architectures() *Request {
 	url := fmt.Sprintf("%s/architectures", omnitruckApi)
 
-	var data ArchitectureList
-
-	code, msg, success := ot.Get(url, &data)
-	if success {
-		return code, data, success
-	} else {
-		return code, msg, success
-	}
+	return ot.Get(url)
 }
 
-func (ot *Omnitruck) LatestVersion(p RequestParamsInterface) (int, ResponseInterface, bool) {
+func (ot *Omnitruck) LatestVersion(p RequestParamsInterface) *Request {
 	url := fmt.Sprintf("%s/%s/%s/versions/latest", omnitruckApi, p.Get("channel"), p.Get("product"))
 
-	var data ProductVersion
-
-	code, msg, success := ot.Get(url, &data)
-	if success {
-		return code, data, success
-	} else {
-		return code, msg, success
-	}
+	return ot.Get(url)
 }
 
-func (ot *Omnitruck) ProductVersions(p RequestParamsInterface) (int, ResponseInterface, bool) {
+func (ot *Omnitruck) ProductVersions(p RequestParamsInterface) *Request {
 	url := fmt.Sprintf("%s/%s/%s/versions/all", omnitruckApi, p.Get("channel"), p.Get("product"))
 
-	var data VersionList
-
-	code, msg, success := ot.Get(url, &data)
-	if success {
-		return code, data, success
-	} else {
-		return code, msg, success
-	}
+	return ot.Get(url)
 }
 
-func (ot *Omnitruck) ProductPackages(p RequestParamsInterface) (int, ResponseInterface, bool) {
+func (ot *Omnitruck) ProductPackages(p RequestParamsInterface) *Request {
 	url := fmt.Sprintf("%s/%s/%s/packages?v=%s", omnitruckApi, p.Get("channel"), p.Get("product"), p.Get("version"))
 
-	var data PackageList
-
-	code, msg, success := ot.Get(url, &data)
-	if success {
-		return code, data, success
-	} else {
-		return code, msg, success
-	}
+	return ot.Get(url)
 }
 
-func (ot *Omnitruck) ProductMetadata(p RequestParamsInterface) (int, ResponseInterface, bool) {
+func (ot *Omnitruck) ProductMetadata(p RequestParamsInterface) *Request {
 	url := fmt.Sprintf("%s/%s/%s/metadata?v=%s&p=%s&pv=%s&m=%s", omnitruckApi,
 		p.Get("channel"),
 		p.Get("product"),
@@ -201,17 +136,10 @@ func (ot *Omnitruck) ProductMetadata(p RequestParamsInterface) (int, ResponseInt
 		p.Get("architecture"),
 	)
 
-	var data PackageMetadata
-
-	code, msg, success := ot.Get(url, &data)
-	if success {
-		return code, data, success
-	} else {
-		return code, msg, success
-	}
+	return ot.Get(url)
 }
 
-func (ot *Omnitruck) ProductDownload(p RequestParamsInterface) (int, ResponseInterface, bool) {
+func (ot *Omnitruck) ProductDownload(p RequestParamsInterface) *Request {
 	url := fmt.Sprintf("%s/%s/%s/metadata?v=%s&p=%s&pv=%s&m=%s", omnitruckApi,
 		p.Get("channel"),
 		p.Get("product"),
@@ -221,12 +149,5 @@ func (ot *Omnitruck) ProductDownload(p RequestParamsInterface) (int, ResponseInt
 		p.Get("architecture"),
 	)
 
-	var data PackageMetadata
-
-	code, msg, success := ot.Get(url, &data)
-	if success {
-		return code, data, success
-	} else {
-		return code, msg, success
-	}
+	return ot.Get(url)
 }

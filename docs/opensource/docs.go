@@ -159,6 +159,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/opensource.ErrorResponse"
                         }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/opensource.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -243,6 +249,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/opensource.ErrorResponse"
                         }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/opensource.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -302,6 +314,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/opensource.ErrorResponse"
                         }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/opensource.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -357,6 +375,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/opensource.ErrorResponse"
                         }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/opensource.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -405,6 +429,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/opensource.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/opensource.ErrorResponse"
                         }

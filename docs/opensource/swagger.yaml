@@ -104,6 +104,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/opensource.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/opensource.ErrorResponse'
   /{channel}/{product}/metadata:
     get:
       description: |-
@@ -168,6 +172,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/opensource.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/opensource.ErrorResponse'
   /{channel}/{product}/packages:
     get:
       description: |-
@@ -210,6 +218,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/opensource.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/opensource.ErrorResponse'
   /{channel}/{product}/versions/all:
     get:
       description: Get a list of all available version numbers for a particular channel
@@ -248,6 +260,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/opensource.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/opensource.ErrorResponse'
   /{channel}/{product}/versions/latest:
     get:
       description: Get the latest version number for a particular channel and product
@@ -281,6 +297,10 @@ paths:
             type: string
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/opensource.ErrorResponse'
+        "403":
+          description: Forbidden
           schema:
             $ref: '#/definitions/opensource.ErrorResponse'
   /architectures:
