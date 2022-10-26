@@ -20,9 +20,10 @@ To just build the service without updating the swagger documentation
 make build
 ```
 
-Running the service
+Copy example config and running the service
 
 ```bash
+$ cp omnitruck.yml.example .omnitruck.yml
 $ bin/omnitruck-service start
 INFO[0000] Starting OpensourceServer                     pkg=cmd/opensource
 ```
