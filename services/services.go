@@ -36,9 +36,9 @@ type ApiService struct {
 	App       *fiber.App
 }
 
-func (server *ApiService) New(c Config) *ApiService {
+func (server *ApiService) Initialize(c Config) *ApiService {
 	server.Omnitruck = omnitruck.NewOmnitruckClient()
-	server.Log = c.Log.WithField("pkg", c.Name)
+	server.Log = c.Log
 	server.Config = c
 
 	return server

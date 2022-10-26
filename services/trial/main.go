@@ -61,7 +61,7 @@ type TrialService struct {
 
 func NewServer(c services.Config) *TrialService {
 	service := TrialService{}
-	service.New(c)
+	service.Initialize(c)
 	return &service
 }
 

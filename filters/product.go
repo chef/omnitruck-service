@@ -30,6 +30,10 @@ var supportedProducts = map[string]Product{
 		MinSupportedVersion: semver.New("21.0.0"),
 		MaxOsVersion:        semver.New("0.4.2"),
 	},
+	"habitat": {
+		Name:         "habitat",
+		MaxOsVersion: semver.New("0.79.0"),
+	},
 	"inspec": {
 		Name:                "inspec",
 		MinSupportedVersion: semver.New("4.0.0"),
@@ -43,6 +47,10 @@ var supportedProducts = map[string]Product{
 		Name:                "supermarket",
 		MinSupportedVersion: semver.New("5.0.0"),
 		MaxOsVersion:        semver.New("5.1.44"),
+	},
+	"deskstop": {
+		Name:         "desktop",
+		MaxOsVersion: semver.New("14.15.6"),
 	},
 }
 

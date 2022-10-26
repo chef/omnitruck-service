@@ -54,7 +54,9 @@ to quickly create a Cobra application.`,
 		if cliConfig.Opensource.Enabled {
 			L.Info("Starting Opensource API")
 			os_api := opensource.NewServer(services.Config{
+				Name:   cliConfig.Opensource.Name,
 				Listen: cliConfig.Opensource.Listen,
+				Log:    L.WithField("pkg", cliConfig.Opensource.Name),
 			})
 			os_api.Start(&wg)
 		}
@@ -63,7 +65,7 @@ to quickly create a Cobra application.`,
 			trial_api := trial.NewServer(services.Config{
 				Name:   cliConfig.Trial.Name,
 				Listen: cliConfig.Trial.Listen,
-				Log:    L,
+				Log:    L.WithField("pkg", cliConfig.Trial.Name),
 			})
 			trial_api.Start(&wg)
 		}
