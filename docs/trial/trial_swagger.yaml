@@ -26,7 +26,7 @@ definitions:
     additionalProperties:
       $ref: '#/definitions/omnitruck_client.ArchList'
     type: object
-  opensource.ErrorResponse:
+  services.ErrorResponse:
     properties:
       code:
         type: integer
@@ -35,10 +35,10 @@ definitions:
       status_text:
         type: string
     type: object
-host: localhost:3000
+host: localhost:3001
 info:
   contact: {}
-  description: Licensed Omnitruck API for opensource products
+  description: Licensed Trial Omnitruck API
   license:
     url: http://www.apache.org/licenses/LICENSE-2.0.html
 paths:
@@ -103,11 +103,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/opensource.ErrorResponse'
+            $ref: '#/definitions/services.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/opensource.ErrorResponse'
+            $ref: '#/definitions/services.ErrorResponse'
   /{channel}/{product}/metadata:
     get:
       description: |-
@@ -171,11 +171,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/opensource.ErrorResponse'
+            $ref: '#/definitions/services.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/opensource.ErrorResponse'
+            $ref: '#/definitions/services.ErrorResponse'
   /{channel}/{product}/packages:
     get:
       description: |-
@@ -217,11 +217,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/opensource.ErrorResponse'
+            $ref: '#/definitions/services.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/opensource.ErrorResponse'
+            $ref: '#/definitions/services.ErrorResponse'
   /{channel}/{product}/versions/all:
     get:
       description: Get a list of all available version numbers for a particular channel
@@ -259,11 +259,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/opensource.ErrorResponse'
+            $ref: '#/definitions/services.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/opensource.ErrorResponse'
+            $ref: '#/definitions/services.ErrorResponse'
   /{channel}/{product}/versions/latest:
     get:
       description: Get the latest version number for a particular channel and product
@@ -298,11 +298,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/opensource.ErrorResponse'
+            $ref: '#/definitions/services.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/opensource.ErrorResponse'
+            $ref: '#/definitions/services.ErrorResponse'
   /architectures:
     get:
       description: |-
@@ -318,7 +318,7 @@ paths:
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/opensource.ErrorResponse'
+            $ref: '#/definitions/services.ErrorResponse'
   /platforms:
     get:
       description: |-
@@ -332,12 +332,17 @@ paths:
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/opensource.ErrorResponse'
+            $ref: '#/definitions/services.ErrorResponse'
   /products:
     get:
       description: |-
         Returns a valid list of valid product keys.
         Any of these product keys can be used in the <PRODUCT> value of other endpoints. Please note many of these products are used for internal tools only and many have been EOL’d.
+      parameters:
+      - description: EOL Products
+        in: query
+        name: eol
+        type: boolean
       responses:
         "200":
           description: OK
@@ -348,5 +353,5 @@ paths:
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/opensource.ErrorResponse'
+            $ref: '#/definitions/services.ErrorResponse'
 swagger: "2.0"

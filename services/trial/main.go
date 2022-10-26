@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	_ "github.com/chef/omnitruck-service/docs/opensource"
+	_ "github.com/chef/omnitruck-service/docs/trial"
 	"github.com/chef/omnitruck-service/filters"
 	omnitruck "github.com/chef/omnitruck-service/omnitruck-client"
 	rv "github.com/chef/omnitruck-service/request_validators"
@@ -119,8 +119,8 @@ func (server *TrialService) ValidateRequest(params *RequestParams, c *fiber.Ctx)
 // @description Returns a valid list of valid product keys.
 // @description Any of these product keys can be used in the <PRODUCT> value of other endpoints. Please note many of these products are used for internal tools only and many have been EOL’d.
 // @Param eol			query 	bool 	false 	"EOL Products"
-// @Success 200 {object} omnitruck.ProductList
-// @Failure 500 {object} opensource.ErrorResponse
+// @Success 200 {object} omnitruck.ItemList
+// @Failure 500 {object} services.ErrorResponse
 // @Router /products [get]
 func (server *TrialService) productsHandler(c *fiber.Ctx) error {
 	params := &RequestParams{
@@ -144,7 +144,7 @@ func (server *TrialService) productsHandler(c *fiber.Ctx) error {
 // @description Returns a valid list of valid platform keys along with full friendly names.
 // @description Any of these platform keys can be used in the p query string value in various endpoints below.
 // @Success 200 {object} omnitruck.PlatformList
-// @Failure 500 {object} opensource.ErrorResponse
+// @Failure 500 {object} services.ErrorResponse
 // @Router /platforms [get]
 func (server *TrialService) platformsHandler(c *fiber.Ctx) error {
 	var data omnitruck.PlatformList
@@ -159,8 +159,8 @@ func (server *TrialService) platformsHandler(c *fiber.Ctx) error {
 
 // @description Returns a valid list of valid platform keys along with friendly names.
 // @description Any of these architecture keys can be used in the p query string value in various endpoints below.
-// @Success 200 {object} omnitruck.ArchitectureList
-// @Failure 500 {object} opensource.ErrorResponse
+// @Success 200 {object} omnitruck.ItemList
+// @Failure 500 {object} services.ErrorResponse
 // @Router /architectures [get]
 func (server *TrialService) architecturesHandler(c *fiber.Ctx) error {
 
@@ -180,8 +180,8 @@ func (server *TrialService) architecturesHandler(c *fiber.Ctx) error {
 // @Param license_id 	header 	string 	false 	"License ID"
 // @Param eol			query 	bool 	false 	"EOL Products"
 // @Success 200 {object} omnitruck.ProductVersion
-// @Failure 400 {object} opensource.ErrorResponse
-// @Failure 403 {object} opensource.ErrorResponse
+// @Failure 400 {object} services.ErrorResponse
+// @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/versions/latest [get]
 func (server *TrialService) latestVersionHandler(c *fiber.Ctx) error {
 	params := &RequestParams{
@@ -209,9 +209,9 @@ func (server *TrialService) latestVersionHandler(c *fiber.Ctx) error {
 // @Param product   	path 	string 	true 	"Product"
 // @Param license_id 	header 	string 	false 	"License ID"
 // @Param eol			query 	bool 	false 	"EOL Products" Default(false)
-// @Success 200 {object} omnitruck.VersionList
-// @Failure 400 {object} opensource.ErrorResponse
-// @Failure 403 {object} opensource.ErrorResponse
+// @Success 200 {object} omnitruck.ItemList
+// @Failure 400 {object} services.ErrorResponse
+// @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/versions/all [get]
 func (server *TrialService) productVersionsHandler(c *fiber.Ctx) error {
 	params := &RequestParams{
@@ -241,8 +241,8 @@ func (server *TrialService) productVersionsHandler(c *fiber.Ctx) error {
 // @Param license_id 	header 	string 	false 	"License ID"
 // @Param eol			query 	bool 	false 	"EOL Products" Default(false)
 // @Success 200 {object} omnitruck.PackageList
-// @Failure 400 {object} opensource.ErrorResponse
-// @Failure 403 {object} opensource.ErrorResponse
+// @Failure 400 {object} services.ErrorResponse
+// @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/packages [get]
 func (server *TrialService) productPackagesHandler(c *fiber.Ctx) error {
 	params := &RequestParams{
@@ -276,8 +276,8 @@ func (server *TrialService) productPackagesHandler(c *fiber.Ctx) error {
 // @Param license_id 	header 	string 	false 	"License ID"
 // @Param eol			query 	bool 	false 	"EOL Products" Default(false)
 // @Success 200 {object} omnitruck.PackageMetadata
-// @Failure 400 {object} opensource.ErrorResponse
-// @Failure 403 {object} opensource.ErrorResponse
+// @Failure 400 {object} services.ErrorResponse
+// @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/metadata [get]
 func (server *TrialService) productMetadataHandler(c *fiber.Ctx) error {
 	params := &RequestParams{
@@ -315,8 +315,8 @@ func (server *TrialService) productMetadataHandler(c *fiber.Ctx) error {
 // @Param license_id 	header 	string 	false 	"License ID"
 // @Param eol			query 	bool 	false 	"EOL Products" Default(false)
 // @Success 302
-// @Failure 400 {object} opensource.ErrorResponse
-// @Failure 403 {object} opensource.ErrorResponse
+// @Failure 400 {object} services.ErrorResponse
+// @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/download [get]
 func (server *TrialService) productDownloadHandler(c *fiber.Ctx) error {
 	params := &RequestParams{
@@ -344,7 +344,9 @@ func (server *TrialService) productDownloadHandler(c *fiber.Ctx) error {
 }
 
 func (server *TrialService) buildRouter() {
-	server.App.Get("/swagger/*", swagger.HandlerDefault)
+	server.App.Get("/swagger/*", swagger.New(swagger.Config{
+		InstanceName: "Trial",
+	}))
 
 	server.App.Get("/", server.HealthCheck)
 	server.App.Get("/products", server.productsHandler)

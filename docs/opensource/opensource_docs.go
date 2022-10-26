@@ -4,7 +4,7 @@ package opensource
 
 import "github.com/swaggo/swag"
 
-const docTemplate = `{
+const docTemplateOpensource = `{
     "schemes": {{ marshal .Schemes }},
     "swagger": "2.0",
     "info": {
@@ -35,7 +35,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/opensource.ErrorResponse"
+                            "$ref": "#/definitions/services.ErrorResponse"
                         }
                     }
                 }
@@ -54,7 +54,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/opensource.ErrorResponse"
+                            "$ref": "#/definitions/services.ErrorResponse"
                         }
                     }
                 }
@@ -76,7 +76,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/opensource.ErrorResponse"
+                            "$ref": "#/definitions/services.ErrorResponse"
                         }
                     }
                 }
@@ -157,13 +157,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/opensource.ErrorResponse"
+                            "$ref": "#/definitions/services.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/opensource.ErrorResponse"
+                            "$ref": "#/definitions/services.ErrorResponse"
                         }
                     }
                 }
@@ -247,13 +247,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/opensource.ErrorResponse"
+                            "$ref": "#/definitions/services.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/opensource.ErrorResponse"
+                            "$ref": "#/definitions/services.ErrorResponse"
                         }
                     }
                 }
@@ -312,13 +312,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/opensource.ErrorResponse"
+                            "$ref": "#/definitions/services.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/opensource.ErrorResponse"
+                            "$ref": "#/definitions/services.ErrorResponse"
                         }
                     }
                 }
@@ -373,13 +373,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/opensource.ErrorResponse"
+                            "$ref": "#/definitions/services.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/opensource.ErrorResponse"
+                            "$ref": "#/definitions/services.ErrorResponse"
                         }
                     }
                 }
@@ -430,13 +430,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/opensource.ErrorResponse"
+                            "$ref": "#/definitions/services.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/opensource.ErrorResponse"
+                            "$ref": "#/definitions/services.ErrorResponse"
                         }
                     }
                 }
@@ -485,7 +485,7 @@ const docTemplate = `{
                 "$ref": "#/definitions/omnitruck_client.ArchList"
             }
         },
-        "opensource.ErrorResponse": {
+        "services.ErrorResponse": {
             "type": "object",
             "properties": {
                 "code": {
@@ -502,18 +502,18 @@ const docTemplate = `{
     }
 }`
 
-// SwaggerInfo holds exported Swagger Info so clients can modify it
-var SwaggerInfo = &swag.Spec{
+// SwaggerInfoOpensource holds exported Swagger Info so clients can modify it
+var SwaggerInfoOpensource = &swag.Spec{
 	Version:          "",
 	Host:             "localhost:3000",
 	BasePath:         "",
 	Schemes:          []string{},
 	Title:            "",
 	Description:      "Licensed Omnitruck API for opensource products",
-	InfoInstanceName: "swagger",
-	SwaggerTemplate:  docTemplate,
+	InfoInstanceName: "Opensource",
+	SwaggerTemplate:  docTemplateOpensource,
 }
 
 func init() {
-	swag.Register(SwaggerInfo.InstanceName(), SwaggerInfo)
+	swag.Register(SwaggerInfoOpensource.InstanceName(), SwaggerInfoOpensource)
 }
