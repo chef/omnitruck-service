@@ -6,9 +6,7 @@ import (
 	"time"
 
 	_ "github.com/chef/omnitruck-service/docs/opensource"
-	"github.com/chef/omnitruck-service/filters"
 	omnitruck "github.com/chef/omnitruck-service/omnitruck-client"
-	rv "github.com/chef/omnitruck-service/request_validators"
 	"github.com/chef/omnitruck-service/services"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -56,11 +54,22 @@ type OpensourceService struct {
 	services.ApiService
 	sync.Mutex
 
-	Validator rv.OpensourceValidator
+	Validator omnitruck.RequestValidator
 }
 
 func NewServer(c services.Config) *OpensourceService {
-	service := OpensourceService{}
+	service := OpensourceService{
+		Validator: omnitruck.NewValidator(),
+	}
+
+	channel := omnitruck.ContainsValidator[string]{
+		Field:  "channel",
+		Values: []string{"stable"},
+		Code:   400,
+	}
+
+	service.Validator.Add(&channel)
+
 	service.Initialize(c)
 	return &service
 }
@@ -102,7 +111,7 @@ func (server *OpensourceService) HealthCheck(c *fiber.Ctx) error {
 }
 
 func (server *OpensourceService) ValidateRequest(params *RequestParams, c *fiber.Ctx) (error, bool) {
-	errors := server.Validator.ValidateParams(params)
+	errors := server.Validator.Params(params)
 	if errors != nil {
 		msgs, code := server.Validator.ErrorMessages(errors)
 
@@ -129,7 +138,7 @@ func (server *OpensourceService) productsHandler(c *fiber.Ctx) error {
 	var data omnitruck.ItemList
 	request := server.Omnitruck.Products(params, &data)
 
-	data = filters.FilterList(data, filters.OsProduct)
+	data = omnitruck.FilterList(data, omnitruck.OsProductName)
 
 	if request.Ok {
 		return server.SendResponse(c, &data)

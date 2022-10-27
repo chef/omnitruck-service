@@ -44,28 +44,29 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		L := log.WithField("pkg", "cmd/start")
 		log.SetOutput(os.Stdout)
 		// log.SetFormatter(&log.JSONFormatter{})
 		log.SetLevel(log.InfoLevel)
 
+		logger := log.WithField("pkg", "cmd/start")
+
 		var wg sync.WaitGroup
 
 		if cliConfig.Opensource.Enabled {
-			L.Info("Starting Opensource API")
+			logger.Info("Starting Opensource API")
 			os_api := opensource.NewServer(services.Config{
 				Name:   cliConfig.Opensource.Name,
 				Listen: cliConfig.Opensource.Listen,
-				Log:    L.WithField("pkg", cliConfig.Opensource.Name),
+				Log:    logger.WithField("pkg", cliConfig.Opensource.Name),
 			})
 			os_api.Start(&wg)
 		}
 		if cliConfig.Trial.Enabled {
-			L.Info("Starting Trial API")
+			logger.Info("Starting Trial API")
 			trial_api := trial.NewServer(services.Config{
 				Name:   cliConfig.Trial.Name,
 				Listen: cliConfig.Trial.Listen,
-				Log:    L.WithField("pkg", cliConfig.Trial.Name),
+				Log:    logger.WithField("pkg", cliConfig.Trial.Name),
 			})
 			trial_api.Start(&wg)
 		}

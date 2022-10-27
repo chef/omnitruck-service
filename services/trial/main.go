@@ -6,9 +6,7 @@ import (
 	"time"
 
 	_ "github.com/chef/omnitruck-service/docs/trial"
-	"github.com/chef/omnitruck-service/filters"
 	omnitruck "github.com/chef/omnitruck-service/omnitruck-client"
-	rv "github.com/chef/omnitruck-service/request_validators"
 	"github.com/chef/omnitruck-service/services"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -18,7 +16,7 @@ import (
 
 // RequestParams is used to setup validation for the request parameters
 type RequestParams struct {
-	Channel         string `validate:"required,eq=stable"`
+	Channel         string `validate:"required"`
 	Product         string `validate:"required"`
 	Version         string
 	Platform        string `validate:"required_with=PlatformVersion"`
@@ -56,11 +54,18 @@ type TrialService struct {
 	services.ApiService
 	sync.Mutex
 
-	Validator rv.OpensourceValidator
+	Validator omnitruck.RequestValidator
 }
 
 func NewServer(c services.Config) *TrialService {
-	service := TrialService{}
+	service := TrialService{
+		Validator: omnitruck.NewValidator(),
+	}
+
+	eolversion := omnitruck.EolVersionValidator{}
+
+	service.Validator.Add(&eolversion)
+
 	service.Initialize(c)
 	return &service
 }
@@ -83,6 +88,8 @@ func (server *TrialService) Start(wg *sync.WaitGroup) error {
 	})
 
 	server.App.Use(cors.New())
+	// This will catch panics in the app and prevent it from crashing the server
+	// TODO: Figure out if we can better handle logging these, currently it just returns a panic message to the user
 	server.App.Use(recover.New())
 
 	server.buildRouter()
@@ -102,7 +109,7 @@ func (server *TrialService) HealthCheck(c *fiber.Ctx) error {
 }
 
 func (server *TrialService) ValidateRequest(params *RequestParams, c *fiber.Ctx) (error, bool) {
-	errors := server.Validator.ValidateParams(params)
+	errors := server.Validator.Params(params)
 	if errors != nil {
 		msgs, code := server.Validator.ErrorMessages(errors)
 
@@ -113,6 +120,7 @@ func (server *TrialService) ValidateRequest(params *RequestParams, c *fiber.Ctx)
 			Message:    msgs,
 		}), false
 	}
+
 	return nil, true
 }
 
@@ -131,7 +139,7 @@ func (server *TrialService) productsHandler(c *fiber.Ctx) error {
 	request := server.Omnitruck.Products(params, &data)
 
 	if params.Eol != "true" {
-		data = filters.FilterList(data, filters.EolProduct)
+		data = omnitruck.FilterList(data, omnitruck.EolProductName)
 	}
 
 	if request.Ok {
@@ -178,7 +186,6 @@ func (server *TrialService) architecturesHandler(c *fiber.Ctx) error {
 // @Param channel 		path 	string 	true 	"Channel" Enums(current, stable)
 // @Param product   	path 	string 	true 	"Product"
 // @Param license_id 	header 	string 	false 	"License ID"
-// @Param eol			query 	bool 	false 	"EOL Products"
 // @Success 200 {object} omnitruck.ProductVersion
 // @Failure 400 {object} services.ErrorResponse
 // @Failure 403 {object} services.ErrorResponse
@@ -189,7 +196,7 @@ func (server *TrialService) latestVersionHandler(c *fiber.Ctx) error {
 		Product: c.Params("product"),
 	}
 	err, ok := server.ValidateRequest(params, c)
-	if err != nil || !ok {
+	if !ok {
 		return err
 	}
 
@@ -217,14 +224,21 @@ func (server *TrialService) productVersionsHandler(c *fiber.Ctx) error {
 	params := &RequestParams{
 		Channel: c.Params("channel"),
 		Product: c.Params("product"),
+		Eol:     c.Query("eol", "false"),
 	}
+
 	err, ok := server.ValidateRequest(params, c)
-	if err != nil || !ok {
+	if !ok {
 		return err
 	}
 
 	var data []omnitruck.ProductVersion
 	request := server.Omnitruck.ProductVersions(params).ParseData(&data)
+
+	if params.Get("eol") != "true" {
+		data = omnitruck.FilterProductList(data, params.Get("product"), omnitruck.EolProductVersion)
+	}
+
 	if request.Ok {
 		return server.SendResponse(c, &data)
 	} else {
@@ -249,14 +263,17 @@ func (server *TrialService) productPackagesHandler(c *fiber.Ctx) error {
 		Channel: c.Params("channel"),
 		Product: c.Params("product"),
 		Version: c.Query("v"),
+		Eol:     c.Query("eol"),
 	}
+
 	err, ok := server.ValidateRequest(params, c)
-	if err != nil || !ok {
+	if !ok {
 		return err
 	}
 
 	var data omnitruck.PackageList
 	request := server.Omnitruck.ProductPackages(params).ParseData(&data)
+
 	if request.Ok {
 		return server.SendResponse(c, &data)
 	} else {
@@ -288,8 +305,9 @@ func (server *TrialService) productMetadataHandler(c *fiber.Ctx) error {
 		PlatformVersion: c.Query("pv"),
 		Architecture:    c.Query("m"),
 	}
+
 	err, ok := server.ValidateRequest(params, c)
-	if err != nil || !ok {
+	if !ok {
 		return err
 	}
 
@@ -327,8 +345,9 @@ func (server *TrialService) productDownloadHandler(c *fiber.Ctx) error {
 		PlatformVersion: c.Query("pv"),
 		Architecture:    c.Query("m"),
 	}
+
 	err, ok := server.ValidateRequest(params, c)
-	if err != nil || !ok {
+	if !ok {
 		return err
 	}
 
@@ -357,4 +376,6 @@ func (server *TrialService) buildRouter() {
 	server.App.Get("/:channel/:product/packages", server.productPackagesHandler)
 	server.App.Get("/:channel/:product/metadata", server.productMetadataHandler)
 	server.App.Get("/:channel/:product/download", server.productDownloadHandler)
+
+	server.App.Get("/status", server.HealthCheck)
 }
