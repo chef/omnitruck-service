@@ -1,6 +1,6 @@
 package omnitruck_client
 
-func FilterList[T any](s []T, filter func(T) bool) []T {
+func FilterList[T comparable](s []T, filter func(T) bool) []T {
 	out := make([]T, len(s))
 
 	counter := 0
@@ -13,7 +13,7 @@ func FilterList[T any](s []T, filter func(T) bool) []T {
 	return out[:counter]
 }
 
-func FilterProductList[T any](s []T, product string, filter func(string, T) bool) []T {
+func FilterProductList[T comparable](s []T, product string, filter func(string, T) bool) []T {
 	out := make([]T, len(s))
 
 	counter := 0

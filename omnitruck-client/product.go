@@ -37,6 +37,7 @@ var supportedProducts = map[string]Product{
 	},
 	"habitat": {
 		Name:              "habitat",
+		SupportedVersion:  NewConstraint(">= 0"),
 		OpensourceVersion: NewConstraint("< 0.79.0"),
 	},
 	"inspec": {
@@ -53,8 +54,9 @@ var supportedProducts = map[string]Product{
 		SupportedVersion:  NewConstraint(">= 5.0.0"),
 		OpensourceVersion: NewConstraint("< 5.1.44"),
 	},
-	"deskstop": {
+	"desktop": {
 		Name:              "desktop",
+		SupportedVersion:  NewConstraint(">= 0"),
 		OpensourceVersion: NewConstraint("< 14.15.6"),
 	},
 }
@@ -77,7 +79,7 @@ func EolProductVersion(product string, v ProductVersion) bool {
 	if v == "latest" {
 		return false
 	}
-	// If we can't find the product in our list then just let it go
+	// If we can't find the product in our list then it's no EOL
 	p, ok := supportedProducts[product]
 	if !ok {
 		return false
@@ -90,4 +92,15 @@ func EolProductVersion(product string, v ProductVersion) bool {
 func OsProductName(name string) bool {
 	p, ok := supportedProducts[name]
 	return ok && p.OpensourceVersion != nil
+}
+
+func OsProductVersion(name string, v ProductVersion) bool {
+	// If we can't find it in our list then it's not Opensource
+	p, ok := supportedProducts[name]
+	if !ok {
+		return false
+	}
+
+	v1, _ := version.NewVersion(string(v))
+	return p.OpensourceVersion.Check(v1)
 }

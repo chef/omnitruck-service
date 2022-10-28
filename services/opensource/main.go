@@ -2,34 +2,16 @@ package opensource
 
 import (
 	"net/http"
-	"sync"
-	"time"
 
 	_ "github.com/chef/omnitruck-service/docs/opensource"
 	omnitruck "github.com/chef/omnitruck-service/omnitruck-client"
 	"github.com/chef/omnitruck-service/services"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/swagger"
 )
 
 type OpensourceService struct {
 	services.ApiService
-}
-
-func NewServer(c services.Config) *OpensourceService {
-	service := OpensourceService{}
-	service.Initialize(c)
-
-	channel := omnitruck.ChannelValidator{
-		Values: []string{"stable"},
-		Code:   400,
-	}
-
-	service.Validator.Add(&channel)
-
-	return &service
 }
 
 // @title			Licensed Omnitruck API for opensource products
@@ -38,25 +20,35 @@ func NewServer(c services.Config) *OpensourceService {
 // @license.name	Apache 2.0
 // @license.url 	http://www.apache.org/licenses/LICENSE-2.0.html
 // @host localhost:3000
-func (server *OpensourceService) Start(wg *sync.WaitGroup) error {
-	server.Lock()
-	defer server.Unlock()
+func NewServer(c services.Config) *OpensourceService {
+	service := OpensourceService{}
+	service.Initialize(c)
+	service.buildRouter()
 
-	server.App = fiber.New(fiber.Config{
-		DisableStartupMessage: true,
-		EnablePrintRoutes:     false,
-		ReadTimeout:           300 * time.Second,
-		WriteTimeout:          300 * time.Second,
-	})
+	channel := omnitruck.ChannelValidator{
+		Values: []string{"stable"},
+		Code:   400,
+	}
+	service.Validator.Add(&channel)
 
-	server.App.Use(cors.New())
-	server.App.Use(recover.New())
-	server.buildRouter()
+	return &service
+}
 
-	wg.Add(1)
-	go server.StartService()
+func (server *OpensourceService) buildRouter() {
+	server.App.Get("/swagger/*", swagger.New(swagger.Config{
+		InstanceName: "Opensource",
+	}))
+	server.App.Get("/", server.HealthCheck)
+	server.App.Get("/products", server.productsHandler)
+	server.App.Get("/platforms", server.platformsHandler)
+	server.App.Get("/architectures", server.architecturesHandler)
+	server.App.Get("/:channel/:product/versions/latest", server.latestVersionHandler)
+	server.App.Get("/:channel/:product/versions/all", server.productVersionsHandler)
+	server.App.Get("/:channel/:product/packages", server.productPackagesHandler)
+	server.App.Get("/:channel/:product/metadata", server.productMetadataHandler)
+	server.App.Get("/:channel/:product/download", server.productDownloadHandler)
 
-	return nil
+	server.App.Get("/status", server.HealthCheck)
 }
 
 func (server *OpensourceService) HealthCheck(c *fiber.Ctx) error {
@@ -304,19 +296,4 @@ func (server *OpensourceService) productDownloadHandler(c *fiber.Ctx) error {
 	} else {
 		return server.SendError(c, request)
 	}
-}
-
-func (server *OpensourceService) buildRouter() {
-	server.App.Get("/swagger/*", swagger.New(swagger.Config{
-		InstanceName: "Opensource",
-	}))
-	server.App.Get("/", server.HealthCheck)
-	server.App.Get("/products", server.productsHandler)
-	server.App.Get("/platforms", server.platformsHandler)
-	server.App.Get("/architectures", server.architecturesHandler)
-	server.App.Get("/:channel/:product/versions/latest", server.latestVersionHandler)
-	server.App.Get("/:channel/:product/versions/all", server.productVersionsHandler)
-	server.App.Get("/:channel/:product/packages", server.productPackagesHandler)
-	server.App.Get("/:channel/:product/metadata", server.productMetadataHandler)
-	server.App.Get("/:channel/:product/download", server.productDownloadHandler)
 }

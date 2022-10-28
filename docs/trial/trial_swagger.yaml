@@ -286,10 +286,6 @@ paths:
         in: header
         name: license_id
         type: string
-      - description: EOL Products
-        in: query
-        name: eol
-        type: boolean
       responses:
         "200":
           description: OK

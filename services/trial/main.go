@@ -1,30 +1,15 @@
 package trial
 
 import (
-	"sync"
-	"time"
-
 	_ "github.com/chef/omnitruck-service/docs/trial"
 	omnitruck "github.com/chef/omnitruck-service/omnitruck-client"
 	"github.com/chef/omnitruck-service/services"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/swagger"
 )
 
 type TrialService struct {
 	services.ApiService
-}
-
-func NewServer(c services.Config) *TrialService {
-	service := TrialService{}
-	service.Initialize(c)
-
-	service.Log.Info("Adding EOL Validator")
-	eolversion := omnitruck.EolVersionValidator{}
-	service.Validator.Add(&eolversion)
-
-	return &service
 }
 
 // @title			Licensed Trial Omnitruck API
@@ -33,27 +18,34 @@ func NewServer(c services.Config) *TrialService {
 // @license.name	Apache 2.0
 // @license.url 	http://www.apache.org/licenses/LICENSE-2.0.html
 // @host localhost:3001
-func (server *TrialService) Start(wg *sync.WaitGroup) error {
-	server.Lock()
-	defer server.Unlock()
+func NewServer(c services.Config) *TrialService {
+	service := TrialService{}
+	service.Initialize(c)
 
-	server.App = fiber.New(fiber.Config{
-		DisableStartupMessage: true,
-		EnablePrintRoutes:     false,
-		ReadTimeout:           300 * time.Second,
-		WriteTimeout:          300 * time.Second,
-	})
+	service.Log.Info("Adding EOL Validator")
+	eolversion := omnitruck.EolVersionValidator{}
+	service.Validator.Add(&eolversion)
+	service.buildRouter()
 
-	server.App.Use(cors.New())
-	// This will catch panics in the app and prevent it from crashing the server
-	// TODO: Figure out if we can better handle logging these, currently it just returns a panic message to the user
-	// server.App.Use(recover.New())
-	server.buildRouter()
+	return &service
+}
 
-	wg.Add(1)
-	go server.StartService()
+func (server *TrialService) buildRouter() {
+	server.App.Get("/swagger/*", swagger.New(swagger.Config{
+		InstanceName: "Trial",
+	}))
 
-	return nil
+	server.App.Get("/", server.HealthCheck)
+	server.App.Get("/products", server.productsHandler)
+	server.App.Get("/platforms", server.platformsHandler)
+	server.App.Get("/architectures", server.architecturesHandler)
+	server.App.Get("/:channel/:product/versions/latest", server.latestVersionHandler)
+	server.App.Get("/:channel/:product/versions/all", server.productVersionsHandler)
+	server.App.Get("/:channel/:product/packages", server.productPackagesHandler)
+	server.App.Get("/:channel/:product/metadata", server.productMetadataHandler)
+	server.App.Get("/:channel/:product/download", server.productDownloadHandler)
+
+	server.App.Get("/status", server.HealthCheck)
 }
 
 func (server *TrialService) HealthCheck(c *fiber.Ctx) error {
@@ -300,22 +292,4 @@ func (server *TrialService) productDownloadHandler(c *fiber.Ctx) error {
 	} else {
 		return server.SendError(c, request)
 	}
-}
-
-func (server *TrialService) buildRouter() {
-	server.App.Get("/swagger/*", swagger.New(swagger.Config{
-		InstanceName: "Trial",
-	}))
-
-	server.App.Get("/", server.HealthCheck)
-	server.App.Get("/products", server.productsHandler)
-	server.App.Get("/platforms", server.platformsHandler)
-	server.App.Get("/architectures", server.architecturesHandler)
-	server.App.Get("/:channel/:product/versions/latest", server.latestVersionHandler)
-	server.App.Get("/:channel/:product/versions/all", server.productVersionsHandler)
-	server.App.Get("/:channel/:product/packages", server.productPackagesHandler)
-	server.App.Get("/:channel/:product/metadata", server.productMetadataHandler)
-	server.App.Get("/:channel/:product/download", server.productDownloadHandler)
-
-	server.App.Get("/status", server.HealthCheck)
 }

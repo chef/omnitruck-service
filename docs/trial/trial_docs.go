@@ -420,12 +420,6 @@ const docTemplateTrial = `{
                         "description": "License ID",
                         "name": "license_id",
                         "in": "header"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "EOL Products",
-                        "name": "eol",
-                        "in": "query"
                     }
                 ],
                 "responses": {

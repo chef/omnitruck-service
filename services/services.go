@@ -3,10 +3,13 @@ package services
 import (
 	"net/http"
 	"sync"
+	"time"
 
 	omnitruck "github.com/chef/omnitruck-service/omnitruck-client"
 	fiber "github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -43,7 +46,26 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	server.Config = c
 	server.Validator = omnitruck.NewValidator()
 
+	server.App = fiber.New(fiber.Config{
+		DisableStartupMessage: true,
+		EnablePrintRoutes:     false,
+		ReadTimeout:           300 * time.Second,
+		WriteTimeout:          300 * time.Second,
+	})
+
+	server.App.Use(cors.New())
+	// This will catch panics in the app and prevent it from crashing the server
+	// TODO: Figure out if we can better handle logging these, currently it just returns a panic message to the user
+	server.App.Use(recover.New())
+
 	return server
+}
+
+func (server *ApiService) Start(wg *sync.WaitGroup) error {
+	wg.Add(1)
+	go server.StartService()
+
+	return nil
 }
 
 func (server *ApiService) StartService() {
@@ -69,7 +91,7 @@ func (server *ApiService) StartService() {
 }
 
 func (server *ApiService) ValidateRequest(params *omnitruck.RequestParams, c *fiber.Ctx) (error, bool) {
-	server.Log.Infof("Validating request %+v", params)
+	server.Log.Debugf("Validating request %+v", params)
 	errors := server.Validator.Params(params)
 	if errors != nil {
 		msgs, code := server.Validator.ErrorMessages(errors)
