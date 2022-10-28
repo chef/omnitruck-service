@@ -1,7 +1,6 @@
 package trial
 
 import (
-	"net/http"
 	"sync"
 	"time"
 
@@ -10,63 +9,21 @@ import (
 	"github.com/chef/omnitruck-service/services"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/swagger"
 )
 
-// RequestParams is used to setup validation for the request parameters
-type RequestParams struct {
-	Channel         string `validate:"required"`
-	Product         string `validate:"required"`
-	Version         string
-	Platform        string `validate:"required_with=PlatformVersion"`
-	PlatformVersion string `validate:"required_with=Platform"`
-	Architecture    string `validate:"required_with_all=PlatformVersion Platform"`
-	Eol             string
-}
-
-// Because the params objects gets passed back to the omnitruck client as an interface object
-// we need to create a getter to fetch the data out of it
-//
-// TODO: Figure out if there is a better way to implement this so we don't need the getter method
-func (rp *RequestParams) Get(name string) string {
-	switch name {
-	case "channel":
-		return rp.Channel
-	case "product":
-		return rp.Product
-	case "version":
-		return rp.Version
-	case "platform":
-		return rp.Platform
-	case "platformVersion":
-		return rp.PlatformVersion
-	case "architecture":
-		return rp.Architecture
-	case "eol":
-		return rp.Eol
-	default:
-		return ""
-	}
-}
-
 type TrialService struct {
 	services.ApiService
-	sync.Mutex
-
-	Validator omnitruck.RequestValidator
 }
 
 func NewServer(c services.Config) *TrialService {
-	service := TrialService{
-		Validator: omnitruck.NewValidator(),
-	}
+	service := TrialService{}
+	service.Initialize(c)
 
+	service.Log.Info("Adding EOL Validator")
 	eolversion := omnitruck.EolVersionValidator{}
-
 	service.Validator.Add(&eolversion)
 
-	service.Initialize(c)
 	return &service
 }
 
@@ -90,8 +47,7 @@ func (server *TrialService) Start(wg *sync.WaitGroup) error {
 	server.App.Use(cors.New())
 	// This will catch panics in the app and prevent it from crashing the server
 	// TODO: Figure out if we can better handle logging these, currently it just returns a panic message to the user
-	server.App.Use(recover.New())
-
+	// server.App.Use(recover.New())
 	server.buildRouter()
 
 	wg.Add(1)
@@ -108,22 +64,6 @@ func (server *TrialService) HealthCheck(c *fiber.Ctx) error {
 	return c.JSON(res)
 }
 
-func (server *TrialService) ValidateRequest(params *RequestParams, c *fiber.Ctx) (error, bool) {
-	errors := server.Validator.Params(params)
-	if errors != nil {
-		msgs, code := server.Validator.ErrorMessages(errors)
-
-		server.Log.WithField("errors", msgs).Error("Error validating request")
-		return c.Status(code).JSON(services.ErrorResponse{
-			Code:       code,
-			StatusText: http.StatusText(code),
-			Message:    msgs,
-		}), false
-	}
-
-	return nil, true
-}
-
 // @description Returns a valid list of valid product keys.
 // @description Any of these product keys can be used in the <PRODUCT> value of other endpoints. Please note many of these products are used for internal tools only and many have been EOL’d.
 // @Param eol			query 	bool 	false 	"EOL Products"
@@ -131,7 +71,7 @@ func (server *TrialService) ValidateRequest(params *RequestParams, c *fiber.Ctx)
 // @Failure 500 {object} services.ErrorResponse
 // @Router /products [get]
 func (server *TrialService) productsHandler(c *fiber.Ctx) error {
-	params := &RequestParams{
+	params := &omnitruck.RequestParams{
 		Eol: c.Query("eol", "false"),
 	}
 
@@ -191,7 +131,7 @@ func (server *TrialService) architecturesHandler(c *fiber.Ctx) error {
 // @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/versions/latest [get]
 func (server *TrialService) latestVersionHandler(c *fiber.Ctx) error {
-	params := &RequestParams{
+	params := &omnitruck.RequestParams{
 		Channel: c.Params("channel"),
 		Product: c.Params("product"),
 	}
@@ -221,7 +161,7 @@ func (server *TrialService) latestVersionHandler(c *fiber.Ctx) error {
 // @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/versions/all [get]
 func (server *TrialService) productVersionsHandler(c *fiber.Ctx) error {
-	params := &RequestParams{
+	params := &omnitruck.RequestParams{
 		Channel: c.Params("channel"),
 		Product: c.Params("product"),
 		Eol:     c.Query("eol", "false"),
@@ -235,8 +175,8 @@ func (server *TrialService) productVersionsHandler(c *fiber.Ctx) error {
 	var data []omnitruck.ProductVersion
 	request := server.Omnitruck.ProductVersions(params).ParseData(&data)
 
-	if params.Get("eol") != "true" {
-		data = omnitruck.FilterProductList(data, params.Get("product"), omnitruck.EolProductVersion)
+	if params.Eol != "true" {
+		data = omnitruck.FilterProductList(data, params.Product, omnitruck.EolProductVersion)
 	}
 
 	if request.Ok {
@@ -259,7 +199,7 @@ func (server *TrialService) productVersionsHandler(c *fiber.Ctx) error {
 // @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/packages [get]
 func (server *TrialService) productPackagesHandler(c *fiber.Ctx) error {
-	params := &RequestParams{
+	params := &omnitruck.RequestParams{
 		Channel: c.Params("channel"),
 		Product: c.Params("product"),
 		Version: c.Query("v"),
@@ -297,7 +237,7 @@ func (server *TrialService) productPackagesHandler(c *fiber.Ctx) error {
 // @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/metadata [get]
 func (server *TrialService) productMetadataHandler(c *fiber.Ctx) error {
-	params := &RequestParams{
+	params := &omnitruck.RequestParams{
 		Channel:         c.Params("channel"),
 		Product:         c.Params("product"),
 		Version:         c.Query("v"),
@@ -337,7 +277,7 @@ func (server *TrialService) productMetadataHandler(c *fiber.Ctx) error {
 // @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/download [get]
 func (server *TrialService) productDownloadHandler(c *fiber.Ctx) error {
-	params := &RequestParams{
+	params := &omnitruck.RequestParams{
 		Channel:         c.Params("channel"),
 		Product:         c.Params("product"),
 		Version:         c.Query("v"),

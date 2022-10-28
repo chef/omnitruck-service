@@ -14,63 +14,21 @@ import (
 	"github.com/gofiber/swagger"
 )
 
-// RequestParams is used to setup validation for the request parameters
-type RequestParams struct {
-	Channel         string `validate:"required,eq=stable"`
-	Product         string `validate:"required"`
-	Version         string
-	Platform        string `validate:"required_with=PlatformVersion"`
-	PlatformVersion string `validate:"required_with=Platform"`
-	Architecture    string `validate:"required_with_all=PlatformVersion Platform"`
-	Eol             string
-}
-
-// Because the params objects gets passed back to the omnitruck client as an interface object
-// we need to create a getter to fetch the data out of it
-//
-// TODO: Figure out if there is a better way to implement this so we don't need the getter method
-func (rp *RequestParams) Get(name string) string {
-	switch name {
-	case "channel":
-		return rp.Channel
-	case "product":
-		return rp.Product
-	case "version":
-		return rp.Version
-	case "platform":
-		return rp.Platform
-	case "platformVersion":
-		return rp.PlatformVersion
-	case "architecture":
-		return rp.Architecture
-	case "eol":
-		return rp.Eol
-	default:
-		return ""
-	}
-}
-
 type OpensourceService struct {
 	services.ApiService
-	sync.Mutex
-
-	Validator omnitruck.RequestValidator
 }
 
 func NewServer(c services.Config) *OpensourceService {
-	service := OpensourceService{
-		Validator: omnitruck.NewValidator(),
-	}
+	service := OpensourceService{}
+	service.Initialize(c)
 
-	channel := omnitruck.ContainsValidator[string]{
-		Field:  "channel",
+	channel := omnitruck.ChannelValidator{
 		Values: []string{"stable"},
 		Code:   400,
 	}
 
 	service.Validator.Add(&channel)
 
-	service.Initialize(c)
 	return &service
 }
 
@@ -93,7 +51,6 @@ func (server *OpensourceService) Start(wg *sync.WaitGroup) error {
 
 	server.App.Use(cors.New())
 	server.App.Use(recover.New())
-
 	server.buildRouter()
 
 	wg.Add(1)
@@ -110,7 +67,7 @@ func (server *OpensourceService) HealthCheck(c *fiber.Ctx) error {
 	return c.JSON(res)
 }
 
-func (server *OpensourceService) ValidateRequest(params *RequestParams, c *fiber.Ctx) (error, bool) {
+func (server *OpensourceService) ValidateRequest(params *omnitruck.RequestParams, c *fiber.Ctx) (error, bool) {
 	errors := server.Validator.Params(params)
 	if errors != nil {
 		msgs, code := server.Validator.ErrorMessages(errors)
@@ -131,7 +88,7 @@ func (server *OpensourceService) ValidateRequest(params *RequestParams, c *fiber
 // @Failure 500 {object} services.ErrorResponse
 // @Router /products [get]
 func (server *OpensourceService) productsHandler(c *fiber.Ctx) error {
-	params := &RequestParams{
+	params := &omnitruck.RequestParams{
 		Eol: c.Query("eol", "false"),
 	}
 
@@ -190,7 +147,7 @@ func (server *OpensourceService) architecturesHandler(c *fiber.Ctx) error {
 // @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/versions/latest [get]
 func (server *OpensourceService) latestVersionHandler(c *fiber.Ctx) error {
-	params := &RequestParams{
+	params := &omnitruck.RequestParams{
 		Channel: c.Params("channel"),
 		Product: c.Params("product"),
 	}
@@ -220,7 +177,7 @@ func (server *OpensourceService) latestVersionHandler(c *fiber.Ctx) error {
 // @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/versions/all [get]
 func (server *OpensourceService) productVersionsHandler(c *fiber.Ctx) error {
-	params := &RequestParams{
+	params := &omnitruck.RequestParams{
 		Channel: c.Params("channel"),
 		Product: c.Params("product"),
 	}
@@ -251,7 +208,7 @@ func (server *OpensourceService) productVersionsHandler(c *fiber.Ctx) error {
 // @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/packages [get]
 func (server *OpensourceService) productPackagesHandler(c *fiber.Ctx) error {
-	params := &RequestParams{
+	params := &omnitruck.RequestParams{
 		Channel: c.Params("channel"),
 		Product: c.Params("product"),
 		Version: c.Query("v"),
@@ -286,7 +243,7 @@ func (server *OpensourceService) productPackagesHandler(c *fiber.Ctx) error {
 // @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/metadata [get]
 func (server *OpensourceService) productMetadataHandler(c *fiber.Ctx) error {
-	params := &RequestParams{
+	params := &omnitruck.RequestParams{
 		Channel:         c.Params("channel"),
 		Product:         c.Params("product"),
 		Version:         c.Query("v"),
@@ -325,7 +282,7 @@ func (server *OpensourceService) productMetadataHandler(c *fiber.Ctx) error {
 // @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/download [get]
 func (server *OpensourceService) productDownloadHandler(c *fiber.Ctx) error {
-	params := &RequestParams{
+	params := &omnitruck.RequestParams{
 		Channel:         c.Params("channel"),
 		Product:         c.Params("product"),
 		Version:         c.Query("v"),

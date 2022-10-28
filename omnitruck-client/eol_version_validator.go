@@ -3,6 +3,7 @@ package omnitruck_client
 import "fmt"
 
 type EolVersionValidator struct {
+	Code int
 }
 
 func (fv *EolVersionValidator) GetField() string {
@@ -17,18 +18,22 @@ func (fv *EolVersionValidator) GetCode() int {
 	return 400
 }
 
-func (fv *EolVersionValidator) Validate(pval string, p RequestParams) (string, bool) {
+func (fv *EolVersionValidator) Validate(p *RequestParams) *ValidationError {
 	// Allow any version if user specified eol == true in the query
-	if p.Get("eol") == "true" {
-		return "", true
+	if p.Eol == "true" {
+		return nil
 	}
 
-	product := p.Get("product")
-	minVer := SupportedVersion(product)
+	minVer := SupportedVersion(p.Product)
 
-	if EolProductVersion(product, ProductVersion(pval)) {
-		return fmt.Sprintf("%s %s %v is EOL, must be %s", product, fv.GetField(), pval, minVer), false
-	} else {
-		return "", true
+	if !EolProductVersion(p.Product, ProductVersion(p.Version)) {
+		return nil
+	}
+
+	return &ValidationError{
+		FailedField: "v",
+		Value:       p.Version,
+		Msg:         fmt.Sprintf("%s %s %v is EOL, must be %s", p.Product, fv.GetField(), p.Version, minVer),
+		Code:        fv.Code,
 	}
 }

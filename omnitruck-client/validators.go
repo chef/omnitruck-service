@@ -5,10 +5,8 @@ import (
 )
 
 type ValidatorInterface interface {
-	GetValues() interface{}
-	GetField() string
 	GetCode() int
-	Validate(string, RequestParams) (string, bool)
+	Validate(*RequestParams) *ValidationError
 }
 
 type ValidatorFunc func(string, ValidatorInterface) bool
@@ -21,16 +19,16 @@ func (rv *RequestValidator) Add(f ValidatorInterface) {
 	rv.validators = append(rv.validators, f)
 }
 
-type RequestParams interface {
-	Get(string) string
-}
-
-type ErrorResponse struct {
+type ValidationError struct {
 	FailedField string
 	Value       string
 	Tag         string
 	Msg         string
 	Code        int
+}
+
+func (e *ValidationError) Error() string {
+	return e.Msg
 }
 
 func NewValidator() RequestValidator {
@@ -41,27 +39,18 @@ func NewValidator() RequestValidator {
 	return rv
 }
 
-func (o *RequestValidator) Params(params RequestParams) []*ErrorResponse {
-	var errors []*ErrorResponse
+func (o *RequestValidator) Params(params *RequestParams) []*ValidationError {
+	var errors []*ValidationError
 	for _, vi := range o.validators {
-		pVal := params.Get(vi.GetField())
-		if len(pVal) > 0 {
-			if msg, ok := vi.Validate(pVal, params); !ok {
-				element := ErrorResponse{
-					FailedField: vi.GetField(),
-					Value:       pVal,
-					Msg:         msg,
-					Code:        vi.GetCode(),
-				}
-				errors = append(errors, &element)
-			}
+		if err := vi.Validate(params); err != nil {
+			errors = append(errors, err)
 		}
 	}
 
 	return errors
 }
 
-func (o *RequestValidator) ErrorMessages(errors []*ErrorResponse) (string, int) {
+func (o *RequestValidator) ErrorMessages(errors []*ValidationError) (string, int) {
 	var msgs []string
 	var code int
 
@@ -69,7 +58,7 @@ func (o *RequestValidator) ErrorMessages(errors []*ErrorResponse) (string, int) 
 		if err.Code > code {
 			code = err.Code
 		}
-		msgs = append(msgs, err.Msg)
+		msgs = append(msgs, err.Error())
 	}
 
 	return strings.Join(msgs, "\n"), code

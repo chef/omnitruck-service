@@ -12,6 +12,16 @@ type Request struct {
 	Ok      bool
 }
 
+type RequestParams struct {
+	Channel         string
+	Product         string
+	Version         string
+	Platform        string
+	PlatformVersion string
+	Architecture    string
+	Eol             string
+}
+
 func (r *Request) Failure(code int, msg string) *Request {
 	r.Code = code
 	r.Message = msg

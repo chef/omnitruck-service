@@ -34,12 +34,14 @@ type ApiService struct {
 	Omnitruck omnitruck.Omnitruck
 	Log       *log.Entry
 	App       *fiber.App
+	Validator omnitruck.RequestValidator
 }
 
 func (server *ApiService) Initialize(c Config) *ApiService {
 	server.Omnitruck = omnitruck.NewOmnitruckClient()
 	server.Log = c.Log
 	server.Config = c
+	server.Validator = omnitruck.NewValidator()
 
 	return server
 }
@@ -64,6 +66,23 @@ func (server *ApiService) StartService() {
 			server.Log.WithError(err).Fatal("Service stopped")
 		}
 	}
+}
+
+func (server *ApiService) ValidateRequest(params *omnitruck.RequestParams, c *fiber.Ctx) (error, bool) {
+	server.Log.Infof("Validating request %+v", params)
+	errors := server.Validator.Params(params)
+	if errors != nil {
+		msgs, code := server.Validator.ErrorMessages(errors)
+
+		server.Log.WithField("errors", msgs).Error("Error validating request")
+		return c.Status(code).JSON(ErrorResponse{
+			Code:       code,
+			StatusText: http.StatusText(code),
+			Message:    msgs,
+		}), false
+	}
+
+	return nil, true
 }
 
 func (server *ApiService) SendResponse(c *fiber.Ctx, data omnitruck.RequestDataInterface) error {
