@@ -9,16 +9,6 @@ type ValidatorInterface interface {
 	Validate(*RequestParams) *ValidationError
 }
 
-type ValidatorFunc func(string, ValidatorInterface) bool
-
-type RequestValidator struct {
-	validators []ValidatorInterface
-}
-
-func (rv *RequestValidator) Add(f ValidatorInterface) {
-	rv.validators = append(rv.validators, f)
-}
-
 type ValidationError struct {
 	FailedField string
 	Value       string
@@ -31,12 +21,26 @@ func (e *ValidationError) Error() string {
 	return e.Msg
 }
 
+type ValidatorFunc func(string, ValidatorInterface) bool
+
+type RequestValidator struct {
+	validators []ValidatorInterface
+}
+
 func NewValidator() RequestValidator {
 	rv := RequestValidator{
 		validators: []ValidatorInterface{},
 	}
 
 	return rv
+}
+
+func (rv *RequestValidator) GetValidators() []ValidatorInterface {
+	return rv.validators
+}
+
+func (rv *RequestValidator) Add(f ValidatorInterface) {
+	rv.validators = append(rv.validators, f)
 }
 
 func (o *RequestValidator) Params(params *RequestParams) []*ValidationError {
