@@ -35,10 +35,10 @@ definitions:
       status_text:
         type: string
     type: object
-host: localhost:3000
+host: localhost:3002
 info:
   contact: {}
-  description: Licensed Omnitruck API for opensource products
+  description: Licensed Commercial Omnitruck API
   license:
     url: http://www.apache.org/licenses/LICENSE-2.0.html
 paths:
@@ -286,10 +286,6 @@ paths:
         in: header
         name: license_id
         type: string
-      - description: EOL Products
-        in: query
-        name: eol
-        type: boolean
       responses:
         "200":
           description: OK

@@ -5,11 +5,11 @@ import (
 	"sync"
 	"time"
 
-	omnitruck "github.com/chef/omnitruck-service/omnitruck-client"
+	"github.com/chef/omnitruck-service/clients"
+	"github.com/chef/omnitruck-service/clients/omnitruck"
 	fiber "github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/fiber/v2/middleware/recover"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -56,7 +56,7 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	server.App.Use(cors.New())
 	// This will catch panics in the app and prevent it from crashing the server
 	// TODO: Figure out if we can better handle logging these, currently it just returns a panic message to the user
-	server.App.Use(recover.New())
+	// server.App.Use(recover.New())
 
 	return server
 }
@@ -79,6 +79,12 @@ func (server *ApiService) StartService() {
 		Format: "[${ip}]:${port} ${status} - ${method} ${path}\n",
 		Output: lw,
 	}))
+
+	server.App.Get("/", server.HealthCheck)
+	server.App.Get("/status", server.HealthCheck)
+	server.App.Get("/products", server.productsHandler)
+	server.App.Get("/platforms", server.platformsHandler)
+	server.App.Get("/architectures", server.architecturesHandler)
 
 	err := server.App.Listen(server.Config.Listen)
 	if err != nil {
@@ -107,14 +113,80 @@ func (server *ApiService) ValidateRequest(params *omnitruck.RequestParams, c *fi
 	return nil, true
 }
 
-func (server *ApiService) SendResponse(c *fiber.Ctx, data omnitruck.RequestDataInterface) error {
+func (server *ApiService) SendResponse(c *fiber.Ctx, data clients.RequestDataInterface) error {
 	return c.JSON(data)
 }
 
-func (server *ApiService) SendError(c *fiber.Ctx, request *omnitruck.Request) error {
+func (server *ApiService) SendError(c *fiber.Ctx, request *clients.Request) error {
 	return c.Status(request.Code).JSON(ErrorResponse{
 		Code:       request.Code,
 		StatusText: http.StatusText(request.Code),
 		Message:    request.Message,
 	})
+}
+
+func (server *ApiService) HealthCheck(c *fiber.Ctx) error {
+	res := map[string]interface{}{
+		"data": "Server is up and running",
+	}
+
+	return c.JSON(res)
+}
+
+// @description Returns a valid list of valid product keys.
+// @description Any of these product keys can be used in the <PRODUCT> value of other endpoints. Please note many of these products are used for internal tools only and many have been EOL’d.
+// @Param eol			query 	bool 	false 	"EOL Products"
+// @Success 200 {object} omnitruck.ItemList
+// @Failure 500 {object} services.ErrorResponse
+// @Router /products [get]
+func (server *ApiService) productsHandler(c *fiber.Ctx) error {
+	params := &omnitruck.RequestParams{
+		Eol: c.Query("eol", "false"),
+	}
+
+	var data omnitruck.ItemList
+	request := server.Omnitruck.Products(params, &data)
+
+	if params.Eol != "true" {
+		data = omnitruck.FilterList(data, omnitruck.EolProductName)
+	}
+
+	if request.Ok {
+		return server.SendResponse(c, &data)
+	} else {
+		return server.SendError(c, request)
+	}
+}
+
+// @description Returns a valid list of valid platform keys along with full friendly names.
+// @description Any of these platform keys can be used in the p query string value in various endpoints below.
+// @Success 200 {object} omnitruck.PlatformList
+// @Failure 500 {object} services.ErrorResponse
+// @Router /platforms [get]
+func (server *ApiService) platformsHandler(c *fiber.Ctx) error {
+	var data omnitruck.PlatformList
+	request := server.Omnitruck.Platforms().ParseData(&data)
+
+	if request.Ok {
+		return server.SendResponse(c, &data)
+	} else {
+		return server.SendError(c, request)
+	}
+}
+
+// @description Returns a valid list of valid platform keys along with friendly names.
+// @description Any of these architecture keys can be used in the p query string value in various endpoints below.
+// @Success 200 {object} omnitruck.ItemList
+// @Failure 500 {object} services.ErrorResponse
+// @Router /architectures [get]
+func (server *ApiService) architecturesHandler(c *fiber.Ctx) error {
+
+	var data omnitruck.ItemList
+	request := server.Omnitruck.Architectures().ParseData(&data)
+
+	if request.Ok {
+		return server.SendResponse(c, &data)
+	} else {
+		return server.SendError(c, request)
+	}
 }

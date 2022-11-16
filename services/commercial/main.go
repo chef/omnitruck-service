@@ -1,26 +1,26 @@
-package trial
+package commercial
 
 import (
 	"github.com/chef/omnitruck-service/clients/omnitruck"
-	_ "github.com/chef/omnitruck-service/docs/trial"
+	_ "github.com/chef/omnitruck-service/docs/commercial"
 	"github.com/chef/omnitruck-service/middleware/license"
 	"github.com/chef/omnitruck-service/services"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/swagger"
 )
 
-type TrialService struct {
+type CommercialService struct {
 	services.ApiService
 }
 
-// @title			Licensed Trial Omnitruck API
+// @title			Licensed Commercial Omnitruck API
 // @version			1.0
-// @description 	Licensed Trial Omnitruck API
+// @description 	Licensed Commercial Omnitruck API
 // @license.name	Apache 2.0
 // @license.url 	http://www.apache.org/licenses/LICENSE-2.0.html
-// @host localhost:3001
-func NewServer(c services.Config) *TrialService {
-	service := TrialService{}
+// @host localhost:3002
+func NewServer(c services.Config) *CommercialService {
+	service := CommercialService{}
 	service.Initialize(c)
 
 	service.App.Use(license.New(license.Config{
@@ -33,22 +33,6 @@ func NewServer(c services.Config) *TrialService {
 		},
 	}))
 
-	channel := omnitruck.ContainsValidator{
-		Field:      "Channel",
-		Values:     []string{"stable"},
-		Code:       400,
-		AllowEmpty: true,
-	}
-	service.Validator.Add(&channel)
-
-	version := omnitruck.ContainsValidator{
-		Field:      "Version",
-		Values:     []string{"latest"},
-		Code:       400,
-		AllowEmpty: true,
-	}
-	service.Validator.Add(&version)
-
 	service.Log.Info("Adding EOL Validator")
 	eolversion := omnitruck.EolVersionValidator{}
 	service.Validator.Add(&eolversion)
@@ -58,9 +42,9 @@ func NewServer(c services.Config) *TrialService {
 	return &service
 }
 
-func (server *TrialService) buildRouter() {
+func (server *CommercialService) buildRouter() {
 	server.App.Get("/swagger/*", swagger.New(swagger.Config{
-		InstanceName: "Trial",
+		InstanceName: "Commercial",
 	}))
 
 	server.App.Get("/:channel/:product/versions/latest", server.latestVersionHandler)
@@ -68,6 +52,7 @@ func (server *TrialService) buildRouter() {
 	server.App.Get("/:channel/:product/packages", server.productPackagesHandler)
 	server.App.Get("/:channel/:product/metadata", server.productMetadataHandler)
 	server.App.Get("/:channel/:product/download", server.productDownloadHandler)
+
 }
 
 // @description Get the latest version number for a particular channel and product combination.
@@ -78,7 +63,7 @@ func (server *TrialService) buildRouter() {
 // @Failure 400 {object} services.ErrorResponse
 // @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/versions/latest [get]
-func (server *TrialService) latestVersionHandler(c *fiber.Ctx) error {
+func (server *CommercialService) latestVersionHandler(c *fiber.Ctx) error {
 	params := &omnitruck.RequestParams{
 		Channel: c.Params("channel"),
 		Product: c.Params("product"),
@@ -109,7 +94,7 @@ func (server *TrialService) latestVersionHandler(c *fiber.Ctx) error {
 // @Failure 400 {object} services.ErrorResponse
 // @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/versions/all [get]
-func (server *TrialService) productVersionsHandler(c *fiber.Ctx) error {
+func (server *CommercialService) productVersionsHandler(c *fiber.Ctx) error {
 	params := &omnitruck.RequestParams{
 		Channel: c.Params("channel"),
 		Product: c.Params("product"),
@@ -126,13 +111,6 @@ func (server *TrialService) productVersionsHandler(c *fiber.Ctx) error {
 
 	if params.Eol != "true" {
 		data = omnitruck.FilterProductList(data, params.Product, omnitruck.EolProductVersion)
-	}
-
-	// Only return the latest version if no license is present
-	if c.Locals("license") == nil {
-		data = []omnitruck.ProductVersion{
-			data[len(data)-1],
-		}
 	}
 
 	if request.Ok {
@@ -154,7 +132,7 @@ func (server *TrialService) productVersionsHandler(c *fiber.Ctx) error {
 // @Failure 400 {object} services.ErrorResponse
 // @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/packages [get]
-func (server *TrialService) productPackagesHandler(c *fiber.Ctx) error {
+func (server *CommercialService) productPackagesHandler(c *fiber.Ctx) error {
 	params := &omnitruck.RequestParams{
 		Channel: c.Params("channel"),
 		Product: c.Params("product"),
@@ -192,7 +170,7 @@ func (server *TrialService) productPackagesHandler(c *fiber.Ctx) error {
 // @Failure 400 {object} services.ErrorResponse
 // @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/metadata [get]
-func (server *TrialService) productMetadataHandler(c *fiber.Ctx) error {
+func (server *CommercialService) productMetadataHandler(c *fiber.Ctx) error {
 	params := &omnitruck.RequestParams{
 		Channel:         c.Params("channel"),
 		Product:         c.Params("product"),
@@ -232,7 +210,7 @@ func (server *TrialService) productMetadataHandler(c *fiber.Ctx) error {
 // @Failure 400 {object} services.ErrorResponse
 // @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/download [get]
-func (server *TrialService) productDownloadHandler(c *fiber.Ctx) error {
+func (server *CommercialService) productDownloadHandler(c *fiber.Ctx) error {
 	params := &omnitruck.RequestParams{
 		Channel:         c.Params("channel"),
 		Product:         c.Params("product"),

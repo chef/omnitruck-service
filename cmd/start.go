@@ -7,9 +7,11 @@ package cmd
 import (
 	"io/ioutil"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/chef/omnitruck-service/services"
+	"github.com/chef/omnitruck-service/services/commercial"
 	"github.com/chef/omnitruck-service/services/opensource"
 	"github.com/chef/omnitruck-service/services/trial"
 	log "github.com/sirupsen/logrus"
@@ -18,14 +20,20 @@ import (
 )
 
 type CliConfig struct {
-	Opensource ServiceDef `yaml:"opensource"`
-	Trial      ServiceDef `yaml:"trial"`
+	Opensource ServiceDef  `yaml:"opensource"`
+	Trial      ServiceDef  `yaml:"trial"`
+	Commercial ServiceDef  `yaml:"commercial"`
+	Logging    LoggingConf `yaml:"logging"`
 }
 
 type ServiceDef struct {
 	Name    string `yaml:"name"`
 	Enabled bool   `yaml:"enabled"`
 	Listen  string `yaml:"listen"`
+}
+
+type LoggingConf struct {
+	Format string `yaml:"format"`
 }
 
 var (
@@ -44,16 +52,11 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		log.SetOutput(os.Stdout)
-		// log.SetFormatter(&log.JSONFormatter{})
-		log.SetLevel(log.InfoLevel)
-
-		logger := log.WithField("pkg", "cmd/start")
+		logger := setupLogging()
 
 		var wg sync.WaitGroup
 
 		if cliConfig.Opensource.Enabled {
-			logger.Info("Starting Opensource API")
 			os_api := opensource.NewServer(services.Config{
 				Name:   cliConfig.Opensource.Name,
 				Listen: cliConfig.Opensource.Listen,
@@ -62,7 +65,6 @@ to quickly create a Cobra application.`,
 			os_api.Start(&wg)
 		}
 		if cliConfig.Trial.Enabled {
-			logger.Info("Starting Trial API")
 			trial_api := trial.NewServer(services.Config{
 				Name:   cliConfig.Trial.Name,
 				Listen: cliConfig.Trial.Listen,
@@ -70,12 +72,29 @@ to quickly create a Cobra application.`,
 			})
 			trial_api.Start(&wg)
 		}
+		if cliConfig.Commercial.Enabled {
+			commercial_api := commercial.NewServer(services.Config{
+				Name:   cliConfig.Commercial.Name,
+				Listen: cliConfig.Commercial.Listen,
+				Log:    logger.WithField("pkg", cliConfig.Commercial.Name),
+			})
+			commercial_api.Start(&wg)
+		}
 		wg.Wait()
 	},
 }
 
+func setupLogging() *log.Entry {
+	log.SetOutput(os.Stdout)
+	if strings.ToLower(cliConfig.Logging.Format) == "json" {
+		log.SetFormatter(&log.JSONFormatter{})
+	}
+	log.SetLevel(log.InfoLevel)
+
+	return log.WithField("pkg", "cmd/start")
+}
+
 func initConfig() {
-	log.Info("Init Config")
 	if cfgFile != "" {
 		// Use config file from the flag
 		yamlFile, err := ioutil.ReadFile(cfgFile)

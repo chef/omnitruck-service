@@ -48,7 +48,7 @@ const docTemplateOpensource = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/omnitruck_client.PlatformList"
+                            "$ref": "#/definitions/omnitruck.PlatformList"
                         }
                     },
                     "500": {
@@ -63,6 +63,14 @@ const docTemplateOpensource = `{
         "/products": {
             "get": {
                 "description": "Returns a valid list of valid product keys.\nAny of these product keys can be used in the \u003cPRODUCT\u003e value of other endpoints. Please note many of these products are used for internal tools only and many have been EOL’d.",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "EOL Products",
+                        "name": "eol",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -241,7 +249,7 @@ const docTemplateOpensource = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/omnitruck_client.PackageMetadata"
+                            "$ref": "#/definitions/omnitruck.PackageMetadata"
                         }
                     },
                     "400": {
@@ -306,7 +314,7 @@ const docTemplateOpensource = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/omnitruck_client.PackageList"
+                            "$ref": "#/definitions/omnitruck.PackageList"
                         }
                     },
                     "400": {
@@ -444,19 +452,19 @@ const docTemplateOpensource = `{
         }
     },
     "definitions": {
-        "omnitruck_client.ArchList": {
+        "omnitruck.ArchList": {
             "type": "object",
             "additionalProperties": {
-                "$ref": "#/definitions/omnitruck_client.PackageMetadata"
+                "$ref": "#/definitions/omnitruck.PackageMetadata"
             }
         },
-        "omnitruck_client.PackageList": {
+        "omnitruck.PackageList": {
             "type": "object",
             "additionalProperties": {
-                "$ref": "#/definitions/omnitruck_client.PlatformVersionList"
+                "$ref": "#/definitions/omnitruck.PlatformVersionList"
             }
         },
-        "omnitruck_client.PackageMetadata": {
+        "omnitruck.PackageMetadata": {
             "type": "object",
             "properties": {
                 "sha1": {
@@ -473,16 +481,16 @@ const docTemplateOpensource = `{
                 }
             }
         },
-        "omnitruck_client.PlatformList": {
+        "omnitruck.PlatformList": {
             "type": "object",
             "additionalProperties": {
                 "type": "string"
             }
         },
-        "omnitruck_client.PlatformVersionList": {
+        "omnitruck.PlatformVersionList": {
             "type": "object",
             "additionalProperties": {
-                "$ref": "#/definitions/omnitruck_client.ArchList"
+                "$ref": "#/definitions/omnitruck.ArchList"
             }
         },
         "services.ErrorResponse": {

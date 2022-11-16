@@ -1,4 +1,4 @@
-package omnitruck_client
+package omnitruck
 
 import (
 	version "github.com/hashicorp/go-version"
@@ -76,7 +76,7 @@ func EolProductName(name string) bool {
 
 func EolProductVersion(product string, v ProductVersion) bool {
 	// Latest should never be EOL
-	if v == "latest" {
+	if v == "latest" || len(v) == 0 {
 		return false
 	}
 	// If we can't find the product in our list then it's no EOL
@@ -85,8 +85,16 @@ func EolProductVersion(product string, v ProductVersion) bool {
 		return false
 	}
 
-	v1, _ := version.NewVersion(string(v))
-	return !p.SupportedVersion.Check(v1)
+	v1, err := version.NewVersion(string(v))
+	if err != nil {
+		return false
+	}
+
+	if p.SupportedVersion != nil {
+		return !p.SupportedVersion.Check(v1)
+	}
+
+	return false
 }
 
 func OsProductName(name string) bool {

@@ -1,4 +1,4 @@
-package omnitruck_client
+package omnitruck
 
 func FilterList[T comparable](s []T, filter func(T) bool) []T {
 	out := make([]T, len(s))

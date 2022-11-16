@@ -1,4 +1,4 @@
-package omnitruck_client
+package omnitruck
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/chef/omnitruck-service/clients"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
@@ -15,9 +16,6 @@ const omnitruckApi = "https://omnitruck.chef.io"
 type Omnitruck struct {
 	client *http.Client
 	log    *logrus.Entry
-}
-
-type RequestDataInterface interface {
 }
 
 type ItemList []string
@@ -33,6 +31,16 @@ type PackageMetadata struct {
 	Version string `json:"version"`
 }
 
+type RequestParams struct {
+	Channel         string
+	Product         string
+	Version         string
+	Platform        string
+	PlatformVersion string
+	Architecture    string
+	Eol             string
+}
+
 func NewOmnitruckClient() Omnitruck {
 	return Omnitruck{
 		client: &http.Client{
@@ -42,15 +50,15 @@ func NewOmnitruckClient() Omnitruck {
 	}
 }
 
-func (ot *Omnitruck) logRequestError(msg string, request *Request, err error) {
+func (ot *Omnitruck) logRequestError(msg string, request *clients.Request, err error) {
 	ot.log.WithError(err).
 		WithField("status", request.Code).
 		WithField("body", string(request.Body)).
 		Error(msg)
 }
 
-func (ot *Omnitruck) Get(url string) *Request {
-	request := Request{
+func (ot *Omnitruck) Get(url string) *clients.Request {
+	request := clients.Request{
 		Url: url,
 	}
 
@@ -87,43 +95,43 @@ func (ot *Omnitruck) Get(url string) *Request {
 	return request.Success()
 }
 
-func (ot *Omnitruck) Products(p *RequestParams, data RequestDataInterface) *Request {
+func (ot *Omnitruck) Products(p *RequestParams, data clients.RequestDataInterface) *clients.Request {
 	url := fmt.Sprintf("%s/products", omnitruckApi)
 
 	return ot.Get(url).ParseData(data)
 }
 
-func (ot *Omnitruck) Platforms() *Request {
+func (ot *Omnitruck) Platforms() *clients.Request {
 	url := fmt.Sprintf("%s/platforms", omnitruckApi)
 
 	return ot.Get(url)
 }
 
-func (ot *Omnitruck) Architectures() *Request {
+func (ot *Omnitruck) Architectures() *clients.Request {
 	url := fmt.Sprintf("%s/architectures", omnitruckApi)
 
 	return ot.Get(url)
 }
 
-func (ot *Omnitruck) LatestVersion(p *RequestParams) *Request {
+func (ot *Omnitruck) LatestVersion(p *RequestParams) *clients.Request {
 	url := fmt.Sprintf("%s/%s/%s/versions/latest", omnitruckApi, p.Channel, p.Product)
 
 	return ot.Get(url)
 }
 
-func (ot *Omnitruck) ProductVersions(p *RequestParams) *Request {
+func (ot *Omnitruck) ProductVersions(p *RequestParams) *clients.Request {
 	url := fmt.Sprintf("%s/%s/%s/versions/all", omnitruckApi, p.Channel, p.Product)
 
 	return ot.Get(url)
 }
 
-func (ot *Omnitruck) ProductPackages(p *RequestParams) *Request {
+func (ot *Omnitruck) ProductPackages(p *RequestParams) *clients.Request {
 	url := fmt.Sprintf("%s/%s/%s/packages?v=%s", omnitruckApi, p.Channel, p.Product, p.Version)
 
 	return ot.Get(url)
 }
 
-func (ot *Omnitruck) ProductMetadata(p *RequestParams) *Request {
+func (ot *Omnitruck) ProductMetadata(p *RequestParams) *clients.Request {
 	url := fmt.Sprintf("%s/%s/%s/metadata?v=%s&p=%s&pv=%s&m=%s", omnitruckApi,
 		p.Channel,
 		p.Product,
@@ -139,6 +147,6 @@ func (ot *Omnitruck) ProductMetadata(p *RequestParams) *Request {
 // Product Download needs to fetch the metadata record instead of the Omnitruck download API
 // The Omnitruck API normall redirects the user to the download URL and we need to do this
 // ourselves.
-func (ot *Omnitruck) ProductDownload(p *RequestParams) *Request {
+func (ot *Omnitruck) ProductDownload(p *RequestParams) *clients.Request {
 	return ot.ProductMetadata(p)
 }

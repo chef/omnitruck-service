@@ -1,10 +1,8 @@
 package opensource
 
 import (
-	"net/http"
-
+	"github.com/chef/omnitruck-service/clients/omnitruck"
 	_ "github.com/chef/omnitruck-service/docs/opensource"
-	omnitruck "github.com/chef/omnitruck-service/omnitruck-client"
 	"github.com/chef/omnitruck-service/services"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/swagger"
@@ -23,14 +21,16 @@ type OpensourceService struct {
 func NewServer(c services.Config) *OpensourceService {
 	service := OpensourceService{}
 	service.Initialize(c)
-	service.buildRouter()
 
-	channel := omnitruck.ChannelValidator{
-		Values: []string{"stable"},
-		Code:   400,
+	channel := omnitruck.ContainsValidator{
+		Field:      "Channel",
+		Values:     []string{"stable"},
+		Code:       400,
+		AllowEmpty: true,
 	}
 	service.Validator.Add(&channel)
 
+	service.buildRouter()
 	return &service
 }
 
@@ -38,95 +38,11 @@ func (server *OpensourceService) buildRouter() {
 	server.App.Get("/swagger/*", swagger.New(swagger.Config{
 		InstanceName: "Opensource",
 	}))
-	server.App.Get("/", server.HealthCheck)
-	server.App.Get("/products", server.productsHandler)
-	server.App.Get("/platforms", server.platformsHandler)
-	server.App.Get("/architectures", server.architecturesHandler)
 	server.App.Get("/:channel/:product/versions/latest", server.latestVersionHandler)
 	server.App.Get("/:channel/:product/versions/all", server.productVersionsHandler)
 	server.App.Get("/:channel/:product/packages", server.productPackagesHandler)
 	server.App.Get("/:channel/:product/metadata", server.productMetadataHandler)
 	server.App.Get("/:channel/:product/download", server.productDownloadHandler)
-
-	server.App.Get("/status", server.HealthCheck)
-}
-
-func (server *OpensourceService) HealthCheck(c *fiber.Ctx) error {
-	res := map[string]interface{}{
-		"data": "Server is up and running",
-	}
-
-	return c.JSON(res)
-}
-
-func (server *OpensourceService) ValidateRequest(params *omnitruck.RequestParams, c *fiber.Ctx) (error, bool) {
-	errors := server.Validator.Params(params)
-	if errors != nil {
-		msgs, code := server.Validator.ErrorMessages(errors)
-
-		server.Log.WithField("errors", msgs).Error("Error validating request")
-		return c.Status(code).JSON(services.ErrorResponse{
-			Code:       code,
-			StatusText: http.StatusText(code),
-			Message:    msgs,
-		}), false
-	}
-	return nil, true
-}
-
-// @description Returns a valid list of valid product keys.
-// @description Any of these product keys can be used in the <PRODUCT> value of other endpoints. Please note many of these products are used for internal tools only and many have been EOL’d.
-// @Success 200 {object} omnitruck.ItemList
-// @Failure 500 {object} services.ErrorResponse
-// @Router /products [get]
-func (server *OpensourceService) productsHandler(c *fiber.Ctx) error {
-	params := &omnitruck.RequestParams{
-		Eol: c.Query("eol", "false"),
-	}
-
-	var data omnitruck.ItemList
-	request := server.Omnitruck.Products(params, &data)
-
-	data = omnitruck.FilterList(data, omnitruck.OsProductName)
-
-	if request.Ok {
-		return server.SendResponse(c, &data)
-	} else {
-		return server.SendError(c, request)
-	}
-}
-
-// @description Returns a valid list of valid platform keys along with full friendly names.
-// @description Any of these platform keys can be used in the p query string value in various endpoints below.
-// @Success 200 {object} omnitruck.PlatformList
-// @Failure 500 {object} services.ErrorResponse
-// @Router /platforms [get]
-func (server *OpensourceService) platformsHandler(c *fiber.Ctx) error {
-	var data omnitruck.PlatformList
-	request := server.Omnitruck.Platforms().ParseData(&data)
-
-	if request.Ok {
-		return server.SendResponse(c, &data)
-	} else {
-		return server.SendError(c, request)
-	}
-}
-
-// @description Returns a valid list of valid platform keys along with friendly names.
-// @description Any of these architecture keys can be used in the p query string value in various endpoints below.
-// @Success 200 {object} omnitruck.ItemList
-// @Failure 500 {object} services.ErrorResponse
-// @Router /architectures [get]
-func (server *OpensourceService) architecturesHandler(c *fiber.Ctx) error {
-
-	var data omnitruck.ItemList
-	request := server.Omnitruck.Architectures().ParseData(&data)
-
-	if request.Ok {
-		return server.SendResponse(c, &data)
-	} else {
-		return server.SendError(c, request)
-	}
 }
 
 // @description Get the latest version number for a particular channel and product combination.
@@ -148,11 +64,20 @@ func (server *OpensourceService) latestVersionHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	var data omnitruck.ProductVersion
-	request := server.Omnitruck.LatestVersion(params).ParseData(&data)
+	var data []omnitruck.ProductVersion
+	// Need to fetch all versions and filter out to only show the OS versions
+	request := server.Omnitruck.ProductVersions(params).ParseData(&data)
+
+	data = omnitruck.FilterList(data, func(v omnitruck.ProductVersion) bool {
+		return !omnitruck.OsProductVersion(params.Product, v)
+	})
+
+	// Return the last opensource version
+	// This assumes the versions are returned in ascending order
+	latest_os_version := data[len(data)-1]
 
 	if request.Ok {
-		return server.SendResponse(c, &data)
+		return server.SendResponse(c, &latest_os_version)
 	} else {
 		return server.SendError(c, request)
 	}
@@ -180,12 +105,16 @@ func (server *OpensourceService) productVersionsHandler(c *fiber.Ctx) error {
 
 	var data []omnitruck.ProductVersion
 	request := server.Omnitruck.ProductVersions(params).ParseData(&data)
+
+	data = omnitruck.FilterList(data, func(v omnitruck.ProductVersion) bool {
+		return !omnitruck.OsProductVersion(params.Product, v)
+	})
+
 	if request.Ok {
 		return server.SendResponse(c, &data)
 	} else {
 		return server.SendError(c, request)
 	}
-
 }
 
 // @description Get the full list of all packages for a particular channel and product combination.

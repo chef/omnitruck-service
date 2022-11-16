@@ -1,13 +1,13 @@
 definitions:
-  omnitruck_client.ArchList:
+  omnitruck.ArchList:
     additionalProperties:
-      $ref: '#/definitions/omnitruck_client.PackageMetadata'
+      $ref: '#/definitions/omnitruck.PackageMetadata'
     type: object
-  omnitruck_client.PackageList:
+  omnitruck.PackageList:
     additionalProperties:
-      $ref: '#/definitions/omnitruck_client.PlatformVersionList'
+      $ref: '#/definitions/omnitruck.PlatformVersionList'
     type: object
-  omnitruck_client.PackageMetadata:
+  omnitruck.PackageMetadata:
     properties:
       sha1:
         type: string
@@ -18,13 +18,13 @@ definitions:
       version:
         type: string
     type: object
-  omnitruck_client.PlatformList:
+  omnitruck.PlatformList:
     additionalProperties:
       type: string
     type: object
-  omnitruck_client.PlatformVersionList:
+  omnitruck.PlatformVersionList:
     additionalProperties:
-      $ref: '#/definitions/omnitruck_client.ArchList'
+      $ref: '#/definitions/omnitruck.ArchList'
     type: object
   services.ErrorResponse:
     properties:
@@ -167,7 +167,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/omnitruck_client.PackageMetadata'
+            $ref: '#/definitions/omnitruck.PackageMetadata'
         "400":
           description: Bad Request
           schema:
@@ -213,7 +213,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/omnitruck_client.PackageList'
+            $ref: '#/definitions/omnitruck.PackageList'
         "400":
           description: Bad Request
           schema:
@@ -324,7 +324,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/omnitruck_client.PlatformList'
+            $ref: '#/definitions/omnitruck.PlatformList'
         "500":
           description: Internal Server Error
           schema:

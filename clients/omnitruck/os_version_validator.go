@@ -1,4 +1,4 @@
-package omnitruck_client
+package omnitruck
 
 import "fmt"
 

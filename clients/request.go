@@ -1,4 +1,4 @@
-package omnitruck_client
+package clients
 
 import (
 	"encoding/json"
@@ -12,14 +12,7 @@ type Request struct {
 	Ok      bool
 }
 
-type RequestParams struct {
-	Channel         string
-	Product         string
-	Version         string
-	Platform        string
-	PlatformVersion string
-	Architecture    string
-	Eol             string
+type RequestDataInterface interface {
 }
 
 func (r *Request) Failure(code int, msg string) *Request {
