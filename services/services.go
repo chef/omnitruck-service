@@ -10,6 +10,7 @@ import (
 	fiber "github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -56,7 +57,14 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	server.App.Use(cors.New())
 	// This will catch panics in the app and prevent it from crashing the server
 	// TODO: Figure out if we can better handle logging these, currently it just returns a panic message to the user
-	// server.App.Use(recover.New())
+	server.App.Use(recover.New())
+
+	// Add the endpoints that don't require any special handling for various APIs
+	server.App.Get("/", server.HealthCheck)
+	server.App.Get("/status", server.HealthCheck)
+	server.App.Get("/products", server.productsHandler)
+	server.App.Get("/platforms", server.platformsHandler)
+	server.App.Get("/architectures", server.architecturesHandler)
 
 	return server
 }
@@ -70,22 +78,17 @@ func (server *ApiService) Start(wg *sync.WaitGroup) error {
 
 func (server *ApiService) StartService() {
 	// Setup io writer for the logger
+	// Needs to be in the method where we start the service
+	// So the io writer will be closed when the service ends
 	lw := server.Log.Writer()
 	defer lw.Close()
-
-	server.Log.Infof("Starting %s server at: %s", server.Config.Name, server.Config.Listen)
 
 	server.App.Use(logger.New(logger.Config{
 		Format: "[${ip}]:${port} ${status} - ${method} ${path}\n",
 		Output: lw,
 	}))
 
-	server.App.Get("/", server.HealthCheck)
-	server.App.Get("/status", server.HealthCheck)
-	server.App.Get("/products", server.productsHandler)
-	server.App.Get("/platforms", server.platformsHandler)
-	server.App.Get("/architectures", server.architecturesHandler)
-
+	server.Log.Infof("Starting %s server at: %s", server.Config.Name, server.Config.Listen)
 	err := server.App.Listen(server.Config.Listen)
 	if err != nil {
 		if err == http.ErrServerClosed {
