@@ -16,6 +16,7 @@ func (e *InvalidLicense) Error() string {
 }
 
 type Config struct {
+	Required      bool
 	Next          func(license_id string, c *fiber.Ctx) bool
 	LicenseClient *clients.License
 	Unauthorized  func(code int, msg string, c *fiber.Ctx) error
@@ -23,6 +24,7 @@ type Config struct {
 }
 
 var ConfigDefault = Config{
+	Required:      true,
 	Next:          nil,
 	LicenseClient: nil,
 	Unauthorized:  nil,
@@ -66,7 +68,12 @@ func New(config ...Config) fiber.Handler {
 		}
 
 		if len(id) == 0 {
-			return cfg.Unauthorized(403, "Missing license_id header", c)
+			if cfg.Required {
+				return cfg.Unauthorized(403, "Missing license_id header", c)
+			} else {
+				// No license id found but not required
+				return c.Next()
+			}
 		}
 
 		cfg.Log.Info("Validating license id: ", id)

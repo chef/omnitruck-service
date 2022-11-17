@@ -14,6 +14,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type ApiType int
+
+const (
+	Trial ApiType = iota
+	Opensource
+	Commercial
+)
+
 type ErrorResponse struct {
 	Code       int    `json:"code" example:200`
 	StatusText string `json:"status_text" example:OK`
@@ -24,6 +32,7 @@ type Config struct {
 	Name   string
 	Listen string
 	Log    *log.Entry
+	Mode   ApiType
 }
 
 type Service interface {
@@ -39,6 +48,7 @@ type ApiService struct {
 	Log       *log.Entry
 	App       *fiber.App
 	Validator omnitruck.RequestValidator
+	Mode      ApiType
 }
 
 func (server *ApiService) Initialize(c Config) *ApiService {
@@ -46,6 +56,7 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	server.Log = c.Log
 	server.Config = c
 	server.Validator = omnitruck.NewValidator()
+	server.Mode = c.Mode
 
 	server.App = fiber.New(fiber.Config{
 		DisableStartupMessage: true,

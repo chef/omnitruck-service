@@ -44,7 +44,7 @@ func (fv *ContainsValidator) Validate(p *RequestParams) *ValidationError {
 			return &ValidationError{
 				FailedField: fv.Field,
 				Value:       fieldValue,
-				Msg:         fmt.Sprintf("%s: %v is not one of %v", fv.Field, fieldValue, fv.Values),
+				Msg:         fmt.Sprintf("%s: %v must be one of %v", fv.Field, fieldValue, fv.Values),
 				Code:        fv.Code,
 			}
 		}

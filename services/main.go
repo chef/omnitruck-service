@@ -1,50 +1,68 @@
-package commercial
+package services
 
 import (
+	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
-	_ "github.com/chef/omnitruck-service/docs/commercial"
+	_ "github.com/chef/omnitruck-service/docs"
 	"github.com/chef/omnitruck-service/middleware/license"
-	"github.com/chef/omnitruck-service/services"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/swagger"
 )
-
-type CommercialService struct {
-	services.ApiService
-}
 
 // @title			Licensed Commercial Omnitruck API
 // @version			1.0
 // @description 	Licensed Commercial Omnitruck API
 // @license.name	Apache 2.0
 // @license.url 	http://www.apache.org/licenses/LICENSE-2.0.html
+// @host localhost:3000
+// @host localhost:3001
 // @host localhost:3002
-func NewServer(c services.Config) *CommercialService {
-	service := CommercialService{}
+func New(c Config) *ApiService {
+	service := ApiService{}
 	service.Initialize(c)
 
-	service.App.Use(license.New(license.Config{
-		Next: func(id string, c *fiber.Ctx) bool {
-			// Allow empty licenses
-			if len(id) == 0 {
-				return true
-			}
-			return false
-		},
-	}))
+	if c.Mode == Trial || c.Mode == Opensource {
+		channel := omnitruck.ContainsValidator{
+			Field:      "Channel",
+			Values:     []string{"stable"},
+			Code:       400,
+			AllowEmpty: true,
+		}
+		service.Validator.Add(&channel)
+	}
 
-	service.Log.Info("Adding EOL Validator")
-	eolversion := omnitruck.EolVersionValidator{}
-	service.Validator.Add(&eolversion)
+	if c.Mode == Trial || c.Mode == Commercial {
+		service.Log.Info("Adding EOL Validator")
+		eolversion := omnitruck.EolVersionValidator{}
+		service.Validator.Add(&eolversion)
+	}
+
+	if c.Mode == Trial {
+		version := omnitruck.ContainsValidator{
+			Field:      "Version",
+			Values:     []string{"latest"},
+			Code:       400,
+			AllowEmpty: true,
+		}
+		service.Validator.Add(&version)
+
+		service.App.Use(license.New(license.Config{
+			Required: c.Mode == Commercial,
+		}))
+	}
 
 	service.buildRouter()
 
 	return &service
 }
 
-func (server *CommercialService) buildRouter() {
+func isLatest(v string) bool {
+	return len(v) == 0 || v == "latest"
+}
+
+func (server *ApiService) buildRouter() {
 	server.App.Get("/swagger/*", swagger.New(swagger.Config{
-		InstanceName: "Commercial",
+		InstanceName: "OmnitruckApi",
 	}))
 
 	server.App.Get("/:channel/:product/versions/latest", server.latestVersionHandler)
@@ -63,7 +81,7 @@ func (server *CommercialService) buildRouter() {
 // @Failure 400 {object} services.ErrorResponse
 // @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/versions/latest [get]
-func (server *CommercialService) latestVersionHandler(c *fiber.Ctx) error {
+func (server *ApiService) latestVersionHandler(c *fiber.Ctx) error {
 	params := &omnitruck.RequestParams{
 		Channel: c.Params("channel"),
 		Product: c.Params("product"),
@@ -75,14 +93,44 @@ func (server *CommercialService) latestVersionHandler(c *fiber.Ctx) error {
 	}
 
 	var data omnitruck.ProductVersion
-	request := server.Omnitruck.LatestVersion(params).ParseData(&data)
+	var request *clients.Request
+
+	if server.Mode == Opensource {
+		data, request = server.fetchLatestOSVersion(params)
+	} else {
+		data, request = server.fetchLatestVersion(params)
+	}
 
 	if request.Ok {
 		return server.SendResponse(c, &data)
 	} else {
 		return server.SendError(c, request)
 	}
+}
 
+func (server *ApiService) fetchLatestVersion(params *omnitruck.RequestParams) (omnitruck.ProductVersion, *clients.Request) {
+	var data omnitruck.ProductVersion
+	request := server.Omnitruck.LatestVersion(params).ParseData(&data)
+
+	return data, request
+}
+
+// We need to fetch the full version list and filter out all the non-opensource versions
+// Then we can return the latest OS version
+func (server *ApiService) fetchLatestOSVersion(params *omnitruck.RequestParams) (omnitruck.ProductVersion, *clients.Request) {
+	var data []omnitruck.ProductVersion
+	// Need to fetch all versions and filter out to only show the OS versions
+	request := server.Omnitruck.ProductVersions(params).ParseData(&data)
+
+	if request.Ok {
+		data = omnitruck.FilterList(data, func(v omnitruck.ProductVersion) bool {
+			return !omnitruck.OsProductVersion(params.Product, v)
+		})
+	}
+
+	// Return the last opensource version
+	// This assumes the versions are returned in ascending order
+	return data[len(data)-1], request
 }
 
 // @description Get a list of all available version numbers for a particular channel and product combination
@@ -94,7 +142,7 @@ func (server *CommercialService) latestVersionHandler(c *fiber.Ctx) error {
 // @Failure 400 {object} services.ErrorResponse
 // @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/versions/all [get]
-func (server *CommercialService) productVersionsHandler(c *fiber.Ctx) error {
+func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 	params := &omnitruck.RequestParams{
 		Channel: c.Params("channel"),
 		Product: c.Params("product"),
@@ -109,8 +157,26 @@ func (server *CommercialService) productVersionsHandler(c *fiber.Ctx) error {
 	var data []omnitruck.ProductVersion
 	request := server.Omnitruck.ProductVersions(params).ParseData(&data)
 
-	if params.Eol != "true" {
-		data = omnitruck.FilterProductList(data, params.Product, omnitruck.EolProductVersion)
+	switch server.Mode {
+	case Commercial:
+		if params.Eol != "true" {
+			data = omnitruck.FilterProductList(data, params.Product, omnitruck.EolProductVersion)
+		}
+	case Trial:
+		if params.Eol != "true" {
+			data = omnitruck.FilterProductList(data, params.Product, omnitruck.EolProductVersion)
+		}
+
+		// Only return the latest version if no license is present
+		if c.Locals("license") == nil {
+			data = []omnitruck.ProductVersion{
+				data[len(data)-1],
+			}
+		}
+	case Opensource:
+		data = omnitruck.FilterList(data, func(v omnitruck.ProductVersion) bool {
+			return !omnitruck.OsProductVersion(params.Product, v)
+		})
 	}
 
 	if request.Ok {
@@ -132,12 +198,17 @@ func (server *CommercialService) productVersionsHandler(c *fiber.Ctx) error {
 // @Failure 400 {object} services.ErrorResponse
 // @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/packages [get]
-func (server *CommercialService) productPackagesHandler(c *fiber.Ctx) error {
+func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 	params := &omnitruck.RequestParams{
 		Channel: c.Params("channel"),
 		Product: c.Params("product"),
 		Version: c.Query("v"),
 		Eol:     c.Query("eol"),
+	}
+
+	if server.Mode == Opensource && isLatest(params.Version) {
+		v, _ := server.fetchLatestOSVersion(params)
+		params.Version = string(v)
 	}
 
 	err, ok := server.ValidateRequest(params, c)
@@ -170,7 +241,7 @@ func (server *CommercialService) productPackagesHandler(c *fiber.Ctx) error {
 // @Failure 400 {object} services.ErrorResponse
 // @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/metadata [get]
-func (server *CommercialService) productMetadataHandler(c *fiber.Ctx) error {
+func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 	params := &omnitruck.RequestParams{
 		Channel:         c.Params("channel"),
 		Product:         c.Params("product"),
@@ -178,6 +249,11 @@ func (server *CommercialService) productMetadataHandler(c *fiber.Ctx) error {
 		Platform:        c.Query("p"),
 		PlatformVersion: c.Query("pv"),
 		Architecture:    c.Query("m"),
+	}
+
+	if server.Mode == Opensource && isLatest(params.Version) {
+		v, _ := server.fetchLatestOSVersion(params)
+		params.Version = string(v)
 	}
 
 	err, ok := server.ValidateRequest(params, c)
@@ -210,7 +286,7 @@ func (server *CommercialService) productMetadataHandler(c *fiber.Ctx) error {
 // @Failure 400 {object} services.ErrorResponse
 // @Failure 403 {object} services.ErrorResponse
 // @Router /{channel}/{product}/download [get]
-func (server *CommercialService) productDownloadHandler(c *fiber.Ctx) error {
+func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 	params := &omnitruck.RequestParams{
 		Channel:         c.Params("channel"),
 		Product:         c.Params("product"),
@@ -218,6 +294,11 @@ func (server *CommercialService) productDownloadHandler(c *fiber.Ctx) error {
 		Platform:        c.Query("p"),
 		PlatformVersion: c.Query("pv"),
 		Architecture:    c.Query("m"),
+	}
+
+	if server.Mode == Opensource && isLatest(params.Version) {
+		v, _ := server.fetchLatestOSVersion(params)
+		params.Version = string(v)
 	}
 
 	err, ok := server.ValidateRequest(params, c)

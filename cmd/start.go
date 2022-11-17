@@ -11,9 +11,6 @@ import (
 	"sync"
 
 	"github.com/chef/omnitruck-service/services"
-	"github.com/chef/omnitruck-service/services/commercial"
-	"github.com/chef/omnitruck-service/services/opensource"
-	"github.com/chef/omnitruck-service/services/trial"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -57,26 +54,29 @@ to quickly create a Cobra application.`,
 		var wg sync.WaitGroup
 
 		if cliConfig.Opensource.Enabled {
-			os_api := opensource.NewServer(services.Config{
+			os_api := services.New(services.Config{
 				Name:   cliConfig.Opensource.Name,
 				Listen: cliConfig.Opensource.Listen,
 				Log:    logger.WithField("pkg", cliConfig.Opensource.Name),
+				Mode:   services.Opensource,
 			})
 			os_api.Start(&wg)
 		}
 		if cliConfig.Trial.Enabled {
-			trial_api := trial.NewServer(services.Config{
+			trial_api := services.New(services.Config{
 				Name:   cliConfig.Trial.Name,
 				Listen: cliConfig.Trial.Listen,
 				Log:    logger.WithField("pkg", cliConfig.Trial.Name),
+				Mode:   services.Trial,
 			})
 			trial_api.Start(&wg)
 		}
 		if cliConfig.Commercial.Enabled {
-			commercial_api := commercial.NewServer(services.Config{
+			commercial_api := services.New(services.Config{
 				Name:   cliConfig.Commercial.Name,
 				Listen: cliConfig.Commercial.Listen,
 				Log:    logger.WithField("pkg", cliConfig.Commercial.Name),
+				Mode:   services.Commercial,
 			})
 			commercial_api.Start(&wg)
 		}
