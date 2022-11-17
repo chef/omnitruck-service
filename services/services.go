@@ -70,13 +70,6 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	// TODO: Figure out if we can better handle logging these, currently it just returns a panic message to the user
 	server.App.Use(recover.New())
 
-	// Add the endpoints that don't require any special handling for various APIs
-	server.App.Get("/", server.HealthCheck)
-	server.App.Get("/status", server.HealthCheck)
-	server.App.Get("/products", server.productsHandler)
-	server.App.Get("/platforms", server.platformsHandler)
-	server.App.Get("/architectures", server.architecturesHandler)
-
 	return server
 }
 
@@ -145,62 +138,4 @@ func (server *ApiService) HealthCheck(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(res)
-}
-
-// @description Returns a valid list of valid product keys.
-// @description Any of these product keys can be used in the <PRODUCT> value of other endpoints. Please note many of these products are used for internal tools only and many have been EOL’d.
-// @Param eol			query 	bool 	false 	"EOL Products"
-// @Success 200 {object} omnitruck.ItemList
-// @Failure 500 {object} services.ErrorResponse
-// @Router /products [get]
-func (server *ApiService) productsHandler(c *fiber.Ctx) error {
-	params := &omnitruck.RequestParams{
-		Eol: c.Query("eol", "false"),
-	}
-
-	var data omnitruck.ItemList
-	request := server.Omnitruck.Products(params, &data)
-
-	if params.Eol != "true" {
-		data = omnitruck.FilterList(data, omnitruck.EolProductName)
-	}
-
-	if request.Ok {
-		return server.SendResponse(c, &data)
-	} else {
-		return server.SendError(c, request)
-	}
-}
-
-// @description Returns a valid list of valid platform keys along with full friendly names.
-// @description Any of these platform keys can be used in the p query string value in various endpoints below.
-// @Success 200 {object} omnitruck.PlatformList
-// @Failure 500 {object} services.ErrorResponse
-// @Router /platforms [get]
-func (server *ApiService) platformsHandler(c *fiber.Ctx) error {
-	var data omnitruck.PlatformList
-	request := server.Omnitruck.Platforms().ParseData(&data)
-
-	if request.Ok {
-		return server.SendResponse(c, &data)
-	} else {
-		return server.SendError(c, request)
-	}
-}
-
-// @description Returns a valid list of valid platform keys along with friendly names.
-// @description Any of these architecture keys can be used in the p query string value in various endpoints below.
-// @Success 200 {object} omnitruck.ItemList
-// @Failure 500 {object} services.ErrorResponse
-// @Router /architectures [get]
-func (server *ApiService) architecturesHandler(c *fiber.Ctx) error {
-
-	var data omnitruck.ItemList
-	request := server.Omnitruck.Architectures().ParseData(&data)
-
-	if request.Ok {
-		return server.SendResponse(c, &data)
-	} else {
-		return server.SendError(c, request)
-	}
 }
