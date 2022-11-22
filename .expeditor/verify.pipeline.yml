@@ -1,6 +1,4 @@
 env:
-  BUILDKITE_PLUGIN_DOBI_S3_BUCKET_NAME: docker-buildkite-cache-chef-prod
-  IMAGE_REGISTRY: "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
 steps:
   - label: ":go: build unit tests"
