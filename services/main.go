@@ -49,6 +49,13 @@ func (server *ApiService) productsHandler(c *fiber.Ctx) error {
 	var data omnitruck.ItemList
 	request := server.Omnitruck.Products(params, &data)
 
+	if server.Mode == Opensource {
+		server.Log.Info("filtering opensource products")
+		data = omnitruck.SelectList(data, omnitruck.OsProductName)
+
+		server.Log.Infof("%+v", data)
+	}
+
 	if params.Eol != "true" {
 		data = omnitruck.FilterList(data, omnitruck.EolProductName)
 	}

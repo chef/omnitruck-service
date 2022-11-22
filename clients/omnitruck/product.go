@@ -70,8 +70,8 @@ func SupportedVersion(product string) string {
 }
 
 func EolProductName(name string) bool {
-	_, ok := supportedProducts[name]
-	return !ok
+	p, ok := supportedProducts[name]
+	return !ok || p.SupportedVersion == nil
 }
 
 func EolProductVersion(product string, v ProductVersion) bool {
