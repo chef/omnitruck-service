@@ -1,0 +1,14 @@
+[
+  {
+    "Key": "X-Contact",
+    "Value": "brimager@progress.com"
+  },
+  {
+    "Key": "X-Dept",
+    "Value": "Chef-Telemetry"
+  },
+  {
+    "Key": "X-Production",
+    "Value": "true"
+  }
+]
