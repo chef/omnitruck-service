@@ -1,0 +1,7 @@
+image=omnitruck-services-server:
+  image: '{env.IMAGE_REGISTRY}/omnitruck-services-server'
+  context: .
+  dockerfile: builder/Dockerfile
+  tags:
+    - latest
+    - '{env.VERSION}'

@@ -30,8 +30,6 @@ subscriptions:
           ignore_labels:
             - "Expeditor: Skip Changelog"
             - "Expeditor: Skip All"
-      - trigger_pipeline:cli-build:
-          ignore_labels:
-            - "X-skip-all"
-            - "X-docs-only"
-            - "X-skip-docker"
+      - bash:.expeditor/update_version.sh:
+          only_if: built_in:bump_version
+      - trigger_pipeline:docker/build
