@@ -5,6 +5,7 @@ swagger:
 	swag init -o docs -d services --parseDependency --instanceName OmnitruckApi
 
 build:
+	@echo "Building cli"
 	go build -o bin/
 
 test: $(TESTS)
@@ -14,3 +15,7 @@ test_omnitruck_client:
 
 start:
 	bin/omnitruck-service start
+
+check:
+	@echo "Checking for syntax errors"
+	gofmt -e . > /dev/null

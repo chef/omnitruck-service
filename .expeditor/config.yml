@@ -1,0 +1,44 @@
+
+# Documentation available at https://expeditor.chef.io/docs/getting-started/
+---
+project:
+  alias: omnitruck-services
+
+# Slack channel in Chef Software slack to send notifications about build failures, etc
+slack:
+  notify_channel: eng-licensing
+
+pipelines:
+  - verify
+
+github:
+  # This deletes the GitHub PR branch after successfully merged into the release branch
+  delete_branch_on_merge: true
+  minor_bump_labels:
+    - "Expeditor: Bump Version Minor"
+  major_bump_labels:
+    - "Expeditor: Bump Version Major"
+
+subscriptions:
+  - workload: pull_request_merged:{{github_repo}}:{{release_branch}}:*
+    actions:
+      - built_in:bump_version:
+          ignore_labels:
+            - "Expeditor: Skip Version Bump"
+            - "Expeditor: Skip All"
+      - bash:.expeditor/update_version.sh:
+          only_if: built_in:bump_version
+      - built_in:update_changelog:
+          ignore_labels:
+            - "Expeditor: Skip Changelog"
+            - "Expeditor: Skip All"
+      - trigger_pipeline:cli-build:
+          ignore_labels:
+            - "X-skip-all"
+            - "X-docs-only"
+            - "X-skip-docker"
+      - trigger_pipeline:docker/build:
+          ignore_labels:
+            - "X-skip-all"
+            - "X-docs-only"
+            - "X-skip-docker"
