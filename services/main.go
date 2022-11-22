@@ -4,7 +4,6 @@ import (
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
 	_ "github.com/chef/omnitruck-service/docs"
-	"github.com/chef/omnitruck-service/middleware/license"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/swagger"
 )
@@ -17,49 +16,6 @@ import (
 // @host localhost:3000
 // @host localhost:3001
 // @host localhost:3002
-func New(c Config) *ApiService {
-	service := ApiService{}
-	service.Initialize(c)
-
-	if c.Mode == Trial || c.Mode == Opensource {
-		channel := omnitruck.ContainsValidator{
-			Field:      "Channel",
-			Values:     []string{"stable"},
-			Code:       400,
-			AllowEmpty: true,
-		}
-		service.Validator.Add(&channel)
-	}
-
-	if c.Mode == Trial || c.Mode == Commercial {
-		service.Log.Info("Adding EOL Validator")
-		eolversion := omnitruck.EolVersionValidator{}
-		service.Validator.Add(&eolversion)
-	}
-
-	if c.Mode == Trial {
-		version := omnitruck.ContainsValidator{
-			Field:      "Version",
-			Values:     []string{"latest"},
-			Code:       400,
-			AllowEmpty: true,
-		}
-		service.Validator.Add(&version)
-
-		service.App.Use(license.New(license.Config{
-			Required: c.Mode == Commercial,
-		}))
-	}
-
-	service.buildRouter()
-
-	return &service
-}
-
-func isLatest(v string) bool {
-	return len(v) == 0 || v == "latest"
-}
-
 func (server *ApiService) buildRouter() {
 	server.App.Get("/swagger/*", swagger.New(swagger.Config{
 		InstanceName: "OmnitruckApi",

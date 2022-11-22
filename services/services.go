@@ -7,6 +7,7 @@ import (
 
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
+	"github.com/chef/omnitruck-service/middleware/license"
 	fiber "github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -51,6 +52,15 @@ type ApiService struct {
 	Mode      ApiType
 }
 
+func New(c Config) *ApiService {
+	service := ApiService{}
+	service.Initialize(c)
+
+	service.buildRouter()
+
+	return &service
+}
+
 func (server *ApiService) Initialize(c Config) *ApiService {
 	server.Omnitruck = omnitruck.NewOmnitruckClient()
 	server.Log = c.Log
@@ -69,6 +79,36 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	// This will catch panics in the app and prevent it from crashing the server
 	// TODO: Figure out if we can better handle logging these, currently it just returns a panic message to the user
 	server.App.Use(recover.New())
+
+	if c.Mode == Trial || c.Mode == Opensource {
+		channel := omnitruck.ContainsValidator{
+			Field:      "Channel",
+			Values:     []string{"stable"},
+			Code:       400,
+			AllowEmpty: true,
+		}
+		server.Validator.Add(&channel)
+	}
+
+	if c.Mode == Trial || c.Mode == Commercial {
+		server.Log.Info("Adding EOL Validator")
+		eolversion := omnitruck.EolVersionValidator{}
+		server.Validator.Add(&eolversion)
+	}
+
+	if c.Mode == Trial {
+		version := omnitruck.ContainsValidator{
+			Field:      "Version",
+			Values:     []string{"latest"},
+			Code:       400,
+			AllowEmpty: true,
+		}
+		server.Validator.Add(&version)
+
+		server.App.Use(license.New(license.Config{
+			Required: c.Mode == Commercial,
+		}))
+	}
 
 	return server
 }
@@ -138,4 +178,8 @@ func (server *ApiService) HealthCheck(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(res)
+}
+
+func isLatest(v string) bool {
+	return len(v) == 0 || v == "latest"
 }
