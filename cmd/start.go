@@ -95,6 +95,14 @@ func setupLogging() *log.Entry {
 }
 
 func initConfig() {
+	files, err := ioutil.ReadDir("./")
+    if err != nil {
+        log.Fatal(err)
+    }
+ 
+    for _, f := range files {
+            log.Println(f.Name())
+    }
 	if cfgFile != "" {
 		// Use config file from the flag
 		yamlFile, err := ioutil.ReadFile(cfgFile)
@@ -120,7 +128,7 @@ func init() {
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
 	// startCmd.PersistentFlags().String("foo", "", "A help for foo")
-	startCmd.PersistentFlags().StringVar(&cfgFile, "config", "./.omnitruck.yml", "config file")
+	startCmd.PersistentFlags().StringVar(&cfgFile, "config", "./omnitruck.yml", "config file")
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 }
