@@ -95,14 +95,6 @@ func setupLogging() *log.Entry {
 }
 
 func initConfig() {
-	files, err := ioutil.ReadDir("./")
-    if err != nil {
-        log.Fatal(err)
-    }
- 
-    for _, f := range files {
-            log.Println(f.Name())
-    }
 	if cfgFile != "" {
 		// Use config file from the flag
 		yamlFile, err := ioutil.ReadFile(cfgFile)
