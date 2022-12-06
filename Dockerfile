@@ -9,7 +9,7 @@ COPY omnitruck.yml.example omnitruck.yml
 
 RUN go mod download 
 
-RUN make all
+RUN make build
 
 EXPOSE 3000
 EXPOSE 3001
