@@ -120,7 +120,7 @@ func init() {
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
 	// startCmd.PersistentFlags().String("foo", "", "A help for foo")
-	startCmd.PersistentFlags().StringVar(&cfgFile, "config", "./.omnitruck.yml", "config file")
+	startCmd.PersistentFlags().StringVar(&cfgFile, "config", "./omnitruck.yml", "config file")
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 }
