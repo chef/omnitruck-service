@@ -66,8 +66,8 @@ resource "aws_route_table_association" "private" {
 
 resource "aws_route53_record" "entry_dn" {
   provider = aws.secure
-  zone_id = data.aws_route53_zone.secure.zone_id
-  name    = "omnitruck-services-acceptance.chef.co"
+  zone_id  = data.aws_route53_zone.secure.zone_id
+  name     = "omnitruck-services-acceptance.chef.co"
 
   type = "CNAME"
   ttl  = "300"

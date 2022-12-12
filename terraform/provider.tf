@@ -7,8 +7,8 @@ provider "vault" {
 }
 
 provider "aws" {
-  profile                 = "chef-telemetry"
-  region                  = var.aws_region
+  profile = "chef-telemetry"
+  region  = var.aws_region
 
   access_key = data.vault_aws_access_credentials.telemetry.access_key
   secret_key = data.vault_aws_access_credentials.telemetry.secret_key
@@ -16,8 +16,8 @@ provider "aws" {
 }
 
 provider "aws" {
-  alias                   = "secure"
-  region                  = var.aws_region
+  alias  = "secure"
+  region = var.aws_region
 
   access_key = data.vault_aws_access_credentials.secure.access_key
   secret_key = data.vault_aws_access_credentials.secure.secret_key
