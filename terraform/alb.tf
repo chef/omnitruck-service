@@ -1,13 +1,13 @@
 # alb.tf
 
 resource "aws_alb" "main" {
-  name            = "license-analytics-load-balancer"
+  name            = "omnitruck-services-load-balancer"
   subnets         = aws_subnet.public.*.id
   security_groups = [aws_security_group.lb.id]
 }
 
 resource "aws_alb_target_group" "app" {
-  name        = "license-analytics-builder-group"
+  name        = "omnitruck-services-lb-group"
   port        = var.app_port
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id

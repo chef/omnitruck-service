@@ -1,6 +1,6 @@
 [
   {
-    "name": "license-analytics-app",
+    "name": "${name}-app",
     "image": "${app_image}",
     "cpu": ${fargate_cpu},
     "memory": ${fargate_memory},
@@ -8,7 +8,7 @@
     "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
-          "awslogs-group": "/ecs/license-analytics-app",
+          "awslogs-group": "/ecs/${name}-app",
           "awslogs-region": "${aws_region}",
           "awslogs-stream-prefix": "ecs"
         }
