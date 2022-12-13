@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -27,7 +28,7 @@ type ErrorResponse struct {
 	Code       int    `json:"code" example:200`
 	StatusText string `json:"status_text" example:OK`
 	Message    string `json:"message"`
-}
+} //@name ErrorResponse
 
 type Config struct {
 	Name   string
@@ -90,12 +91,6 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 		server.Validator.Add(&channel)
 	}
 
-	if c.Mode == Trial || c.Mode == Commercial {
-		server.Log.Info("Adding EOL Validator")
-		eolversion := omnitruck.EolVersionValidator{}
-		server.Validator.Add(&eolversion)
-	}
-
 	if c.Mode == Trial {
 		version := omnitruck.ContainsValidator{
 			Field:      "Version",
@@ -104,9 +99,26 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 			AllowEmpty: true,
 		}
 		server.Validator.Add(&version)
+	}
+
+	if c.Mode == Trial || c.Mode == Commercial {
+		server.Log.Info("Adding EOL Validator")
+		eolversion := omnitruck.EolVersionValidator{}
+		server.Validator.Add(&eolversion)
 
 		server.App.Use(license.New(license.Config{
 			Required: c.Mode == Commercial,
+			Next: func(license_id string, c *fiber.Ctx) bool {
+				fmt.Printf("%+v", c.Path())
+				switch c.Path() {
+				case "/status":
+					return true
+				case "/":
+					return true
+				}
+
+				return false
+			},
 		}))
 	}
 
