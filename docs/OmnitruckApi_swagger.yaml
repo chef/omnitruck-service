@@ -1,4 +1,13 @@
 definitions:
+  ErrorResponse:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+      status_text:
+        type: string
+    type: object
   omnitruck.ArchList:
     additionalProperties:
       $ref: '#/definitions/omnitruck.PackageMetadata'
@@ -26,21 +35,14 @@ definitions:
     additionalProperties:
       $ref: '#/definitions/omnitruck.ArchList'
     type: object
-  services.ErrorResponse:
-    properties:
-      code:
-        type: integer
-      message:
-        type: string
-      status_text:
-        type: string
-    type: object
-host: localhost:3002
 info:
   contact: {}
-  description: Licensed Commercial Omnitruck API
+  description: Licensed Omnitruck API
   license:
+    name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: Licensed Omnitruck API
+  version: "1.0"
 paths:
   /{channel}/{product}/download:
     get:
@@ -103,11 +105,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/services.ErrorResponse'
+            $ref: '#/definitions/ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/services.ErrorResponse'
+            $ref: '#/definitions/ErrorResponse'
   /{channel}/{product}/metadata:
     get:
       description: |-
@@ -171,11 +173,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/services.ErrorResponse'
+            $ref: '#/definitions/ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/services.ErrorResponse'
+            $ref: '#/definitions/ErrorResponse'
   /{channel}/{product}/packages:
     get:
       description: |-
@@ -217,11 +219,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/services.ErrorResponse'
+            $ref: '#/definitions/ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/services.ErrorResponse'
+            $ref: '#/definitions/ErrorResponse'
   /{channel}/{product}/versions/all:
     get:
       description: Get a list of all available version numbers for a particular channel
@@ -259,11 +261,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/services.ErrorResponse'
+            $ref: '#/definitions/ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/services.ErrorResponse'
+            $ref: '#/definitions/ErrorResponse'
   /{channel}/{product}/versions/latest:
     get:
       description: Get the latest version number for a particular channel and product
@@ -294,11 +296,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/services.ErrorResponse'
+            $ref: '#/definitions/ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/services.ErrorResponse'
+            $ref: '#/definitions/ErrorResponse'
   /architectures:
     get:
       description: |-
@@ -314,7 +316,7 @@ paths:
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/services.ErrorResponse'
+            $ref: '#/definitions/ErrorResponse'
   /platforms:
     get:
       description: |-
@@ -328,7 +330,7 @@ paths:
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/services.ErrorResponse'
+            $ref: '#/definitions/ErrorResponse'
   /products:
     get:
       description: |-
@@ -349,5 +351,5 @@ paths:
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/services.ErrorResponse'
+            $ref: '#/definitions/ErrorResponse'
 swagger: "2.0"
