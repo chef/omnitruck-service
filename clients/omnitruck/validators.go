@@ -6,7 +6,7 @@ import (
 
 type ValidatorInterface interface {
 	GetCode() int
-	Validate(*RequestParams) *ValidationError
+	Validate(*RequestParams, Context) *ValidationError
 }
 
 type ValidationError struct {
@@ -15,6 +15,11 @@ type ValidationError struct {
 	Tag         string
 	Msg         string
 	Code        int
+}
+
+type Context struct {
+	Path    string
+	License bool
 }
 
 func (e *ValidationError) Error() string {
@@ -43,10 +48,10 @@ func (rv *RequestValidator) Add(f ValidatorInterface) {
 	rv.validators = append(rv.validators, f)
 }
 
-func (o *RequestValidator) Params(params *RequestParams) []*ValidationError {
+func (o *RequestValidator) Params(params *RequestParams, c Context) []*ValidationError {
 	var errors []*ValidationError
 	for _, vi := range o.validators {
-		if err := vi.Validate(params); err != nil {
+		if err := vi.Validate(params, c); err != nil {
 			errors = append(errors, err)
 		}
 	}

@@ -1,6 +1,8 @@
 package omnitruck
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type OsVersionValidator struct {
 	Code int
@@ -18,7 +20,7 @@ func (fv *OsVersionValidator) GetCode() int {
 	return 400
 }
 
-func (fv *OsVersionValidator) Validate(p *RequestParams) *ValidationError {
+func (fv *OsVersionValidator) Validate(p *RequestParams, c Context) *ValidationError {
 	// Allow any version if user specified eol == true in the query
 	if p.Eol == "true" {
 		return nil

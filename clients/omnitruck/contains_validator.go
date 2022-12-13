@@ -10,6 +10,7 @@ type ContainsValidator struct {
 	Values     []string
 	Code       int
 	AllowEmpty bool
+	Skip       func(c Context) bool
 }
 
 func (fv *ContainsValidator) GetField() string {
@@ -24,7 +25,11 @@ func (fv *ContainsValidator) GetCode() int {
 	return fv.Code
 }
 
-func (fv *ContainsValidator) Validate(p *RequestParams) *ValidationError {
+func (fv *ContainsValidator) Validate(p *RequestParams, c Context) *ValidationError {
+	if fv.Skip != nil && fv.Skip(c) {
+		return nil
+	}
+
 	pr := reflect.ValueOf(*p)
 	fieldValue := pr.FieldByName(fv.Field).String()
 

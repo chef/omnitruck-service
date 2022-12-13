@@ -189,7 +189,7 @@ func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 		}
 
 		// Only return the latest version if no license is present
-		if c.Locals("license") == nil {
+		if !c.Locals("valid_license").(bool) {
 			data = []omnitruck.ProductVersion{
 				data[len(data)-1],
 			}

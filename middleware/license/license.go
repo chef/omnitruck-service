@@ -62,6 +62,7 @@ func New(config ...Config) fiber.Handler {
 	return func(c *fiber.Ctx) (err error) {
 		headers := c.GetReqHeaders()
 		id, _ := headers["License_id"]
+		c.Locals("valid_license", false)
 
 		if cfg.Next != nil && cfg.Next(id, c) {
 			return c.Next()
@@ -87,7 +88,7 @@ func New(config ...Config) fiber.Handler {
 		}
 
 		c.Locals("valid_license", true)
-		c.Locals("license", resp.Data)
+		c.Locals("license_id", id)
 
 		return c.Next()
 	}

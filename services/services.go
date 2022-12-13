@@ -97,6 +97,9 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 			Values:     []string{"latest"},
 			Code:       400,
 			AllowEmpty: true,
+			Skip: func(c omnitruck.Context) bool {
+				return c.License
+			},
 		}
 		server.Validator.Add(&version)
 	}
@@ -157,7 +160,11 @@ func (server *ApiService) StartService() {
 
 func (server *ApiService) ValidateRequest(params *omnitruck.RequestParams, c *fiber.Ctx) (error, bool) {
 	server.Log.Debugf("Validating request %+v", params)
-	errors := server.Validator.Params(params)
+	context := omnitruck.Context{
+		License: c.Locals("valid_license").(bool),
+	}
+
+	errors := server.Validator.Params(params, context)
 	if errors != nil {
 		msgs, code := server.Validator.ErrorMessages(errors)
 
