@@ -1,11 +1,11 @@
 # ecs.tf
 
 resource "aws_ecs_cluster" "main" {
-  name = "${local.name}-cluster"
+  name = "${local.full_name}-cluster"
 }
 
 resource "aws_ecs_task_definition" "app" {
-  family                   = "${local.name}-task"
+  family                   = "${local.full_name}-task"
   execution_role_arn       = "arn:aws:iam::862552916454:role/ecsTaskExecutionRole"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
@@ -15,7 +15,7 @@ resource "aws_ecs_task_definition" "app" {
 }
 
 resource "aws_ecs_service" "main" {
-  name            = local.name
+  name            = local.full_name
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.app.arn
   desired_count   = var.app_count
@@ -28,11 +28,26 @@ resource "aws_ecs_service" "main" {
   }
 
   load_balancer {
-    target_group_arn = aws_alb_target_group.app.id
-    container_name   = "${local.name}-app"
-    container_port   = var.app_port
+    target_group_arn = aws_alb_target_group.trial.arn
+    container_name   = "${local.full_name}-app"
+    container_port   = var.app_trial_port
   }
 
+  load_balancer {
+    target_group_arn = aws_alb_target_group.opensource.arn
+    container_name   = "${local.full_name}-app"
+    container_port   = var.app_os_port
+  }
+
+  load_balancer {
+    target_group_arn = aws_alb_target_group.commercial.arn
+    container_name   = "${local.full_name}-app"
+    container_port   = var.app_commercial_port
+  }
+
+  lifecycle {
+    ignore_changes = [desired_count]
+  }
 }
 
 # depends_on = [aws_alb_listener.front_end]

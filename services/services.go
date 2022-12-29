@@ -1,7 +1,6 @@
 package services
 
 import (
-	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -112,7 +111,6 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 		server.App.Use(license.New(license.Config{
 			Required: c.Mode == Commercial,
 			Next: func(license_id string, c *fiber.Ctx) bool {
-				fmt.Printf("%+v", c.Path())
 				switch c.Path() {
 				case "/status":
 					return true
@@ -121,6 +119,13 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 				}
 
 				return false
+			},
+		}))
+	} else {
+		server.App.Use(license.New(license.Config{
+			Required: c.Mode == Commercial,
+			Next: func(license_id string, c *fiber.Ctx) bool {
+				return true
 			},
 		}))
 	}
@@ -193,6 +198,7 @@ func (server *ApiService) SendError(c *fiber.Ctx, request *clients.Request) erro
 
 func (server *ApiService) HealthCheck(c *fiber.Ctx) error {
 	res := map[string]interface{}{
+		"name": server.Config.Name,
 		"data": "Server is up and running",
 	}
 

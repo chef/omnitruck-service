@@ -22,12 +22,27 @@ variable "az_count" {
 
 variable "app_image" {
   description = "Docker image to run in the ECS cluster"
-  default     = "omitruck-services-acceptance/omnitruck-service:latest"
+  default     = "omnitruck-service:latest"
 }
 
-variable "app_port" {
+variable "app_version_tag" {
+  description = "Docker version tag to run in the ECS cluster"
+  default     = "latest"
+}
+
+variable "app_os_port" {
   description = "Port exposed by the docker image to redirect traffic to"
   default     = 3000
+}
+
+variable "app_trial_port" {
+  description = "Port exposed by the docker image to redirect traffic to"
+  default     = 3001
+}
+
+variable "app_commercial_port" {
+  description = "Port exposed by the docker image to redirect traffic to"
+  default     = 3002
 }
 
 variable "app_count" {

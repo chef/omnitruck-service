@@ -23,6 +23,7 @@ image_linux:
 
 image_push: image_linux 
 	@echo "Pushing image to ${DOCKER_HUB}"
+	docker tag chef/omnitruck-services:latest ${DOCKER_HUB}
 	docker push ${DOCKER_HUB}
 
 docker_run: image

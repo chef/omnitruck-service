@@ -14,8 +14,17 @@ data "vault_aws_access_credentials" "secure" {
 data "aws_availability_zones" "available" {
 }
 
-data "aws_route53_zone" "secure" {
-  provider     = aws.secure
-  name         = "chef.co."
-  private_zone = true
+# data "aws_route53_zone" "secure" {
+#   provider     = aws.secure
+#   name         = "chef.co."
+#   private_zone = true
+# }
+
+data "aws_ecr_repository" "omnitruck" {
+  name = "omitruck-services-acceptance/omnitruck-service"
+}
+
+data "aws_ecr_image" "omnitruck" {
+  repository_name = "omitruck-services-acceptance/omnitruck-service"
+  image_tag = "${var.app_version_tag}"
 }
