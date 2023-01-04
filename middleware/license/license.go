@@ -64,6 +64,9 @@ func New(config ...Config) fiber.Handler {
 		id, _ := headers["License_id"]
 		c.Locals("valid_license", false)
 
+		log := cfg.Log.WithField("license_id", id)
+		c.Locals("log", log)
+
 		if cfg.Next != nil && cfg.Next(id, c) {
 			return c.Next()
 		}
@@ -77,7 +80,7 @@ func New(config ...Config) fiber.Handler {
 			}
 		}
 
-		cfg.Log.Info("Validating license id: ", id)
+		log.Info("Validating license")
 
 		resp := clients.Response{}
 		request := cfg.LicenseClient.Validate(id, &resp)

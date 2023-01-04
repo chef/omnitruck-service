@@ -44,13 +44,13 @@ func (server *ApiService) productsHandler(c *fiber.Ctx) error {
 	}
 
 	var data omnitruck.ItemList
-	request := server.Omnitruck.Products(params, &data)
+	request := server.Omnitruck(c).Products(params, &data)
 
 	if server.Mode == Opensource {
-		server.Log.Info("filtering opensource products")
+		server.logCtx(c).Info("filtering opensource products")
 		data = omnitruck.SelectList(data, omnitruck.OsProductName)
 	} else if params.Eol != "true" {
-		server.Log.Info("filtering eol products")
+		server.logCtx(c).Info("filtering eol products")
 		data = omnitruck.FilterList(data, omnitruck.EolProductName)
 	}
 
@@ -68,7 +68,7 @@ func (server *ApiService) productsHandler(c *fiber.Ctx) error {
 // @Router      /platforms [get]
 func (server *ApiService) platformsHandler(c *fiber.Ctx) error {
 	var data omnitruck.PlatformList
-	request := server.Omnitruck.Platforms().ParseData(&data)
+	request := server.Omnitruck(c).Platforms().ParseData(&data)
 
 	if request.Ok {
 		return server.SendResponse(c, &data)
@@ -85,7 +85,7 @@ func (server *ApiService) platformsHandler(c *fiber.Ctx) error {
 func (server *ApiService) architecturesHandler(c *fiber.Ctx) error {
 
 	var data omnitruck.ItemList
-	request := server.Omnitruck.Architectures().ParseData(&data)
+	request := server.Omnitruck(c).Architectures().ParseData(&data)
 
 	if request.Ok {
 		return server.SendResponse(c, &data)
@@ -117,9 +117,9 @@ func (server *ApiService) latestVersionHandler(c *fiber.Ctx) error {
 	var request *clients.Request
 
 	if server.Mode == Opensource {
-		data, request = server.fetchLatestOSVersion(params)
+		data, request = server.fetchLatestOSVersion(params, c)
 	} else {
-		data, request = server.fetchLatestVersion(params)
+		data, request = server.fetchLatestVersion(params, c)
 	}
 
 	if request.Ok {
@@ -129,19 +129,19 @@ func (server *ApiService) latestVersionHandler(c *fiber.Ctx) error {
 	}
 }
 
-func (server *ApiService) fetchLatestVersion(params *omnitruck.RequestParams) (omnitruck.ProductVersion, *clients.Request) {
+func (server *ApiService) fetchLatestVersion(params *omnitruck.RequestParams, c *fiber.Ctx) (omnitruck.ProductVersion, *clients.Request) {
 	var data omnitruck.ProductVersion
-	request := server.Omnitruck.LatestVersion(params).ParseData(&data)
+	request := server.Omnitruck(c).LatestVersion(params).ParseData(&data)
 
 	return data, request
 }
 
 // We need to fetch the full version list and filter out all the non-opensource versions
 // Then we can return the latest OS version
-func (server *ApiService) fetchLatestOSVersion(params *omnitruck.RequestParams) (omnitruck.ProductVersion, *clients.Request) {
+func (server *ApiService) fetchLatestOSVersion(params *omnitruck.RequestParams, c *fiber.Ctx) (omnitruck.ProductVersion, *clients.Request) {
 	var data []omnitruck.ProductVersion
 	// Need to fetch all versions and filter out to only show the OS versions
-	request := server.Omnitruck.ProductVersions(params).ParseData(&data)
+	request := server.Omnitruck(c).ProductVersions(params).ParseData(&data)
 
 	if request.Ok {
 		data = omnitruck.FilterList(data, func(v omnitruck.ProductVersion) bool {
@@ -176,7 +176,7 @@ func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 	}
 
 	var data []omnitruck.ProductVersion
-	request := server.Omnitruck.ProductVersions(params).ParseData(&data)
+	request := server.Omnitruck(c).ProductVersions(params).ParseData(&data)
 
 	switch server.Mode {
 	case Commercial:
@@ -228,7 +228,7 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 	}
 
 	if server.Mode == Opensource && isLatest(params.Version) {
-		v, _ := server.fetchLatestOSVersion(params)
+		v, _ := server.fetchLatestOSVersion(params, c)
 		params.Version = string(v)
 	}
 
@@ -238,7 +238,7 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 	}
 
 	var data omnitruck.PackageList
-	request := server.Omnitruck.ProductPackages(params).ParseData(&data)
+	request := server.Omnitruck(c).ProductPackages(params).ParseData(&data)
 
 	if request.Ok {
 		return server.SendResponse(c, &data)
@@ -273,7 +273,7 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 	}
 
 	if server.Mode == Opensource && isLatest(params.Version) {
-		v, _ := server.fetchLatestOSVersion(params)
+		v, _ := server.fetchLatestOSVersion(params, c)
 		params.Version = string(v)
 	}
 
@@ -283,7 +283,7 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 	}
 
 	var data omnitruck.PackageMetadata
-	request := server.Omnitruck.ProductMetadata(params).ParseData(&data)
+	request := server.Omnitruck(c).ProductMetadata(params).ParseData(&data)
 
 	if request.Ok {
 		return server.SendResponse(c, &data)
@@ -318,7 +318,7 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 	}
 
 	if server.Mode == Opensource && isLatest(params.Version) {
-		v, _ := server.fetchLatestOSVersion(params)
+		v, _ := server.fetchLatestOSVersion(params, c)
 		params.Version = string(v)
 	}
 
@@ -328,10 +328,10 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 	}
 
 	var data omnitruck.PackageMetadata
-	request := server.Omnitruck.ProductDownload(params).ParseData(&data)
+	request := server.Omnitruck(c).ProductDownload(params).ParseData(&data)
 
 	if request.Ok {
-		server.Log.Infof("Redirecting user to %s", data.Url)
+		server.logCtx(c).Infof("Redirecting user to %s", data.Url)
 		return c.Redirect(data.Url, 302)
 	} else {
 		return server.SendError(c, request)

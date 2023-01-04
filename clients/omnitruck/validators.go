@@ -18,8 +18,9 @@ type ValidationError struct {
 }
 
 type Context struct {
-	Path    string
-	License bool
+	Path      string
+	License   bool
+	LicenseId string
 }
 
 func (e *ValidationError) Error() string {

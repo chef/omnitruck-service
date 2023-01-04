@@ -41,7 +41,7 @@ type RequestParams struct {
 	Eol             string
 }
 
-func NewOmnitruckClient() Omnitruck {
+func New(log *log.Entry) Omnitruck {
 	return Omnitruck{
 		client: &http.Client{
 			Timeout: 10 * time.Second,

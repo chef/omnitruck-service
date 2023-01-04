@@ -11,7 +11,6 @@ import (
 	fiber "github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/fiber/v2/middleware/recover"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -45,7 +44,6 @@ type Service interface {
 type ApiService struct {
 	sync.Mutex
 	Config    Config
-	Omnitruck omnitruck.Omnitruck
 	Log       *log.Entry
 	App       *fiber.App
 	Validator omnitruck.RequestValidator
@@ -62,7 +60,6 @@ func New(c Config) *ApiService {
 }
 
 func (server *ApiService) Initialize(c Config) *ApiService {
-	server.Omnitruck = omnitruck.NewOmnitruckClient()
 	server.Log = c.Log
 	server.Config = c
 	server.Validator = omnitruck.NewValidator()
@@ -78,7 +75,7 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	server.App.Use(cors.New())
 	// This will catch panics in the app and prevent it from crashing the server
 	// TODO: Figure out if we can better handle logging these, currently it just returns a panic message to the user
-	server.App.Use(recover.New())
+	// server.App.Use(recover.New())
 
 	if c.Mode == Trial || c.Mode == Opensource {
 		channel := omnitruck.ContainsValidator{
@@ -122,6 +119,7 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 			},
 		}))
 	} else {
+		// Add the middleware so it can inject the license locals into the fiber context
 		server.App.Use(license.New(license.Config{
 			Required: c.Mode == Commercial,
 			Next: func(license_id string, c *fiber.Ctx) bool {
@@ -129,6 +127,20 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 			},
 		}))
 	}
+
+	server.App.Use(license.New(license.Config{
+		Required: c.Mode == Commercial,
+		Next: func(license_id string, c *fiber.Ctx) bool {
+			switch c.Path() {
+			case "/status":
+				return true
+			case "/":
+				return true
+			}
+
+			return false
+		},
+	}))
 
 	return server
 }
@@ -163,17 +175,32 @@ func (server *ApiService) StartService() {
 	}
 }
 
+func (server *ApiService) Omnitruck(c *fiber.Ctx) *omnitruck.Omnitruck {
+	client := omnitruck.New(server.logCtx(c))
+
+	return &client
+}
+
+func (server *ApiService) logCtx(c *fiber.Ctx) *log.Entry {
+	return server.Log.WithField("license_id", c.Locals("license_id"))
+}
+
+func (server *ApiService) validLicense(c *fiber.Ctx) bool {
+	v := c.Locals("valid_license")
+	return v != nil && v.(bool)
+}
+
 func (server *ApiService) ValidateRequest(params *omnitruck.RequestParams, c *fiber.Ctx) (error, bool) {
-	server.Log.Debugf("Validating request %+v", params)
+	server.logCtx(c).Debugf("Validating request %+v", params)
 	context := omnitruck.Context{
-		License: c.Locals("valid_license").(bool),
+		License: server.validLicense(c),
 	}
 
 	errors := server.Validator.Params(params, context)
 	if errors != nil {
 		msgs, code := server.Validator.ErrorMessages(errors)
 
-		server.Log.WithField("errors", msgs).Error("Error validating request")
+		server.logCtx(c).WithField("errors", msgs).Error("Error validating request")
 		return c.Status(code).JSON(ErrorResponse{
 			Code:       code,
 			StatusText: http.StatusText(code),
