@@ -12,6 +12,7 @@ const docTemplateOmnitruckApi = `{
         "title": "{{.Title}}",
         "contact": {},
         "license": {
+            "name": "Apache 2.0",
             "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
         },
         "version": "{{.Version}}"
@@ -35,7 +36,7 @@ const docTemplateOmnitruckApi = `{
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/services.ErrorResponse"
+                            "$ref": "#/definitions/ErrorResponse"
                         }
                     }
                 }
@@ -54,7 +55,7 @@ const docTemplateOmnitruckApi = `{
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/services.ErrorResponse"
+                            "$ref": "#/definitions/ErrorResponse"
                         }
                     }
                 }
@@ -84,7 +85,7 @@ const docTemplateOmnitruckApi = `{
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/services.ErrorResponse"
+                            "$ref": "#/definitions/ErrorResponse"
                         }
                     }
                 }
@@ -165,13 +166,13 @@ const docTemplateOmnitruckApi = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/services.ErrorResponse"
+                            "$ref": "#/definitions/ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/services.ErrorResponse"
+                            "$ref": "#/definitions/ErrorResponse"
                         }
                     }
                 }
@@ -255,13 +256,13 @@ const docTemplateOmnitruckApi = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/services.ErrorResponse"
+                            "$ref": "#/definitions/ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/services.ErrorResponse"
+                            "$ref": "#/definitions/ErrorResponse"
                         }
                     }
                 }
@@ -320,13 +321,13 @@ const docTemplateOmnitruckApi = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/services.ErrorResponse"
+                            "$ref": "#/definitions/ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/services.ErrorResponse"
+                            "$ref": "#/definitions/ErrorResponse"
                         }
                     }
                 }
@@ -381,13 +382,13 @@ const docTemplateOmnitruckApi = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/services.ErrorResponse"
+                            "$ref": "#/definitions/ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/services.ErrorResponse"
+                            "$ref": "#/definitions/ErrorResponse"
                         }
                     }
                 }
@@ -432,13 +433,13 @@ const docTemplateOmnitruckApi = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/services.ErrorResponse"
+                            "$ref": "#/definitions/ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/services.ErrorResponse"
+                            "$ref": "#/definitions/ErrorResponse"
                         }
                     }
                 }
@@ -446,6 +447,20 @@ const docTemplateOmnitruckApi = `{
         }
     },
     "definitions": {
+        "ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status_text": {
+                    "type": "string"
+                }
+            }
+        },
         "omnitruck.ArchList": {
             "type": "object",
             "additionalProperties": {
@@ -486,32 +501,18 @@ const docTemplateOmnitruckApi = `{
             "additionalProperties": {
                 "$ref": "#/definitions/omnitruck.ArchList"
             }
-        },
-        "services.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "message": {
-                    "type": "string"
-                },
-                "status_text": {
-                    "type": "string"
-                }
-            }
         }
     }
 }`
 
 // SwaggerInfoOmnitruckApi holds exported Swagger Info so clients can modify it
 var SwaggerInfoOmnitruckApi = &swag.Spec{
-	Version:          "",
-	Host:             "localhost:3002",
+	Version:          "1.0",
+	Host:             "",
 	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "",
-	Description:      "Licensed Commercial Omnitruck API",
+	Title:            "Licensed Omnitruck API",
+	Description:      "Licensed Omnitruck API",
 	InfoInstanceName: "OmnitruckApi",
 	SwaggerTemplate:  docTemplateOmnitruckApi,
 }

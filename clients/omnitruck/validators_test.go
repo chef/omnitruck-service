@@ -71,7 +71,7 @@ type TestValidator struct {
 func (t *TestValidator) GetCode() int {
 	return t.Code
 }
-func (t *TestValidator) Validate(p *RequestParams) *ValidationError {
+func (t *TestValidator) Validate(p *RequestParams, c Context) *ValidationError {
 	if t.Ok {
 		return nil
 	}
@@ -177,7 +177,7 @@ func TestRequestValidator_Params(t *testing.T) {
 			o := &RequestValidator{
 				validators: tt.fields.validators,
 			}
-			if got := o.Params(tt.args.params); !reflect.DeepEqual(got, tt.want) {
+			if got := o.Params(tt.args.params, Context{}); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("RequestValidator.Params() = %v, want %v", got, tt.want)
 			}
 		})

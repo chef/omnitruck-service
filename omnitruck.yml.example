@@ -12,4 +12,4 @@ commercial:
   listen: ":3002"
 logging:
   # can be text or json
-  format: text
+  format: json

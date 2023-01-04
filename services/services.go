@@ -27,7 +27,7 @@ type ErrorResponse struct {
 	Code       int    `json:"code" example:200`
 	StatusText string `json:"status_text" example:OK`
 	Message    string `json:"message"`
-}
+} //@name ErrorResponse
 
 type Config struct {
 	Name   string
@@ -90,23 +90,43 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 		server.Validator.Add(&channel)
 	}
 
-	if c.Mode == Trial || c.Mode == Commercial {
-		server.Log.Info("Adding EOL Validator")
-		eolversion := omnitruck.EolVersionValidator{}
-		server.Validator.Add(&eolversion)
-	}
-
 	if c.Mode == Trial {
 		version := omnitruck.ContainsValidator{
 			Field:      "Version",
 			Values:     []string{"latest"},
 			Code:       400,
 			AllowEmpty: true,
+			Skip: func(c omnitruck.Context) bool {
+				return c.License
+			},
 		}
 		server.Validator.Add(&version)
+	}
+
+	if c.Mode == Trial || c.Mode == Commercial {
+		server.Log.Info("Adding EOL Validator")
+		eolversion := omnitruck.EolVersionValidator{}
+		server.Validator.Add(&eolversion)
 
 		server.App.Use(license.New(license.Config{
 			Required: c.Mode == Commercial,
+			Next: func(license_id string, c *fiber.Ctx) bool {
+				switch c.Path() {
+				case "/status":
+					return true
+				case "/":
+					return true
+				}
+
+				return false
+			},
+		}))
+	} else {
+		server.App.Use(license.New(license.Config{
+			Required: c.Mode == Commercial,
+			Next: func(license_id string, c *fiber.Ctx) bool {
+				return true
+			},
 		}))
 	}
 
@@ -145,7 +165,11 @@ func (server *ApiService) StartService() {
 
 func (server *ApiService) ValidateRequest(params *omnitruck.RequestParams, c *fiber.Ctx) (error, bool) {
 	server.Log.Debugf("Validating request %+v", params)
-	errors := server.Validator.Params(params)
+	context := omnitruck.Context{
+		License: c.Locals("valid_license").(bool),
+	}
+
+	errors := server.Validator.Params(params, context)
 	if errors != nil {
 		msgs, code := server.Validator.ErrorMessages(errors)
 
@@ -174,6 +198,7 @@ func (server *ApiService) SendError(c *fiber.Ctx, request *clients.Request) erro
 
 func (server *ApiService) HealthCheck(c *fiber.Ctx) error {
 	res := map[string]interface{}{
+		"name": server.Config.Name,
 		"data": "Server is up and running",
 	}
 
