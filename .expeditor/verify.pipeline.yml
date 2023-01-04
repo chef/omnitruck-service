@@ -1,6 +1,7 @@
 steps:
   - label: ":go: build unit tests"
     command:
+      - scripts/install_golang.sh
       - go version
       - make test
     expeditor:
@@ -8,6 +9,7 @@ steps:
         docker:
   - label: ":go: build syntax"
     command: 
+      - scripts/install_golang.sh
       - go version
       - make check
     expeditor:
