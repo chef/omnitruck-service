@@ -1,12 +1,15 @@
 steps:
   - label: ":go: build unit tests"
     command:
+      - go version
       - make test
     expeditor:
       executor:
         docker:
   - label: ":go: build syntax"
-    command: make check
+    command: 
+      - go version
+      - make check
     expeditor:
       executor:
         docker:
