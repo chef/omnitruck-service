@@ -1,4 +1,4 @@
 env:
   VERSION: "0.0.5"
 
-image_registry: devchef
+image_registry: chefes
