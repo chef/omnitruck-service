@@ -1,7 +1,14 @@
-image=omnitruck-services-server:
+image=omnitruck-services:
   image: '{env.IMAGE_REGISTRY}/omnitruck-services'
   context: .
   dockerfile: Dockerfile
   tags:
     - latest
     - '{env.VERSION}'
+  args:
+    VERSION: '{env.VERSION}'
+    CHANNEL: unstable
+  annotations:
+    tags:
+      - expeditor:default-tags={{channel}}
+      - expeditor:final-channel-tags={{major}},{{major}}.{{minor}},latest
