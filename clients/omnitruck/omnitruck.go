@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/chef/omnitruck-service/clients"
@@ -39,6 +40,27 @@ type RequestParams struct {
 	PlatformVersion string
 	Architecture    string
 	Eol             string
+}
+
+func (rp *RequestParams) UrlParams() url.Values {
+	v := url.Values{}
+	if len(rp.Version) > 0 {
+		v.Add("v", rp.Version)
+	}
+	if len(rp.Platform) > 0 {
+		v.Add("p", rp.Platform)
+	}
+	if len(rp.PlatformVersion) > 0 {
+		v.Add("pv", rp.PlatformVersion)
+	}
+	if len(rp.Architecture) > 0 {
+		v.Add("m", rp.Architecture)
+	}
+	if len(rp.Eol) > 0 {
+		v.Add("eol", rp.Eol)
+	}
+
+	return v
 }
 
 func New(log *log.Entry) Omnitruck {

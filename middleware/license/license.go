@@ -17,7 +17,7 @@ func (e *InvalidLicense) Error() string {
 
 type Config struct {
 	Required      bool
-	Next          func(license_id string, c *fiber.Ctx) bool
+	Next          func(c *fiber.Ctx) bool
 	LicenseClient *clients.License
 	Unauthorized  func(code int, msg string, c *fiber.Ctx) error
 	Log           *log.Entry
@@ -60,20 +60,17 @@ func New(config ...Config) fiber.Handler {
 	cfg := configDefault(config...)
 
 	return func(c *fiber.Ctx) (err error) {
-		headers := c.GetReqHeaders()
-		id, _ := headers["License_id"]
+		id := c.Query("license_id")
 		c.Locals("valid_license", false)
+		c.Locals("license_id", id)
 
-		log := cfg.Log.WithField("license_id", id)
-		c.Locals("log", log)
-
-		if cfg.Next != nil && cfg.Next(id, c) {
+		if cfg.Next != nil && cfg.Next(c) {
 			return c.Next()
 		}
 
 		if len(id) == 0 {
 			if cfg.Required {
-				return cfg.Unauthorized(403, "Missing license_id header", c)
+				return cfg.Unauthorized(403, "Missing license_id query param", c)
 			} else {
 				// No license id found but not required
 				return c.Next()
@@ -91,7 +88,6 @@ func New(config ...Config) fiber.Handler {
 		}
 
 		c.Locals("valid_license", true)
-		c.Locals("license_id", id)
 
 		return c.Next()
 	}
