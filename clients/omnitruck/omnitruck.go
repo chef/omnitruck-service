@@ -44,11 +44,21 @@ type RequestParams struct {
 
 func (rp *RequestParams) UrlParams() url.Values {
 	v := url.Values{}
-	v.Add("v", rp.Version)
-	v.Add("p", rp.Platform)
-	v.Add("pv", rp.PlatformVersion)
-	v.Add("m", rp.Architecture)
-	v.Add("eol", rp.Eol)
+	if len(rp.Version) > 0 {
+		v.Add("v", rp.Version)
+	}
+	if len(rp.Platform) > 0 {
+		v.Add("p", rp.Platform)
+	}
+	if len(rp.PlatformVersion) > 0 {
+		v.Add("pv", rp.PlatformVersion)
+	}
+	if len(rp.Architecture) > 0 {
+		v.Add("m", rp.Architecture)
+	}
+	if len(rp.Eol) > 0 {
+		v.Add("eol", rp.Eol)
+	}
 
 	return v
 }
