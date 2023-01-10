@@ -104,33 +104,11 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 		server.Log.Info("Adding EOL Validator")
 		eolversion := omnitruck.EolVersionValidator{}
 		server.Validator.Add(&eolversion)
-
-		server.App.Use(license.New(license.Config{
-			Required: c.Mode == Commercial,
-			Next: func(license_id string, c *fiber.Ctx) bool {
-				switch c.Path() {
-				case "/status":
-					return true
-				case "/":
-					return true
-				}
-
-				return false
-			},
-		}))
-	} else {
-		// Add the middleware so it can inject the license locals into the fiber context
-		server.App.Use(license.New(license.Config{
-			Required: c.Mode == Commercial,
-			Next: func(license_id string, c *fiber.Ctx) bool {
-				return true
-			},
-		}))
 	}
 
 	server.App.Use(license.New(license.Config{
 		Required: c.Mode == Commercial,
-		Next: func(license_id string, c *fiber.Ctx) bool {
+		Next: func(c *fiber.Ctx) bool {
 			switch c.Path() {
 			case "/status":
 				return true
