@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.8 -->
-## [0.0.8](https://github.com/chef/omnitruck-service/tree/0.0.8) (2023-01-06)
+<!-- latest_release 0.0.9 -->
+## [0.0.9](https://github.com/chef/omnitruck-service/tree/0.0.9) (2023-01-12)
 
 #### Merged Pull Requests
-- Fix registry to point to internal artifactory [#10](https://github.com/chef/omnitruck-service/pull/10) ([teknofire](https://github.com/teknofire))
+- Metadata endpoint now maps url to the download endpoint [#11](https://github.com/chef/omnitruck-service/pull/11) ([teknofire](https://github.com/teknofire))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Metadata endpoint now maps url to the download endpoint [#11](https://github.com/chef/omnitruck-service/pull/11) ([teknofire](https://github.com/teknofire)) <!-- 0.0.9 -->
 - Fix registry to point to internal artifactory [#10](https://github.com/chef/omnitruck-service/pull/10) ([teknofire](https://github.com/teknofire)) <!-- 0.0.8 -->
 - Switch to publish images to artifactory [#9](https://github.com/chef/omnitruck-service/pull/9) ([teknofire](https://github.com/teknofire)) <!-- 0.0.7 -->
 - Switch to chefes docker repo [#8](https://github.com/chef/omnitruck-service/pull/8) ([teknofire](https://github.com/teknofire)) <!-- 0.0.6 -->
