@@ -2,6 +2,7 @@ package services
 
 import (
 	"net/url"
+	"time"
 
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
@@ -21,7 +22,14 @@ func (server *ApiService) buildRouter() {
 	}))
 
 	// Add the endpoints that don't require any special handling for various APIs
-	server.App.Get("/", server.HealthCheck)
+	server.App.Static("/", "./static", fiber.Static{
+		Compress:      true,
+		ByteRange:     true,
+		Browse:        false,
+		Index:         "index.html",
+		CacheDuration: 10 * time.Second,
+		MaxAge:        3600,
+	})
 	server.App.Get("/status", server.HealthCheck)
 	server.App.Get("/products", server.productsHandler)
 	server.App.Get("/platforms", server.platformsHandler)
