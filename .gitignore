@@ -2,3 +2,4 @@ omnitruck-service
 .omnitruck.yml
 omnitruck.yml
 .terraform
+*.fiber.gz
