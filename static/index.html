@@ -4,8 +4,9 @@
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4" crossorigin="anonymous"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" type="text/javascript"></script>
         <script>
-            const Omnitruck_Url_Customer = "http://localhost:3002";
-            const Omnitruck_Url_Trial = "http://localhost:3001";
+            const Origin = window.location.origin;
+            const Omnitruck_Url_Customer = Origin;
+            const Omnitruck_Url_Trial = Origin;
             const Omnitruck_Url_OpenSource = "http://localhost:3000";
 
             let Omnitruck = (function () { 
@@ -113,252 +114,6 @@
                 return Constructor;
             })();
         </script>
-        <script>
-            /*******
-             * 
-             * 
-             * FREE / COMMUNITY Example
-             * 
-             * 
-             *******/
-            $(function() {
-                
-                var freeApi = new Omnitruck(Omnitruck_Url_OpenSource);
-
-                function init(){
-                    freeApi.Platforms().done( function(data){ 
-                        var dd = $("#oss-Platform");
-                        dd.empty();
-                        $.each(data, function (value, key) { $("<option />", { val: value, text: key }).appendTo(dd); });                        
-                        dd.removeAttr('disabled');
-                        listProducts();
-                    });
-                }
-
-                function listProducts(){
-                    freeApi.Products().done( function(data){ 
-                        var dd = $("#oss-Product");
-                        dd.empty();
-                        $(data).each(function () { $("<option />", { val: this, text: this }).appendTo(dd); });
-                        dd.removeAttr('disabled');
-                        listVersions();
-                    });
-                }
-
-                function listVersions(){
-                    product = $("#oss-Product").val();
-                    freeApi.Versions(product).done( function(data){ 
-                        var dd = $("#oss-Version");
-                        dd.empty();
-                        dd.attr('disabled', 'disabled');
-                        $(data.reverse()).each(function () { $("<option />", { val: this, text: this }).appendTo(dd); });
-                        dd.removeAttr('disabled');
-                        validateProduct();
-                    });                    
-                }
-
-                function updateSelections(src){
-                    function disablePlatforms(data){
-                        var dd = $("#oss-Platform");            
-                        dd.children().attr('disabled','disabled');
-                        $.each(data, function (key, value) { dd.children("option[value="+key+"]").removeAttr('disabled'); });    
-                        if( dd.children(":selected").attr("disabled") === "disabled" ) { dd.children(":enabled").prop('selected','selected'); }
-                    }
-
-                    function displayPackage(src) {     
-                        var platform = $("#oss-Platform").val();     
-                        var product = $("#oss-Product").val();
-                        var version = $("#oss-Version").val();                     
-                        var data = src[platform];
-                        $('#oss-table tbody').empty();
-                        $.each(data, function (pVer, vData) { 
-                            $.each(vData, function (arch, package) {
-                                var os = $('<td />').html(platform + " " + pVer);
-                                var ver = $('<td />').html(package.version);
-                                var notes = $('<td class="small"/>').html(
-                                    "<span>Architecture:<span> " + arch + "<br/>" +
-                                    "<span>SHA256:<span> " + package.sha256 + "<br/>" 
-                                );
-
-                                var link = freeApi.DownloadAsLink(product, platform, pVer, arch, version);
-                                var href = $('<a class="btn btn-danger" />').html("Download").attr("href", link);
-                                var dl = $('<td />').append(href);
-                                var row = $('<tr valign="top" />');
-                                row.append(os).append(ver).append(notes).append(dl);
-                                $("#oss-table tbody").append( row );
-                            });
-                        });    
-                    }
-
-                    disablePlatforms(src);
-                    displayPackage(src);
-                }
-
-                function validateProduct(){
-                    product = $("#oss-Product").val();
-                    version = $("#oss-Version").val();                     
-                    freeApi.Packages(product, version).done( function(data) { 
-                        updateSelections(data);
-                    });
-                }
-
-                $("#oss-Product").change( listVersions );
-                $("#oss-Version").change( validateProduct );
-                $("#oss-Platform").change( validateProduct );
-
-                init();                
-            });
-
-        </script>
-
-        <script>
-            /*******
-             * 
-             * 
-             * TRIAL DEMO EXAMPLE
-             * 
-             * 
-             *******/
-            $(function() {
-              
-                var trialApi = new Omnitruck(Omnitruck_Url_Trial);
-                var cache = {
-                    product: undefined,
-                    version: undefined,
-                    packages: undefined,
-                }
-                
-                function init(){
-                    trialApi.Platforms().done( function(data){ 
-                        var dd = $("#trial-Platform");
-                        dd.empty();
-                        $.each(data, function (value, key) { $("<option />", { val: value, text: key }).appendTo(dd); });                        
-                        dd.removeAttr('disabled');
-
-                        trialApi.Architectures().done( function(data){ 
-                            var dd = $("#trial-Architecture");
-                            dd.empty();
-                            $(data).each(function () { $("<option />", { val: this, text: this }).appendTo(dd); });
-                            dd.removeAttr('disabled');
-                            listProducts();
-                        });
-                    });
-                }
-
-                function listProducts(){
-                    trialApi.Products().done( function(data){ 
-                        var dd = $("#trial-Product");
-                        dd.empty();
-                        $(data).each(function () { $("<option />", { val: this, text: this }).appendTo(dd); });
-                        dd.removeAttr('disabled');
-                        listVersions();
-                    });
-                }
-
-                function listVersions(){
-                    product = $("#trial-Product").val();
-                    trialApi.Versions(product).done( function(data){ 
-                        var dd = $("#trial-Version");
-                        dd.empty();
-                        dd.attr('disabled', 'disabled');
-                        $(data.reverse()).each(function () { $("<option />", { val: this, text: this }).appendTo(dd); });
-                        if (trialApi.License() !== undefined) { dd.removeAttr('disabled'); }
-                        validateProduct();
-                    });                    
-                }
-
-                function updateSelections(){
-                    src = cache.packages;          
-                    function disablePlatforms(data){
-                        var dd = $("#trial-Platform");            
-                        dd.children().attr('disabled','disabled');
-                        $.each(data, function (key, value) { dd.children("option[value="+key+"]").removeAttr('disabled'); });    
-                        if( dd.children(":selected").attr("disabled") === "disabled" ) { dd.children(":enabled").prop('selected','selected'); }
-                    }
-
-                    function listPlatformVersions(platforms){
-                        var value = $("#trial-Platform").val();  
-                        var data = platforms[value]
-                        var dd = $("#trial-PlatformVersion");            
-                        dd.attr('disabled', 'disabled');
-                        dd.empty();
-                        $.each(data, function (key, value) { $("<option />", { val: key, text: key }).appendTo(dd); });                            
-                        dd.removeAttr('disabled', 'disabled');                        
-                    }
-
-                    function disableArchitectures(src){
-                        var platform = src[ $("#trial-Platform").val() ];
-                        var data = platform[ $("#trial-PlatformVersion").val() ];
-                        var dd = $("#trial-Architecture");
-                        dd.children().attr('disabled','disabled');
-                        $.each(data, function (key, value) { dd.children("option[value="+key+"]").removeAttr('disabled'); });    
-                        if( dd.children(":selected").attr("disabled") === "disabled" ) { dd.children(":enabled").prop('selected','selected'); }
-                    }
-
-                    function displayPackage(src){
-                        var keys =                             {
-                                product: $("#trial-Product").val(),
-                                version: $("#trial-Version").val(),
-                                platform: $("#trial-Platform").val(),
-                                platformVersion: $("#trial-PlatformVersion").val(),
-                                architecture: $("#trial-Architecture").val(),
-                            };
-                        var platform = src[ $("#trial-Platform").val() ];
-                        var arch = platform[ $("#trial-PlatformVersion").val() ];
-                        var data = arch[ $("#trial-Architecture").val() ];
-                        var fileName = data.url.substring(data.url.lastIndexOf('/')+1);
-                        var ident = trialApi.apply("{{product}} ({{version}}) for {{platform}} {{platformVersion}} [{{architecture}}]", keys);
-                        var href = trialApi.DownloadAsLink(keys.product, keys.platform, keys.platformVersion, keys.architecture, keys.version);
-                        var cmd = trialApi.Curl(fileName, keys.product, keys.platform, keys.platformVersion, keys.architecture, keys.version);
-                        $("#trial-Product").val()
-                        $("#trial-FileSha1").val(data.sha1);
-                        $("#trial-FileSha256").val(data.sha256);
-                        $("#trial-FileVersion").val(data.version);
-                        $("#trial-FileName").val(fileName);
-                        $("#trial-FileDownload").text(ident);
-                        $("#trial-FileDownload").prop("href", href);
-                        $("#trial-Command").text(cmd);                                            
-                        trialApi.License() !== undefined ? $("#trial-LinkAllowed").hide() : $("#trial-LinkAllowed").show();
-                    }
-
-                    disablePlatforms(src);
-                    listPlatformVersions(src);
-                    disableArchitectures(src);
-                    displayPackage(src);
-                }
-
-                function validateProduct(){
-                    product = $("#trial-Product").val();
-                    version = $("#trial-Version").val();                     
-                    if (trialApi.License() == undefined){ /*NOTE: trial API does not support passing in the version without a license ID*/
-                        version = undefined;
-                    }
-                    if (cache.product === product && cache.version === version && cache.packages !== undefined){
-                        updateSelections();
-                    }
-                    trialApi.Packages(product, version).done( function(data) { 
-                        cache.product = product;
-                        cache.version = version;
-                        cache.packages = data;
-                        updateSelections();
-                    });
-                }
-
-                $('#trial-LicenseId').change( function(){
-                    var value = $(this).val();
-                    if( !value || value == ""){ trialApi.ClearLicense(); }else{ trialApi.License( value ); }
-                    listProducts();
-                });
-
-                $("#trial-Product").change( listVersions );
-                $("#trial-Version").change( validateProduct );
-                $("#trial-Platform").change( updateSelections );
-                $("#trial-PlatformVersion").change( updateSelections );
-                $("#trial-Architecture").change( updateSelections );
-
-                init();                
-            });
-        </script>
 
         <script>
             /*******
@@ -378,20 +133,12 @@
 
                 function init(){     
                     customerApi.EndOfLife( $("#customer-Eol").val() == "True" );
-                    if( $("#customer-LicenseId").val() == "" ){ customerApi.ClearLicense(); }else{ customerApi.License( $("#customer-LicenseId").val() ); }
-                    
-                    if( customerApi.License() === undefined ){
-                        $("#customer-Product").attr("disabled","disabled");
-                        $("#customer-input").find("select").attr("disabled","disabled");
-
-                        $("#customer-Product").empty();
-                        $("#customer-Version").empty();
-                        $("#customer-Platform").empty();
-                        $("#customer-PlatformVersion").empty();
-
-                        return;
+                    if( $("#customer-LicenseId").val() == "" ){ 
+                        customerApi.ClearLicense(); 
+                    } else { 
+                        customerApi.License( $("#customer-LicenseId").val() ); 
                     }
-
+                    
                     if(platformCache === undefined){
                         customerApi.Platforms().done( function(data){ platformCache = data; init(); });     
                         return;
@@ -409,13 +156,12 @@
                 function listVersions(){
                     product = $("#customer-Product").val();
 
-                    $("#customer-Platform").attr("disabled","disabled");
-                    $("#customer-PlatformVersion").attr("disabled","disabled");
-
                     customerApi.Versions(product).done( function(data){ 
                         var dd = $("#customer-Version");
                         dd.empty();
                         dd.attr('disabled', 'disabled');
+                        $("<option />", { val: "latest", text: "latest"}).appendTo(dd);
+
                         $(data.reverse()).each(function () { $("<option />", { val: this, text: this }).appendTo(dd); });
                         dd.removeAttr('disabled');
                         loadProductByVersion();
@@ -447,6 +193,8 @@
                 function populatePlatform(){
                     product = $("#customer-Product").val();
                     version = $("#customer-Version").val();
+                    if (!product || !version) { return }
+
                     data = cache[product][version];
 
                     var dd = $("#customer-Platform");
@@ -533,6 +281,7 @@
                 $("#customer-Version").change( loadProductByVersion );
                 $("#customer-Platform").change( populatePlatformVersion );
 
+                populatePlatform();
                 init();
             });
 
@@ -543,130 +292,7 @@
         
 
         <div class="container-md">
-
-        <ul class="nav nav-tabs" id="myTab" role="tablist">
-            <li class="nav-item" role="presentation">
-              <button class="nav-link active" id="free-tab" data-bs-toggle="tab" data-bs-target="#free" type="button" role="tab" aria-controls="free" aria-selected="true">Open Source</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="trial-tab" data-bs-toggle="tab" data-bs-target="#trial" type="button" role="tab" aria-controls="trial" aria-selected="false">Trial</button>
-            </li>
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" id="customer-tab" data-bs-toggle="tab" data-bs-target="#customer" type="button" role="tab" aria-controls="customer" aria-selected="false">Customer</button>
-            </li>
-        </ul>
-        <div class="tab-content" id="myTabContent">
-            <div class="tab-pane fade show active" id="free" role="tabpanel" aria-labelledby="free-tab">
-
-                <form>
-                    <div class="mb-3">                        
-                        <label for="oss-Product" class="form-label">Product</label>
-                        <select id="oss-Product" disabled="disabled" class="form-select"></select>
-                    </div>
-                    <div class="mb-3">                        
-                        <label for="oss-Version" class="form-label">Versions</label>
-                        <select id="oss-Version" disabled="disabled" class="form-select"></select>
-                    </div>                    
-                    <div class="mb-3">                        
-                        <label for="oss-Platform" class="form-label">Platform</label>
-                        <select id="oss-Platform" disabled="disabled" class="form-select"></select>
-                    </div>                    
-
-                </form>
-
-                <div class="pt-5">
-                    <h5>Download</h5>
-                    <hr/>
-                    <table id="oss-table" class="table table-striped">
-                        <thead>
-                            <th scope="col">OS</th>
-                            <th scope="col">Version</th>
-                            <th scope="col">Notes</th>
-                            <th scope="col">&nbsp;</th>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="tab-pane fade" id="trial" role="tabpanel" aria-labelledby="trial-tab">
-
-                <form>
-                    <div class="mb-3">
-                        <label for="trial-LicenseId" class="form-label">Trial License ID</label>
-                        <select id="trial-LicenseId" class="form-select">
-                            <option value="" selected="true">-- NONE --</option>
-                            <option value="tmns-bea68bbb-1e85-44ea-8b98-a654b011174b-4227">Example License</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">                        
-                        <label for="trial-Product" class="form-label">Product</label>
-                        <select id="trial-Product" disabled="disabled" class="form-select"></select>
-                    </div>
-                    <div class="mb-3">                        
-                        <label for="trial-Version" class="form-label">Versions</label>
-                        <select id="trial-Version" disabled="disabled" class="form-select"></select>
-                    </div>                    
-                    <div class="mb-3">                        
-                        <label for="trial-Platform" class="form-label">Platform</label>
-                        <select id="trial-Platform" disabled="disabled" class="form-select"></select>
-                    </div>                    
-                    <div class="mb-3">                        
-                        <label for="trial-PlatformVersion" class="form-label">Platform Version</label>
-                        <select id="trial-PlatformVersion" disabled="disabled" class="form-select"></select>
-                    </div>                    
-                    <div class="mb-3">                        
-                        <label for="trial-Architecture" class="form-label">Architecture</label>
-                        <select id="trial-Architecture" disabled="disabled" class="form-select"></select>
-                    </div>                    
-
-                    <div id="trial-DownloadPanel" class="pt-5">
-                        <h5>Download</h5>
-                        <hr/>
-                        <div class="container">
-                            <div class="row">
-                                <div class="col-sm">
-                                    <div class="mb-3">                        
-                                        <label for="trial-FileSha1" class="form-label">Sha1</label>
-                                        <input type="text" readonly="readonly" disabled="disabled" id="trial-FileSha1" class="form-control"/>
-                                    </div>                    
-                                    <div class="mb-3">                        
-                                        <label for="trial-FileSha256" class="form-label">Sha256</label>
-                                        <input type="text" readonly="readonly" disabled="disabled" id="trial-FileSha256" class="form-control"/>
-                                    </div>                    
-                                </div>
-
-                                <div class="col-sm">
-                                    <div class="mb-3">                        
-                                        <label for="trial-FileVersion" class="form-label">Version</label>
-                                        <input type="text" readonly="readonly" disabled="disabled" id="trial-FileVersion" class="form-control"/>
-                                    </div>                    
-                                    <div class="mb-3">                        
-                                        <label for="trial-FileName" class="form-label">File</label>
-                                        <input type="text" readonly="readonly" disabled="disabled" id="trial-FileName" class="form-control"/>
-                                    </div>                    
-                                </div>
-                                
-                                <div class="col-sm">
-                                    <div class="mb-3" id="trial-LinkAllowed">
-                                        <label for="trial-FileDownload" class="form-label">Downlad:</label><br/>
-                                        <a href="" class="btn btn-primary" id="trial-FileDownload">Download</a>
-                                    </div>                    
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">                        
-                            <label for="trial-Command" class="form-label">CLI</label><br/>
-                            <pre id="trial-Command" class="form-text">
-                            </pre>
-                        </div>                            
-                    </div>                    
-
-                </form>
-
-            </div>
-
-            <div class="tab-pane fade" id="customer" role="tabpanel" aria-labelledby="customer-tab">
+            <div class="tab-pane" id="customer" role="tabpanel" aria-labelledby="customer-tab">
 
 
                 <form>
@@ -687,7 +313,7 @@
                     </div>
                     <div class="mb-3">                        
                         <label for="customer-Product" class="form-label">Product</label>
-                        <select id="customer-Product" disabled="disabled" class="form-select"></select>
+                        <select id="customer-Product" class="form-select"></select>
                     </div>
 
 
@@ -697,15 +323,15 @@
                                 <div class="col-sm">
                                     <div class="mb-3">                        
                                         <label for="customer-Version" class="form-label"> <span id="customer-product-name-span"></span> Version</label>
-                                        <select id="customer-Version" disabled="disabled" class="form-select"></select>
+                                        <select id="customer-Version" class="form-select"></select>
                                     </div>                    
                                     <div class="mb-3">                        
                                         <label for="customer-Platform" class="form-label">Operating System</label>
-                                        <select id="customer-Platform" disabled="disabled" class="form-select"></select>
+                                        <select id="customer-Platform" class="form-select"></select>
                                     </div>                    
                                     <div class="mb-3">                        
                                         <label for="customer-PlatformVersion" class="form-label"> <span id="customer-platform-name-span"></span> Version</label>
-                                        <select id="customer-PlatformVersion" disabled="disabled" class="form-select"></select>
+                                        <select id="customer-PlatformVersion" class="form-select"></select>
                                     </div>                    
                                 </div>                
 
@@ -833,7 +459,6 @@
 
 
             </div>            
-          </div>
         </div>
 
     </body>
