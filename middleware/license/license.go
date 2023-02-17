@@ -3,7 +3,6 @@ package license
 import (
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/gofiber/fiber/v2"
-	log "github.com/sirupsen/logrus"
 )
 
 type InvalidLicense struct {
@@ -20,7 +19,6 @@ type Config struct {
 	Next          func(c *fiber.Ctx) bool
 	LicenseClient *clients.License
 	Unauthorized  func(code int, msg string, c *fiber.Ctx) error
-	Log           *log.Entry
 }
 
 var ConfigDefault = Config{
@@ -28,7 +26,6 @@ var ConfigDefault = Config{
 	Next:          nil,
 	LicenseClient: nil,
 	Unauthorized:  nil,
-	Log:           log.WithField("pkg", "middleware/license"),
 }
 
 func configDefault(config ...Config) Config {
@@ -39,10 +36,6 @@ func configDefault(config ...Config) Config {
 		cfg = config[0]
 	}
 
-	if cfg.Log == nil {
-		cfg.Log = ConfigDefault.Log
-	}
-
 	if cfg.Unauthorized == nil {
 		cfg.Unauthorized = func(code int, msg string, c *fiber.Ctx) error {
 			return c.Status(code).JSON(msg)
@@ -50,7 +43,7 @@ func configDefault(config ...Config) Config {
 	}
 
 	if cfg.LicenseClient == nil {
-		cfg.LicenseClient = clients.NewLicenseClient(cfg.Log)
+		cfg.LicenseClient = clients.NewLicenseClient()
 	}
 
 	return cfg
@@ -71,13 +64,10 @@ func New(config ...Config) fiber.Handler {
 		if len(id) == 0 {
 			if cfg.Required {
 				return cfg.Unauthorized(403, "Missing license_id query param", c)
-			} else {
-				// No license id found but not required
-				return c.Next()
 			}
+			// No license id found but not required
+			return c.Next()
 		}
-
-		log.Info("Validating license")
 
 		resp := clients.Response{}
 		request := cfg.LicenseClient.Validate(id, &resp)

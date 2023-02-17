@@ -2,6 +2,7 @@ package services
 
 import (
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/chef/omnitruck-service/clients"
@@ -9,6 +10,7 @@ import (
 	_ "github.com/chef/omnitruck-service/docs"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/swagger"
+	"github.com/gomarkdown/markdown"
 )
 
 // @title        Licensed Omnitruck API
@@ -34,12 +36,28 @@ func (server *ApiService) buildRouter() {
 	server.App.Get("/products", server.productsHandler)
 	server.App.Get("/platforms", server.platformsHandler)
 	server.App.Get("/architectures", server.architecturesHandler)
+	server.App.Get("/docs", server.docsHandler("localhost"))
 	server.App.Get("/:channel/:product/versions/latest", server.latestVersionHandler)
 	server.App.Get("/:channel/:product/versions/all", server.productVersionsHandler)
 	server.App.Get("/:channel/:product/packages", server.productPackagesHandler)
 	server.App.Get("/:channel/:product/metadata", server.productMetadataHandler)
 	server.App.Get("/:channel/:product/download", server.productDownloadHandler)
 
+}
+
+func (server *ApiService) docsHandler(baseUrl string) func(*fiber.Ctx) error {
+	content, err := os.ReadFile("docs/index.md")
+	if err != nil {
+		content = []byte("Error reading docs/index.md")
+	}
+	output := markdown.ToHTML(content, nil, nil)
+	view_data := fiber.Map{
+		"Content": string(output),
+	}
+
+	return func(c *fiber.Ctx) error {
+		return c.Render("docs", view_data, "layouts/docs")
+	}
 }
 
 // @description Returns a valid list of valid product keys.
