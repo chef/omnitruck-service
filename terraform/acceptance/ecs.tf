@@ -28,19 +28,19 @@ resource "aws_ecs_service" "main" {
   }
 
   load_balancer {
-    target_group_arn = aws_alb_target_group.trial.arn
+    target_group_arn = module.trial_alb.alb_tg_arn
     container_name   = "${local.full_name}-app"
     container_port   = var.app_trial_port
   }
 
   load_balancer {
-    target_group_arn = aws_alb_target_group.opensource.arn
+    target_group_arn = module.opensource_alb.alb_tg_arn
     container_name   = "${local.full_name}-app"
     container_port   = var.app_os_port
   }
 
   load_balancer {
-    target_group_arn = aws_alb_target_group.commercial.arn
+    target_group_arn = module.commercial_alb.alb_tg_arn
     container_name   = "${local.full_name}-app"
     container_port   = var.app_commercial_port
   }
