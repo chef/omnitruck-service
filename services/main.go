@@ -36,7 +36,6 @@ func (server *ApiService) buildRouter() {
 	server.App.Get("/products", server.productsHandler)
 	server.App.Get("/platforms", server.platformsHandler)
 	server.App.Get("/architectures", server.architecturesHandler)
-	server.App.Get("/docs", server.docsHandler("localhost"))
 	server.App.Get("/:channel/:product/versions/latest", server.latestVersionHandler)
 	server.App.Get("/:channel/:product/versions/all", server.productVersionsHandler)
 	server.App.Get("/:channel/:product/packages", server.productPackagesHandler)
@@ -53,6 +52,7 @@ func (server *ApiService) docsHandler(baseUrl string) func(*fiber.Ctx) error {
 	output := markdown.ToHTML(content, nil, nil)
 	view_data := fiber.Map{
 		"Content": string(output),
+		"baseUrl": baseUrl,
 	}
 
 	return func(c *fiber.Ctx) error {

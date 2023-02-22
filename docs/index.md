@@ -1,6 +1,31 @@
-# Omnitruck Documentation
+# Omnitruck API Documentation
 
-Valid \<CHANNEL> values in endpoint URLs include: `current` and `stable`.
+## API Operation Modes
+---
+
+Omnitruck API operates in 3 different modes; `trial`, `opensource`, and `commercial`. 
+
+### Trial Mode
+
+Valid `<CHANNEL>` values in endpoint URLs is limited to `stable` 
+Endpoint results are limited to the most recent version of any product unless a valid commercial `license_id` is provided.
+
+### Opensource Mode
+
+Valid `<CHANNEL>` values in endpoint URLs is limited to `stable`.
+
+Endpoint results are restricted to opensource versions of products. 
+
+### Commercial Mode
+
+Valid `<CHANNEL>` values in endpoint URLs include: `current` and `stable`.
+
+If `eol=true` url query parameter is returned than all product versions are returned, otherwise only supported products and product versions are returned.
+
+Valid `license_id` url query parameter is required to return results from API endpoints.
+
+## API Endpoints
+---
 
 ### /products
 Returns a valid list of valid product keys. Any of these product keys can be used in the \<PRODUCT> value of other endpoints. Please note many of these products are used for internal tools only and many have been EOL'd.

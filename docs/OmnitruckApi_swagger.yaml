@@ -91,7 +91,7 @@ paths:
         name: v
         type: string
       - description: License ID
-        in: header
+        in: query
         name: license_id
         type: string
       - default: false
@@ -157,7 +157,7 @@ paths:
         name: v
         type: string
       - description: License ID
-        in: header
+        in: query
         name: license_id
         type: string
       - default: false
@@ -203,7 +203,7 @@ paths:
         name: v
         type: string
       - description: License ID
-        in: header
+        in: query
         name: license_id
         type: string
       - default: false
@@ -243,7 +243,7 @@ paths:
         required: true
         type: string
       - description: License ID
-        in: header
+        in: query
         name: license_id
         type: string
       - default: false
@@ -285,7 +285,7 @@ paths:
         required: true
         type: string
       - description: License ID
-        in: header
+        in: query
         name: license_id
         type: string
       responses:
