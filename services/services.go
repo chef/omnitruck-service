@@ -11,6 +11,8 @@ import (
 	fiber "github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/template/mustache"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -54,8 +56,6 @@ func New(c Config) *ApiService {
 	service := ApiService{}
 	service.Initialize(c)
 
-	service.buildRouter()
-
 	return &service
 }
 
@@ -65,17 +65,15 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	server.Validator = omnitruck.NewValidator()
 	server.Mode = c.Mode
 
+	engine := mustache.New("./views", ".html")
+
 	server.App = fiber.New(fiber.Config{
-		DisableStartupMessage: true,
+		DisableStartupMessage: false,
 		EnablePrintRoutes:     false,
 		ReadTimeout:           300 * time.Second,
 		WriteTimeout:          300 * time.Second,
+		Views:                 engine,
 	})
-
-	server.App.Use(cors.New())
-	// This will catch panics in the app and prevent it from crashing the server
-	// TODO: Figure out if we can better handle logging these, currently it just returns a panic message to the user
-	// server.App.Use(recover.New())
 
 	if c.Mode == Trial || c.Mode == Opensource {
 		channel := omnitruck.ContainsValidator{
@@ -106,20 +104,6 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 		server.Validator.Add(&eolversion)
 	}
 
-	server.App.Use(license.New(license.Config{
-		Required: c.Mode == Commercial,
-		Next: func(c *fiber.Ctx) bool {
-			switch c.Path() {
-			case "/status":
-				return true
-			case "/":
-				return true
-			}
-
-			return false
-		},
-	}))
-
 	return server
 }
 
@@ -136,13 +120,35 @@ func (server *ApiService) StartService() {
 	// So the io writer will be closed when the service ends
 	lw := server.Log.Writer()
 	defer lw.Close()
-
 	server.App.Use(logger.New(logger.Config{
-		Format: "[${ip}]:${port} ${status} - ${method} ${path}\n",
+		Format: "[${time}] [${ip}]:${port} ${status} - ${method} ${path} ${red}${error}\n",
 		Output: lw,
 	}))
 
+	server.App.Use(cors.New())
+	// This will catch panics in the app and prevent it from crashing the server
+	// TODO: Figure out if we can better handle logging these, currently it just returns a panic message to the user
+	server.App.Use(recover.New())
+
+	server.App.Use(license.New(license.Config{
+		Required: server.Config.Mode == Commercial,
+		Next: func(c *fiber.Ctx) bool {
+			switch c.Path() {
+			case "/status":
+				return true
+			case "/":
+				return true
+			}
+
+			return false
+		},
+	}))
+
+	// Make sure we build the router last so the middleware has a chance to execute before hand
+	server.buildRouter()
+
 	server.Log.Infof("Starting %s server at: %s", server.Config.Name, server.Config.Listen)
+
 	err := server.App.Listen(server.Config.Listen)
 	if err != nil {
 		if err == http.ErrServerClosed {

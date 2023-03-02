@@ -2,6 +2,7 @@ package services
 
 import (
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/chef/omnitruck-service/clients"
@@ -9,6 +10,7 @@ import (
 	_ "github.com/chef/omnitruck-service/docs"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/swagger"
+	"github.com/gomarkdown/markdown"
 )
 
 // @title        Licensed Omnitruck API
@@ -40,6 +42,22 @@ func (server *ApiService) buildRouter() {
 	server.App.Get("/:channel/:product/metadata", server.productMetadataHandler)
 	server.App.Get("/:channel/:product/download", server.productDownloadHandler)
 
+}
+
+func (server *ApiService) docsHandler(baseUrl string) func(*fiber.Ctx) error {
+	content, err := os.ReadFile("docs/index.md")
+	if err != nil {
+		content = []byte("Error reading docs/index.md")
+	}
+	output := markdown.ToHTML(content, nil, nil)
+	view_data := fiber.Map{
+		"Content": string(output),
+		"baseUrl": baseUrl,
+	}
+
+	return func(c *fiber.Ctx) error {
+		return c.Render("docs", view_data, "layouts/docs")
+	}
 }
 
 // @description Returns a valid list of valid product keys.

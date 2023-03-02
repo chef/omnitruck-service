@@ -149,7 +149,7 @@ const docTemplateOmnitruckApi = `{
                         "type": "string",
                         "description": "License ID",
                         "name": "license_id",
-                        "in": "header"
+                        "in": "query"
                     },
                     {
                         "type": "boolean",
@@ -236,7 +236,7 @@ const docTemplateOmnitruckApi = `{
                         "type": "string",
                         "description": "License ID",
                         "name": "license_id",
-                        "in": "header"
+                        "in": "query"
                     },
                     {
                         "type": "boolean",
@@ -301,7 +301,7 @@ const docTemplateOmnitruckApi = `{
                         "type": "string",
                         "description": "License ID",
                         "name": "license_id",
-                        "in": "header"
+                        "in": "query"
                     },
                     {
                         "type": "boolean",
@@ -359,7 +359,7 @@ const docTemplateOmnitruckApi = `{
                         "type": "string",
                         "description": "License ID",
                         "name": "license_id",
-                        "in": "header"
+                        "in": "query"
                     },
                     {
                         "type": "boolean",
@@ -420,7 +420,7 @@ const docTemplateOmnitruckApi = `{
                         "type": "string",
                         "description": "License ID",
                         "name": "license_id",
-                        "in": "header"
+                        "in": "query"
                     }
                 ],
                 "responses": {
