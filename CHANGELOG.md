@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.10 -->
-## [0.0.10](https://github.com/chef/omnitruck-service/tree/0.0.10) (2023-02-21)
+<!-- latest_release 0.0.11 -->
+## [0.0.11](https://github.com/chef/omnitruck-service/tree/0.0.11) (2023-03-02)
 
 #### Merged Pull Requests
-- Adding acceptance dns entries [#13](https://github.com/chef/omnitruck-service/pull/13) ([teknofire](https://github.com/teknofire))
+- WIP Adding omnitruck service documentation [#14](https://github.com/chef/omnitruck-service/pull/14) ([teknofire](https://github.com/teknofire))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- WIP Adding omnitruck service documentation [#14](https://github.com/chef/omnitruck-service/pull/14) ([teknofire](https://github.com/teknofire)) <!-- 0.0.11 -->
 - Adding acceptance dns entries [#13](https://github.com/chef/omnitruck-service/pull/13) ([teknofire](https://github.com/teknofire)) <!-- 0.0.10 -->
 - Metadata endpoint now maps url to the download endpoint [#11](https://github.com/chef/omnitruck-service/pull/11) ([teknofire](https://github.com/teknofire)) <!-- 0.0.9 -->
 - Fix registry to point to internal artifactory [#10](https://github.com/chef/omnitruck-service/pull/10) ([teknofire](https://github.com/teknofire)) <!-- 0.0.8 -->
