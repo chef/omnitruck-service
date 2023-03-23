@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.12 -->
-## [0.0.12](https://github.com/chef/omnitruck-service/tree/0.0.12) (2023-03-14)
+<!-- latest_release 0.0.13 -->
+## [0.0.13](https://github.com/chef/omnitruck-service/tree/0.0.13) (2023-03-23)
 
 #### Merged Pull Requests
-- Chef/cla 191 [#17](https://github.com/chef/omnitruck-service/pull/17) ([gangwarshivendra](https://github.com/gangwarshivendra))
+- Resolved swagger for commercial [#18](https://github.com/chef/omnitruck-service/pull/18) ([gangwarshivendra](https://github.com/gangwarshivendra))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Resolved swagger for commercial [#18](https://github.com/chef/omnitruck-service/pull/18) ([gangwarshivendra](https://github.com/gangwarshivendra)) <!-- 0.0.13 -->
 - Chef/cla 191 [#17](https://github.com/chef/omnitruck-service/pull/17) ([gangwarshivendra](https://github.com/gangwarshivendra)) <!-- 0.0.12 -->
 - WIP Adding omnitruck service documentation [#14](https://github.com/chef/omnitruck-service/pull/14) ([teknofire](https://github.com/teknofire)) <!-- 0.0.11 -->
 - Adding acceptance dns entries [#13](https://github.com/chef/omnitruck-service/pull/13) ([teknofire](https://github.com/teknofire)) <!-- 0.0.10 -->
