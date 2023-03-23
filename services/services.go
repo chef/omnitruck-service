@@ -138,6 +138,8 @@ func (server *ApiService) StartService() {
 				return true
 			case "/":
 				return true
+			case "/swagger":
+				return true
 			}
 
 			return false
