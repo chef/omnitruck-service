@@ -1,10 +1,19 @@
 # Omnitruck API Documentation
+ There are two environments available for Omnitruck API i.e: `production`, `acceptance`. Below are the base url for emvironments.
+ Base url for `Acceptance` environments.
+ `commercial` : https://commercial-acceptance.downloads.chef.co/
+ `trial` : https://trial-acceptance.downloads.chef.co/
+ `opensource` : https://opensource-acceptance.downloads.chef.co/
+
+ Base url for `Production` environments.
+ `commercial` : https://ChefDownload-Commerical.chef.io
+ `trial` : https://ChefDownload-Trial.chef.io
+ `opensource` : https://ChefDownload-Community.chef.io
 
 ## API Operation Modes
 ---
 
-Omnitruck API operates in 3 different modes; `trial`, `opensource`, and `commercial`. 
-
+Omnitruck API operates in 3 different modes; `trial`, `opensource`, and `commercial`.
 ### Trial Mode
 
 Valid `<CHANNEL>` values in endpoint URLs is limited to `stable` 
@@ -33,7 +42,7 @@ Returns a valid list of valid product keys. Any of these product keys can be use
 Example Request:
 
 ```bash
-curl https://omnitruck.chef.io/products
+curl <BASE_URL>/products
 [
   "analytics",
   "angry-omnibus-toolchain",
@@ -71,7 +80,7 @@ Returns a valid list of valid platform keys along with full friendly names. Any 
 Example Request:
 
 ```bash
-curl https://omnitruck.chef.io/platforms
+curl <BASE_URL>/platforms
 {
   "aix": "AIX",
   "amazon": "Amazon Linux",
@@ -95,7 +104,7 @@ Returns a valid list of valid platform keys along with friendly names. Any of th
 Example Request:
 
 ```bash
-curl https://omnitruck.chef.io/architectures
+curl <BASE_URL>/architectures
 [
   "aarch64",
   "armv7l",
@@ -115,7 +124,7 @@ Get a list of all available version numbers for a particular channel and product
 Example Request:
 
 ```bash
-curl https://omnitruck.chef.io/stable/chef-workstation/versions/all
+curl <BASE_URL>/stable/chef-workstation/versions/all
 [
   "0.1.119",
   "0.1.120",
@@ -165,7 +174,7 @@ Get the latest version number for a particular channel and product combination.
 Example Request:
 
 ```bash
-curl https://omnitruck.chef.io/stable/chef/versions/latest
+curl <BASE_URL>/stable/chef/versions/latest
 "15.8.23"
 ```
 
@@ -175,7 +184,7 @@ Get the full list of all packages for a particular channel and product combinati
 Example Request:
 
 ```bash
-curl https://omnitruck.chef.io/stable/chef-workstation/packages
+curl <BASE_URL>/stable/chef-workstation/packages
 {
   "ubuntu": {
     "16.04": {
@@ -287,7 +296,7 @@ curl https://omnitruck.chef.io/stable/chef-workstation/packages
 ```
 
 ```bash
-curl "https://omnitruck.chef.io/stable/chef-workstation/packages?v=0.1.133"
+curl "<BASE_URL>/stable/chef-workstation/packages?v=0.1.133"
 {
   "ubuntu": {
     "16.04": {
@@ -388,7 +397,7 @@ This endpoint supports the following query string parameters:
 Example Request:
 
 ```bash
-curl -H "ACCEPT:application/json"  "https://omnitruck.chef.io/stable/chef/metadata?p=mac_os_x&pv=10.15&m=x86_64"
+curl -H "ACCEPT:application/json"  "<BASE_URL>/stable/chef/metadata?p=mac_os_x&pv=10.15&m=x86_64"
 {
   "sha1": "cac3e26b69ecca885cc54c61ff465954f5f148b9",
   "sha256": "f437427cd72ed14fb89590f4cdd4b252702bf5bf869c3c7450b323986d3cc6e3",
@@ -398,7 +407,7 @@ curl -H "ACCEPT:application/json"  "https://omnitruck.chef.io/stable/chef/metada
 ```
 
 ```bash
-curl -H "ACCEPT:application/json" "https://omnitruck.chef.io/stable/chef/metadata?p=ubuntu&pv=18.04&m=x86_64"
+curl -H "ACCEPT:application/json" "<BASE_URL>/stable/chef/metadata?p=ubuntu&pv=18.04&m=x86_64"
 {
   "sha1": "dc185e713e1dc3a79f699340c4fb169596375b43",
   "sha256": "d5a616db707690fe52aa90f52c13deb3e37c3b8790feb2c37154ab3c4565fda7",
@@ -413,7 +422,7 @@ Returns a 302 redirect to the download URL for a specific package. The following
 Example Request:
 
 ```bash
-curl -I "https://omnitruck.chef.io/stable/chef/download?p=mac_os_x&pv=10.15&m=x86_64"
+curl -I "<BASE_URL>/stable/chef/download?p=mac_os_x&pv=10.15&m=x86_64"
 
 HTTP/2 302
 content-type: text/html;charset=utf-8
