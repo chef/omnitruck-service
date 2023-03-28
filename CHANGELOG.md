@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.14 -->
-## [0.0.14](https://github.com/chef/omnitruck-service/tree/0.0.14) (2023-03-23)
+<!-- latest_release 0.0.15 -->
+## [0.0.15](https://github.com/chef/omnitruck-service/tree/0.0.15) (2023-03-28)
 
 #### Merged Pull Requests
-- Bump golang.org/x/text from 0.3.7 to 0.3.8 [#15](https://github.com/chef/omnitruck-service/pull/15) ([dependabot[bot]](https://github.com/dependabot[bot]))
+- Added enviroment&#39;s base url [#19](https://github.com/chef/omnitruck-service/pull/19) ([rahulgoel1](https://github.com/rahulgoel1))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Added enviroment&#39;s base url [#19](https://github.com/chef/omnitruck-service/pull/19) ([rahulgoel1](https://github.com/rahulgoel1)) <!-- 0.0.15 -->
 - Bump golang.org/x/text from 0.3.7 to 0.3.8 [#15](https://github.com/chef/omnitruck-service/pull/15) ([dependabot[bot]](https://github.com/dependabot[bot])) <!-- 0.0.14 -->
 - Resolved swagger for commercial [#18](https://github.com/chef/omnitruck-service/pull/18) ([gangwarshivendra](https://github.com/gangwarshivendra)) <!-- 0.0.13 -->
 - Chef/cla 191 [#17](https://github.com/chef/omnitruck-service/pull/17) ([gangwarshivendra](https://github.com/gangwarshivendra)) <!-- 0.0.12 -->
