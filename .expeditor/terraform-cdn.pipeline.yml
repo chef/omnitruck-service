@@ -1,0 +1,30 @@
+---
+FASTLY_API_KEY:
+  path: secret/fastly/data/omnitruck-service
+  field: token
+AWS_ACCESS_KEY_ID:
+  account: aws/chef-telemetry
+  field: token
+
+steps:
+  - label: ':terraform: init & plan'
+    command: |
+      cd terraform/cdn
+
+      # debug
+      env
+      ls -lR
+      pwd
+      terraform version
+
+      terraform init -migrate-state -force-copy -input=false
+      terraform plan -out="$(terraform workspace show).tfplan" -input=false
+
+  - block: ":rocket: Release!"
+
+  - label: ':terraform: apply'
+    command: |
+      cd terraform/cdn
+      # debug
+      echo terraform apply "$(terraform workspace show).tfplan" -input=false
+      ls -lR
