@@ -13,7 +13,7 @@
 ## API Operation Modes
 ---
 
-Omnitruck API operates in 3 different modes; `trial`, `opensource`, and `commercial`. These modes indicate the type of license which the user may have - 'free', 'trial , 'opensource'
+Omnitruck API operates in 3 different modes; `trial`, `opensource`, and `commercial`. These modes indicate the type of license which the user may have - `free`, `trial` , `commercial`
 ### Trial Mode
 
 Valid `<CHANNEL>` values in endpoint URLs is limited to `stable` 
