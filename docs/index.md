@@ -1,5 +1,5 @@
-# Omnitruck API Documentation
- There are two environments available for Omnitruck API i.e: `production`, `acceptance`. Below are the base url for emvironments.
+# Download API Documentation
+ There are two environments available for Download API i.e: `production`, `acceptance`. Below are the base url for emvironments. 'Acceptance' environment is an internal testing environment for Download API
  Base url for `Acceptance` environments.
  `commercial` : https://commercial-acceptance.downloads.chef.co/
  `trial` : https://trial-acceptance.downloads.chef.co/
@@ -13,7 +13,7 @@
 ## API Operation Modes
 ---
 
-Omnitruck API operates in 3 different modes; `trial`, `opensource`, and `commercial`.
+Omnitruck API operates in 3 different modes; `trial`, `opensource`, and `commercial`. These modes indicate the type of license which the user may have - 'free', 'trial , 'opensource'
 ### Trial Mode
 
 Valid `<CHANNEL>` values in endpoint URLs is limited to `stable` 
