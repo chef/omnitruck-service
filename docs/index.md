@@ -1,5 +1,5 @@
 # Download API Documentation
- There are two environments available for Download API i.e: `production`, `acceptance`. Below are the base url for emvironments. 'Acceptance' environment is an internal testing environment for Download API
+ There are two environments available for Download API i.e: `production`, `acceptance`. Below are the base url for emvironments. `Acceptance` environment is an internal testing environment for Download API
  ### Base url for Acceptance environments.
  `commercial` : https://commercial-acceptance.downloads.chef.co/
  
@@ -17,8 +17,8 @@
  ## Terminology
 ` <CHANNEL>` is the release channel to install from.
  
-stable :	A build from this channel is an "official" release that has passed full user acceptance testing. Artifacts in this channel are retained      indefinitely.
-current	 : A build from this channel is an "integration" build that has passed full testing, but has not been officially released. Artifacts in this channel are retained for 30 days and then removed automatically.
+`stable` :	A build from this channel is an "official" release that has passed full user acceptance testing. Artifacts in this channel are retained      indefinitely.
+`current`	 : A build from this channel is an "integration" build that has passed full testing, but has not been officially released. Artifacts in this channel are retained for 30 days and then removed automatically.
 Chef recommends using the stable channel when installing any of these products on production systems.
  
 `<PRODUCT>` is the Chef Software product to install. 
@@ -29,7 +29,7 @@ Chef recommends using the stable channel when installing any of these products o
 
 `m` is the machine architecture for the machine on which the product will be installed. Possible values depend on the platform. For example, for Ubuntu  or Debian: i386 or x86_64 or for macOS: x86_64.
 
-'v' is the version of the product to be installed. A version always takes the form x.y.z, where x, y, and z are decimal numbers that are used to represent major (x), minor (y), and patch (z) versions. One-part (x) and two-part (x.y) versions are allowed. 
+`v` is the version of the product to be installed. A version always takes the form x.y.z, where x, y, and z are decimal numbers that are used to represent major (x), minor (y), and patch (z) versions. One-part (x) and two-part (x.y) versions are allowed. 
 
 ## API Operation Modes
 ---
