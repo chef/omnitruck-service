@@ -94,7 +94,7 @@ curl -X 'GET' \
 
 ### architectures
 
-Returns a valid list of valid platform keys along with friendly names. Any of these platform keys can be used in the m query string value in various endpoints below. 
+Returns a valid list of valid architectures for the chef products. Any of these architectures can be used in the m query string value in various endpoints below. 
 
 ```
 curl -X 'GET' \
