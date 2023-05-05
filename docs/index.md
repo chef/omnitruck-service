@@ -596,28 +596,9 @@ curl -X 'GET' \
 
 ### /\<CHANNEL>/\<PRODUCT>/download 
 Returns a 302 redirect to the download URL for a specific package. The following parameters must be provided. This is a perfect URL to use for the actual download buttons. This endpoint supports the same query string parameters as /\<CHANNEL>/\<PRODUCT>/metadata.
-
 Example Request:
-
-```bash
-curl -I "<BASE_URL>/stable/chef/download?p=mac_os_x&pv=10.15&m=x86_64"
-
-HTTP/2 302
-content-type: text/html;charset=utf-8
-location: https://packages.chef.io/files/stable/chef/15.8.23/mac_os_x/10.15/chef-15.8.23-1.dmg
-server: WEBrick/1.4.2 (Ruby/2.5.7/2019-10-01)
-x-content-type-options: nosniff
-x-frame-options: SAMEORIGIN
-x-xss-protection: 1; mode=block
-accept-ranges: bytes
-date: Thu, 12 Mar 2020 19:57:08 GMT
-via: 1.1 varnish
-age: 37
-x-served-by: cache-fty21372-FTY
-x-cache: HIT
-x-cache-hits: 1
-x-timer: S1584043028.159446,VS0,VE0
-content-length: 0
+```
+curl -X 'GET' 'https://chefdownload-commercial.chef.co/stable/chef/download?p=amazon&pv=latest&m=x86_64&v=latest&license_id=d8ed0e36-5d27-44b1-994b-e65f45c0704a&eol=false' -o <filename>
 ```
 
 
