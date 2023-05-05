@@ -1,18 +1,11 @@
-# Download API Documentation
+# Download API Documentation (Commercial License)
  There are two environments available for Download API i.e: `production`, `acceptance`. Below are the base url for emvironments. `Acceptance` environment is an internal testing environment for Download API
  ### Base url for Acceptance environments.
  `commercial` : https://commercial-acceptance.downloads.chef.co/
- 
- `trial` : https://trial-acceptance.downloads.chef.co/
- 
- `opensource` : https://opensource-acceptance.downloads.chef.co/
 
  ### Base url for Production environments.
  `commercial` : https://ChefDownload-Commerical.chef.io
- 
- `trial` : https://ChefDownload-Trial.chef.io
- 
- `opensource` : https://ChefDownload-Community.chef.io
+
  
  ## Terminology
 ` <CHANNEL>` is the release channel to install from.
@@ -32,12 +25,9 @@ Chef recommends using the stable channel when installing any of these products o
 
 `v` is the version of the product to be installed. A version always takes the form x.y.z, where x, y, and z are decimal numbers that are used to represent major (x), minor (y), and patch (z) versions. One-part (x) and two-part (x.y) versions are allowed. 
 
-## API Operation Modes
----
 
-Download API has three different use cases : `trial`, `opensource`, and `commercial`. These use cases indicate the type of license which the user may have - `opensource`, `trial` , `commercial`. A user may be able to get a `commercial` license or `trial` or `free` license which will qualify them to use the product based on the license policies.
 
-### Commercial Mode
+### What is Download API (Commercial) ?
 
 When a user is having a commercial license they can connect to the `commercial` instance of the API and use that to provide them with product information and also be able to download the commercial version of the chef products for the which the license applies.
 
@@ -602,13 +592,3 @@ curl -X 'GET' 'https://chefdownload-commercial.chef.co/stable/chef/download?p=am
 ```
 
 
-### Trial Mode
-
-Valid `<CHANNEL>` values in endpoint URLs is limited to `stable` 
-Endpoint results are limited to the most recent version of any product unless a valid commercial `license_id` is provided.
-
-### Opensource Mode
-
-Valid `<CHANNEL>` values in endpoint URLs is limited to `stable`.
-
-Endpoint results are restricted to opensource versions of products. 
