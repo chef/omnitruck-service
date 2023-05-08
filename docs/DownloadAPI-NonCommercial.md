@@ -1140,7 +1140,9 @@ curl -X 'GET' \
 Returns a 302 redirect to the download URL for a specific package. The following parameters must be provided. This is a perfect URL to use for the actual download buttons. This endpoint supports the same query string parameters as /<CHANNEL>/<PRODUCT>/metadata. 
  
  Example Request:
- 
+ ```
+ curl -X 'GET' 'https://chefdownload-trial.chef.co/stable/chef/download?p=amazon&pv=latest&m=x86_64&v=latest&license_id=d8ed0e36-5d27-44b1-994b-e65f45c0704a&eol=false' -o <filename>
+```
  
 ## What is Download API - Opensource ?
 
