@@ -17,7 +17,7 @@
 
 Download API has three different use cases : `trial`, `opensource`, and `commercial`. These use cases indicate the type of license which the user may have - 
 `opensource`, `trial` , `commercial`. A user may be able to get a `commercial` license or `trial` or `free` license which will qualify them to use the 
-product based on the license policies. The Download API for commercial licenses is discussed in the [link here{https://github.com/chef/omnitruck-service/blob/main/docs/DownloadAPI-Commercial.md}]
+product based on the license policies. The Download API for commercial licenses is discussed in the [link here](https://github.com/chef/omnitruck-service/blob/main/docs/DownloadAPI-Commercial.md)
 
  ### Download API - Trial
 
@@ -1141,7 +1141,7 @@ Returns a 302 redirect to the download URL for a specific package. The following
  
  Example Request:
  ```
- curl -X 'GET' 'https://chefdownload-trial.chef.co/stable/chef/download?p=amazon&pv=latest&m=x86_64&v=latest&license_id=d8ed0e36-5d27-44b1-994b-e65f45c0704a&eol=false' -o <filename>
+ curl -X 'GET' 'https://chefdownload-trial.chef.io/stable/chef/download?p=amazon&pv=latest&m=x86_64&v=latest&license_id=d8ed0e36-5d27-44b1-994b-e65f45c0704a&eol=false' -o <filename>
 ```
  
 ## What is Download API - Opensource ?
