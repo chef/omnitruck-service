@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.17 -->
-## [0.0.17](https://github.com/chef/omnitruck-service/tree/0.0.17) (2023-05-03)
+<!-- latest_release 0.0.18 -->
+## [0.0.18](https://github.com/chef/omnitruck-service/tree/0.0.18) (2023-05-15)
 
 #### Merged Pull Requests
-- Add terraform configuration for Fastly CDN [#21](https://github.com/chef/omnitruck-service/pull/21) ([joebuilds](https://github.com/joebuilds))
+- Corrected filtering logic for chef products [#22](https://github.com/chef/omnitruck-service/pull/22) ([gangwarshivendra](https://github.com/gangwarshivendra))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Corrected filtering logic for chef products [#22](https://github.com/chef/omnitruck-service/pull/22) ([gangwarshivendra](https://github.com/gangwarshivendra)) <!-- 0.0.18 -->
 - Add terraform configuration for Fastly CDN [#21](https://github.com/chef/omnitruck-service/pull/21) ([joebuilds](https://github.com/joebuilds)) <!-- 0.0.17 -->
 - Deploy documentation [#20](https://github.com/chef/omnitruck-service/pull/20) ([MadhviAtroliya](https://github.com/MadhviAtroliya)) <!-- 0.0.16 -->
 - Added enviroment&#39;s base url [#19](https://github.com/chef/omnitruck-service/pull/19) ([rahulgoel1](https://github.com/rahulgoel1)) <!-- 0.0.15 -->
