@@ -8,6 +8,8 @@ AWS_ACCESS_KEY_ID:
 
 steps:
   - label: ':terraform: init & plan'
+    agents:
+      queue: default-privileged
     command: |
       cd terraform/cdn
 
@@ -25,6 +27,8 @@ steps:
   - block: ":rocket: Release!"
 
   - label: ':terraform: apply'
+    agents:
+      queue: default-privileged
     command: |
       cd terraform/cdn
       # debug
