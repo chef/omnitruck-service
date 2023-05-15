@@ -13,8 +13,6 @@ steps:
     command: |
       cd terraform/cdn
 
-      tfenv install
-
       # debug
       env
       ls -lR
