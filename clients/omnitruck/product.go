@@ -19,7 +19,7 @@ var supportedProducts = map[string]Product{
 	"chef": {
 		Name:              "chef",
 		SupportedVersion:  NewConstraint(">= 16.0.0"),
-		OpensourceVersion: NewConstraint("< 14.15.6"),
+		OpensourceVersion: NewConstraint("<= 14.15.6"),
 	},
 	"chef-backend": {
 		Name:             "chef-backend",
@@ -28,12 +28,12 @@ var supportedProducts = map[string]Product{
 	"chef-server": {
 		Name:              "chef-server",
 		SupportedVersion:  NewConstraint(">= 14.0.0"),
-		OpensourceVersion: NewConstraint("< 12.19.31"),
+		OpensourceVersion: NewConstraint("<= 12.19.31"),
 	},
 	"chef-workstation": {
 		Name:              "chef-workstation",
 		SupportedVersion:  NewConstraint(">= 21.0.0"),
-		OpensourceVersion: NewConstraint("< 0.4.2"),
+		OpensourceVersion: NewConstraint("<= 0.4.2"),
 	},
 	"habitat": {
 		Name:              "habitat",
@@ -43,7 +43,7 @@ var supportedProducts = map[string]Product{
 	"inspec": {
 		Name:              "inspec",
 		SupportedVersion:  NewConstraint(">= 4.0.0"),
-		OpensourceVersion: NewConstraint("< 4.3.2"),
+		OpensourceVersion: NewConstraint("<= 4.3.2"),
 	},
 	"manage": {
 		Name:             "manage",
@@ -52,12 +52,12 @@ var supportedProducts = map[string]Product{
 	"supermarket": {
 		Name:              "supermarket",
 		SupportedVersion:  NewConstraint(">= 5.0.0"),
-		OpensourceVersion: NewConstraint("< 5.1.44"),
+		OpensourceVersion: NewConstraint("<= 5.1.63"),
 	},
 	"desktop": {
 		Name:              "desktop",
 		SupportedVersion:  NewConstraint(">= 0"),
-		OpensourceVersion: NewConstraint("< 14.15.6"),
+		OpensourceVersion: NewConstraint("<= 14.15.6"),
 	},
 }
 
