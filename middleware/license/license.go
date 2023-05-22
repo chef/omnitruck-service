@@ -3,7 +3,12 @@ package license
 import (
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/gofiber/fiber/v2"
+	"regexp"
 )
+
+
+var re = regexp.MustCompile(`platforms|architectures|products|swagger`)
+
 
 type InvalidLicense struct {
 	Code int
@@ -60,23 +65,25 @@ func New(config ...Config) fiber.Handler {
 		if cfg.Next != nil && cfg.Next(c) {
 			return c.Next()
 		}
+		swaggerPath := c.Path()
+		if !re.MatchString(swaggerPath) {
 
-		if len(id) == 0 {
-			if cfg.Required {
-				return cfg.Unauthorized(403, "Missing license_id query param", c)
+			if len(id) == 0 {
+				if cfg.Required {
+					return cfg.Unauthorized(403, "Missing license_id query param", c)
+				}
+				// No license id found but not required
+				return c.Next()
 			}
-			// No license id found but not required
-			return c.Next()
+
+			resp := clients.Response{}
+			request := cfg.LicenseClient.Validate(id, &resp)
+
+			// Invalid license of some sort returned from license API
+			if request.Code >= 400 {
+				return cfg.Unauthorized(403, resp.Message, c)
+			}
 		}
-
-		resp := clients.Response{}
-		request := cfg.LicenseClient.Validate(id, &resp)
-
-		// Invalid license of some sort returned from license API
-		if request.Code >= 400 {
-			return cfg.Unauthorized(403, resp.Message, c)
-		}
-
 		c.Locals("valid_license", true)
 
 		return c.Next()
