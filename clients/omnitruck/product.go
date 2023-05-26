@@ -110,5 +110,5 @@ func OsProductVersion(name string, v ProductVersion) bool {
 	}
 
 	v1, _ := version.NewVersion(string(v))
-	return p.OpensourceVersion.Check(v1)
+	return p.OpensourceVersion.Check(v1.Core())
 }
