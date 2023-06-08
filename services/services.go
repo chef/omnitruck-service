@@ -121,7 +121,7 @@ func (server *ApiService) StartService() {
 	lw := server.Log.Writer()
 	defer lw.Close()
 	server.App.Use(logger.New(logger.Config{
-		Format: "[${time}] [${ip}]:${port} ${status} - ${method} ${path} ${red}${error}\n",
+		Format: "LicenseId :- ${locals:licenseId} : Method :- ${method} : IP :- ${ip} : EndPoint :- ${path} : status :- ${status} : latency :- ${latency} : Time :- [${time}] : request-id ${locals:requestid} \n",
 		Output: lw,
 	}))
 
