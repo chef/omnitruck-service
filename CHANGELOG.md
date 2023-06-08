@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.20 -->
-## [0.0.20](https://github.com/chef/omnitruck-service/tree/0.0.20) (2023-05-26)
+<!-- latest_release 0.0.21 -->
+## [0.0.21](https://github.com/chef/omnitruck-service/tree/0.0.21) (2023-06-08)
 
 #### Merged Pull Requests
-- Fixed supermarket bug filtering out apha version [#25](https://github.com/chef/omnitruck-service/pull/25) ([gangwarshivendra](https://github.com/gangwarshivendra))
+- Added IP path licenseId to middleware [#26](https://github.com/chef/omnitruck-service/pull/26) ([gangwarshivendra](https://github.com/gangwarshivendra))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Added IP path licenseId to middleware [#26](https://github.com/chef/omnitruck-service/pull/26) ([gangwarshivendra](https://github.com/gangwarshivendra)) <!-- 0.0.21 -->
 - Fixed supermarket bug filtering out apha version [#25](https://github.com/chef/omnitruck-service/pull/25) ([gangwarshivendra](https://github.com/gangwarshivendra)) <!-- 0.0.20 -->
 - Fix: Add tfenv install step [#23](https://github.com/chef/omnitruck-service/pull/23) ([joebuilds](https://github.com/joebuilds)) <!-- 0.0.19 -->
 - Corrected filtering logic for chef products [#22](https://github.com/chef/omnitruck-service/pull/22) ([gangwarshivendra](https://github.com/gangwarshivendra)) <!-- 0.0.18 -->
