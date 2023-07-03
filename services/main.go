@@ -268,6 +268,16 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 	var data omnitruck.PackageList
 	request := server.Omnitruck(c).ProductPackages(params).ParseData(&data)
 
+	for os, versions := range data {
+		for version, arches := range versions {
+			for arch, _ := range arches {
+				metadata := data[os][version][arch]
+				metadata.Url = server.getDownloadUrl(params, metadata, c)
+				data[os][version][arch] = metadata
+			}
+		}
+	}
+
 	if request.Ok {
 		return server.SendResponse(c, &data)
 	} else {
