@@ -1,7 +1,6 @@
 package services
 
 import (
-	"fmt"
 	"net/url"
 	"os"
 	"time"
@@ -272,7 +271,6 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 	for platform, versions := range data {
 		for version, arches := range versions {
 			for arch, metadata := range arches {
-				fmt.Printf("%v\n", metadata)
 				params := &omnitruck.RequestParams{
 					Channel:         c.Params("channel"),
 					Product:         c.Params("product"),
