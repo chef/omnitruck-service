@@ -40,6 +40,20 @@ type RequestParams struct {
 	PlatformVersion string
 	Architecture    string
 	Eol             string
+	LicenseId       string
+}
+
+type PackageListUpdater func(platform string, platformVersion string, arch string, meta PackageMetadata) PackageMetadata
+
+func (pl PackageList) UpdatePackages(fn PackageListUpdater) {
+	for platform, versions := range pl {
+		for version, arches := range versions {
+			for arch, metadata := range arches {
+				pl[platform][version][arch] = fn(platform, version, arch, metadata)
+			}
+		}
+	}
+
 }
 
 func (rp *RequestParams) UrlParams() url.Values {
@@ -58,6 +72,9 @@ func (rp *RequestParams) UrlParams() url.Values {
 	}
 	if len(rp.Eol) > 0 {
 		v.Add("eol", rp.Eol)
+	}
+	if len(rp.LicenseId) > 0 {
+		v.Add("license_id", rp.LicenseId)
 	}
 
 	return v
