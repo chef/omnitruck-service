@@ -66,9 +66,7 @@ func (server *ApiService) docsHandler(baseUrl string) func(*fiber.Ctx) error {
 // @Failure     500 {object} services.ErrorResponse
 // @Router      /products [get]
 func (server *ApiService) productsHandler(c *fiber.Ctx) error {
-	params := &omnitruck.RequestParams{
-		Eol: c.Query("eol", "false"),
-	}
+	params := getRequestParams(c)
 
 	var data omnitruck.ItemList
 	request := server.Omnitruck(c).Products(params, &data)
@@ -130,11 +128,10 @@ func (server *ApiService) architecturesHandler(c *fiber.Ctx) error {
 // @Failure     403        {object} services.ErrorResponse
 // @Router      /{channel}/{product}/versions/latest [get]
 func (server *ApiService) latestVersionHandler(c *fiber.Ctx) error {
-	params := &omnitruck.RequestParams{
-		Channel: c.Params("channel"),
-		Product: c.Params("product"),
-		Version: "latest",
-	}
+	params := getRequestParams(c)
+	// Force version to always be latest
+	params.Version = "latest"
+
 	err, ok := server.ValidateRequest(params, c)
 	if !ok {
 		return err
@@ -191,11 +188,7 @@ func (server *ApiService) fetchLatestOSVersion(params *omnitruck.RequestParams, 
 // @Failure     403        {object} services.ErrorResponse
 // @Router      /{channel}/{product}/versions/all [get]
 func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
-	params := &omnitruck.RequestParams{
-		Channel: c.Params("channel"),
-		Product: c.Params("product"),
-		Eol:     c.Query("eol", "false"),
-	}
+	params := getRequestParams(c)
 
 	err, ok := server.ValidateRequest(params, c)
 	if !ok {
