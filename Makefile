@@ -1,4 +1,4 @@
-TESTS = test_omnitruck_client
+TESTS = test_omnitruck_client test_services
 
 all: swagger build
 swagger:
@@ -12,6 +12,8 @@ test: $(TESTS)
 
 test_omnitruck_client:
 	cd clients/omnitruck; go test
+test_services: 
+	cd services; go test
 
 image: 
 	@echo "Creating docker image"

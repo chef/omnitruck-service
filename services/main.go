@@ -1,7 +1,6 @@
 package services
 
 import (
-	"net/url"
 	"os"
 	"time"
 
@@ -248,12 +247,7 @@ func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 // @Failure     403        {object} services.ErrorResponse
 // @Router      /{channel}/{product}/packages [get]
 func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
-	params := &omnitruck.RequestParams{
-		Channel: c.Params("channel"),
-		Product: c.Params("product"),
-		Version: c.Query("v"),
-		Eol:     c.Query("eol"),
-	}
+	params := getRequestParams(c)
 
 	if server.Mode == Opensource && isLatest(params.Version) {
 		v, _ := server.fetchLatestOSVersion(params, c)
@@ -268,23 +262,17 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 	var data omnitruck.PackageList
 	request := server.Omnitruck(c).ProductPackages(params).ParseData(&data)
 
-	for platform, versions := range data {
-		for version, arches := range versions {
-			for arch, metadata := range arches {
-				params := &omnitruck.RequestParams{
-					Channel:         c.Params("channel"),
-					Product:         c.Params("product"),
-					Version:         metadata.Version,
-					Platform:        platform,
-					PlatformVersion: version,
-					Architecture:    arch,
-				}
+	p := getRequestParams(c)
+	data.UpdatePackages(func(platform string, pv string, arch string, m omnitruck.PackageMetadata) omnitruck.PackageMetadata {
+		p.Version = m.Version
+		p.Platform = platform
+		p.PlatformVersion = pv
+		p.Architecture = arch
 
-				metadata.Url = server.getDownloadUrl(params, metadata, c)
-				data[platform][version][arch] = metadata
-			}
-		}
-	}
+		m.Url = getDownloadUrl(p, c)
+
+		return m
+	})
 
 	if request.Ok {
 		return server.SendResponse(c, &data)
@@ -309,14 +297,7 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 // @Failure     403        {object} services.ErrorResponse
 // @Router      /{channel}/{product}/metadata [get]
 func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
-	params := &omnitruck.RequestParams{
-		Channel:         c.Params("channel"),
-		Product:         c.Params("product"),
-		Version:         c.Query("v"),
-		Platform:        c.Query("p"),
-		PlatformVersion: c.Query("pv"),
-		Architecture:    c.Query("m"),
-	}
+	params := getRequestParams(c)
 
 	if server.Mode == Opensource && isLatest(params.Version) {
 		v, _ := server.fetchLatestOSVersion(params, c)
@@ -332,7 +313,7 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 	request := server.Omnitruck(c).ProductMetadata(params).ParseData(&data)
 
 	// Remap the package url to our download URL
-	url := server.getDownloadUrl(params, data, c)
+	url := getDownloadUrl(params, c)
 	data.Url = url
 
 	if request.Ok {
@@ -340,17 +321,6 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 	} else {
 		return server.SendError(c, request)
 	}
-}
-
-func (server *ApiService) getDownloadUrl(params *omnitruck.RequestParams, m omnitruck.PackageMetadata, c *fiber.Ctx) string {
-	u, _ := url.Parse(c.BaseURL())
-	path, _ := url.JoinPath(params.Channel, params.Product, "download")
-	u.Path = path
-	p := params.UrlParams()
-	p.Add("license_id", c.Locals("license_id").(string))
-	u.RawQuery = p.Encode()
-
-	return u.String()
 }
 
 // @description Get details for a particular package.
@@ -368,14 +338,7 @@ func (server *ApiService) getDownloadUrl(params *omnitruck.RequestParams, m omni
 // @Failure     403 {object} services.ErrorResponse
 // @Router      /{channel}/{product}/download [get]
 func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
-	params := &omnitruck.RequestParams{
-		Channel:         c.Params("channel"),
-		Product:         c.Params("product"),
-		Version:         c.Query("v"),
-		Platform:        c.Query("p"),
-		PlatformVersion: c.Query("pv"),
-		Architecture:    c.Query("m"),
-	}
+	params := getRequestParams(c)
 
 	if server.Mode == Opensource && isLatest(params.Version) {
 		v, _ := server.fetchLatestOSVersion(params, c)
