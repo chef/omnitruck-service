@@ -11,9 +11,9 @@ build:
 test: $(TESTS)
 
 test_omnitruck_client:
-	cd clients/omnitruck; go test
+	cd clients/omnitruck; go test -v
 test_services: 
-	cd services; go test
+	cd services; go test -v
 
 image: 
 	@echo "Creating docker image"

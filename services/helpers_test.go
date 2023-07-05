@@ -99,3 +99,49 @@ func Test_getDownloadUrl(t *testing.T) {
 		})
 	}
 }
+
+func Test_getRequestParams(t *testing.T) {
+	type args struct {
+		c omnitruck.FiberContext
+	}
+	tests := []struct {
+		name string
+		ctx  omnitruck.FiberContext
+		want *omnitruck.RequestParams
+	}{
+		{
+			name: "default",
+			ctx: &testContext{
+				params: map[string]string{
+					"channel": "stable",
+					"product": "chef",
+				},
+				query: map[string]string{
+					"v":          "1.0",
+					"p":          "el",
+					"pv":         "2.0",
+					"m":          "x86",
+					"eol":        "false",
+					"license_id": "12345",
+				},
+			},
+			want: &omnitruck.RequestParams{
+				Channel:         "stable",
+				Product:         "chef",
+				Version:         "1.0",
+				Platform:        "el",
+				PlatformVersion: "2.0",
+				Architecture:    "x86",
+				Eol:             "false",
+				LicenseId:       "12345",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := getRequestParams(tt.ctx); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getRequestParams() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
