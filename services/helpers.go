@@ -4,7 +4,6 @@ import (
 	"net/url"
 
 	"github.com/chef/omnitruck-service/clients/omnitruck"
-	"github.com/gofiber/fiber/v2"
 )
 
 func buildEndpointUrl(baseUrl string, endpoint string, params *omnitruck.RequestParams) *url.URL {
@@ -16,11 +15,11 @@ func buildEndpointUrl(baseUrl string, endpoint string, params *omnitruck.Request
 	return u
 }
 
-func getDownloadUrl(params *omnitruck.RequestParams, c *fiber.Ctx) string {
+func getDownloadUrl(params *omnitruck.RequestParams, c omnitruck.FiberContext) string {
 	return buildEndpointUrl(c.BaseURL(), "download", params).String()
 }
 
-func getRequestParams(c *fiber.Ctx) *omnitruck.RequestParams {
+func getRequestParams(c omnitruck.FiberContext) *omnitruck.RequestParams {
 	return &omnitruck.RequestParams{
 		Channel:         c.Params("channel"),
 		Product:         c.Params("product"),

@@ -19,6 +19,12 @@ type Omnitruck struct {
 	log    *logrus.Entry
 }
 
+type FiberContext interface {
+	Params(string, ...string) string
+	Query(string, ...string) string
+	BaseURL() string
+}
+
 type ItemList []string
 type PlatformList map[string]string
 type PackageList map[string]PlatformVersionList

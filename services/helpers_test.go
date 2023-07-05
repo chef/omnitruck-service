@@ -43,3 +43,59 @@ func Test_buildEndpointUrl(t *testing.T) {
 		})
 	}
 }
+
+type testContext struct {
+	params  map[string]string
+	query   map[string]string
+	baseUrl string
+}
+
+func (tc *testContext) Params(k string, defaultValues ...string) string {
+	return tc.params[k]
+}
+
+func (tc *testContext) Query(k string, defaultValues ...string) string {
+	return tc.query[k]
+}
+
+func (tc *testContext) BaseURL() string {
+	return tc.baseUrl
+}
+
+func Test_getDownloadUrl(t *testing.T) {
+	type args struct {
+		params *omnitruck.RequestParams
+		c      omnitruck.FiberContext
+	}
+
+	tests := []struct {
+		name string
+		args *testContext
+		want string
+	}{
+		// TODO: Add test cases.
+		{
+			name: "default",
+			args: &testContext{
+				baseUrl: "https://commercial.chef.io",
+				params: map[string]string{
+					"channel": "stable",
+					"product": "chef",
+				},
+				query: map[string]string{
+					"v":          "1.0",
+					"p":          "el",
+					"license_id": "12345",
+				},
+			},
+			want: "https://commercial.chef.io/stable/chef/download?license_id=12345&p=el&v=1.0",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := getDownloadUrl(getRequestParams(tt.args), tt.args); got != tt.want {
+				t.Errorf("getDownloadUrl() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
