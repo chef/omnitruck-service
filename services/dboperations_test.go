@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -22,7 +23,7 @@ func (mdb *MDB) Scan(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
 	return mdb.Scanfunc(input)
 }
 
-func TestGetPackages(t *testing.T) {
+func TestGetPackagesSuccess(t *testing.T) {
 	type args struct {
 		partitionKey   string
 		partitionValue string
@@ -72,7 +73,51 @@ func TestGetPackages(t *testing.T) {
 	}
 }
 
-func TestGetVersionAll(t *testing.T) {
+func TestGetPackagesFailure(t *testing.T) {
+	type args struct {
+		partitionKey   string
+		partitionValue string
+		sortKey        string
+		sortValue      string
+		tableName      string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    models.ProductDetails
+		wantErr error
+	}{
+		{
+			name: "Failure in reading the DataBase",
+			args: args{
+				partitionKey:   "product",
+				partitionValue: "automate",
+				sortKey:        "version",
+				sortValue:      "4.3.9",
+				tableName:      "test-table",
+			},
+			want: models.ProductDetails{},
+			wantErr: errors.New("ReplicaNotFoundException: Requested resource not found"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ser := &DbOperationsService{
+				db: &MDB{
+					GetItemfunc: func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
+						return nil, &dynamodb.ReplicaNotFoundException{
+							Message_: aws.String("Requested resource not found"),
+						}
+					},
+				},
+			}
+			_, err := ser.GetPackages(tt.args.partitionKey, tt.args.partitionValue, tt.args.sortKey, tt.args.sortValue, tt.args.tableName)
+			assert.Equal(t, err.Error(), tt.wantErr.Error())
+		})
+	}
+}
+
+func TestGetVersionAllSuccess(t *testing.T) {
 	type args struct {
 		partitionKey   string
 		partitionValue string
@@ -124,7 +169,48 @@ func TestGetVersionAll(t *testing.T) {
 	}
 }
 
-func TestGetMetaData(t *testing.T) {
+func TestGetVersionAllFailure(t* testing.T) {
+	type args struct {
+		partitionKey   string
+		partitionValue string
+		tableName      string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    []string
+		wantErr error
+	}{
+		{
+			name: "Failure in reading the DataBase",
+			args: args{
+				partitionKey:   "product",
+				partitionValue: "autoamte",
+				tableName:      "test-table",
+			},
+			want: nil,
+			wantErr: errors.New("ReplicaNotFoundException: Requested resource not found"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ser := &DbOperationsService{
+				db: &MDB{
+					Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+						return nil, &dynamodb.ReplicaNotFoundException{
+							Message_: aws.String("Requested resource not found"),
+						}
+					},
+				},
+			}
+			got, err := ser.GetVersionAll(tt.args.partitionKey, tt.args.partitionValue, tt.args.tableName)
+			assert.Equal(t, got, tt.want)
+			assert.Equal(t, err.Error(), tt.wantErr.Error())
+		})
+	}
+}
+
+func TestGetMetaDataSuccess(t *testing.T) {
 	type args struct {
 		partitionKey    string
 		partitionValue  string
@@ -209,7 +295,58 @@ func TestGetMetaData(t *testing.T) {
 	}
 }
 
-func TestGetVersionLatest(t *testing.T) {
+func TestGetMetaDataFailure(t *testing.T) {
+	type args struct {
+		partitionKey    string
+		partitionValue  string
+		sortKey         string
+		sortValue       string
+		tableName       string
+		platform        string
+		platformVersion string
+		architecture    string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    models.ProductDetails
+		wantErr error
+	}{
+		{
+			name: "Failure in reading the DataBase",
+			args: args{
+				partitionKey:    "product",
+				partitionValue:  "automate",
+				sortKey:         "version",
+				sortValue:       "4.0.54",
+				tableName:       "test-table",
+				platform:        "amazon",
+				platformVersion: "2",
+				architecture:    "arch64",
+			},
+			want: models.ProductDetails{},
+			wantErr: errors.New("ReplicaNotFoundException: Requested resource not found"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ser := &DbOperationsService{
+				db: &MDB{
+					GetItemfunc: func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
+						return nil, &dynamodb.ReplicaNotFoundException{
+							Message_: aws.String("Requested resource not found"),
+						}
+					},
+				},
+			}
+			got, err := ser.GetMetaData(tt.args.partitionKey, tt.args.partitionValue, tt.args.sortKey, tt.args.sortValue, tt.args.tableName, tt.args.platform, tt.args.platformVersion, tt.args.architecture)
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.wantErr.Error(), err.Error())
+		})
+	}
+}
+
+func TestGetVersionLatestSuccess(t *testing.T) {
 	type args struct {
 		partitionKey   string
 		partitionValue string
@@ -262,7 +399,53 @@ func TestGetVersionLatest(t *testing.T) {
 	}
 }
 
-func TestGetRelatedProducts(t *testing.T) {
+func TestGetVersionLatestFailure(t *testing.T) {
+	type args struct {
+		partitionKey   string
+		partitionValue string
+		tableName      string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr error
+	}{
+		{
+			name: "Failure in reading the DataBase",
+			args: args{
+				partitionKey:   "product",
+				partitionValue: "automate",
+				tableName:      "test-table",
+			},
+			want:    "",
+			wantErr: errors.New("ReplicaNotFoundException: Requested resource not found"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ser := &DbOperationsService{
+				db: &MDB{
+					GetItemfunc: func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
+						return nil, &dynamodb.ReplicaNotFoundException{
+							Message_: aws.String("Requested resource not found"),
+						}
+					},
+					Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+						return nil, &dynamodb.ReplicaNotFoundException{
+							Message_: aws.String("Requested resource not found"),
+						}
+					},
+				},
+			}
+			got, err := ser.GetVersionLatest(tt.args.partitionKey, tt.args.partitionValue, tt.args.tableName)
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.wantErr.Error(), err.Error())
+		})
+	}
+}
+
+func TestGetRelatedProductsSuccess(t *testing.T) {
 	type args struct {
 		partitionKey   string
 		partitionValue string
@@ -306,6 +489,46 @@ func TestGetRelatedProducts(t *testing.T) {
 								},
 							},
 						}, nil
+					},
+				},
+			}
+			got, _ := ser.GetRelatedProducts(tt.args.partitionKey, tt.args.partitionValue, tt.args.tableName)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestGetRelatedProductsFailure(t *testing.T) {
+	type args struct {
+		partitionKey   string
+		partitionValue string
+		tableName      string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    models.Sku
+		wantErr error
+	}{
+		{
+			name: "Failure in reading the DataBase",
+			args: args{
+				partitionKey:   "skus",
+				partitionValue: "habitat",
+				tableName:      "test-table",
+			},
+			want: models.Sku{},
+			wantErr: errors.New("ReplicaNotFoundException: Requested resource not found"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ser := &DbOperationsService{
+				db: &MDB{
+					Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+						return nil, &dynamodb.ReplicaNotFoundException{
+							Message_: aws.String("Requested resource not found"),
+						}
 					},
 				},
 			}
