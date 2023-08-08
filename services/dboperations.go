@@ -20,13 +20,13 @@ type IDbOperations interface {
 	GetRelatedProducts(partitionKey string, partitionValue string, tableName string) (models.Sku, error)
 }
 
-type IDBOps interface {
+type IDynamoDBOps interface {
 	GetItem(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error)
-	Scan(*dynamodb.ScanInput) (*dynamodb.ScanOutput, error)
+	Scan(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error)
 }
 
 type DbOperationsService struct {
-	db IDBOps
+	db IDynamoDBOps
 }
 
 func NewDbOperationsService(dbConnection dbconnection.DbConnection) *DbOperationsService {

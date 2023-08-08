@@ -7,20 +7,20 @@ type AWSConfig struct {
 }
 
 type ProductDetails struct {
-	Product  string `json:"product"`
-	Version  string `json:"version"`
+	Product  string     `json:"product"`
+	Version  string     `json:"version"`
 	MetaData []MetaData `json:"metadata"`
 }
 
 type MetaData struct {
-	Architecture     string
-	Platform         string
-	Platform_Version string
-	SHA1             string
-	SHA256           string
+	Architecture     string `json:"architecture"`
+	Platform         string `json:"platform"`
+	Platform_Version string `json:"platform_version"`
+	SHA1             string `json:"sha1"`
+	SHA256           string `json:"sha256"`
 }
 
 type Sku struct {
-	Skus     string
-	Products []string
+	Skus     string   `json:"skus"`
+	Products []string `json:"products"`
 }
