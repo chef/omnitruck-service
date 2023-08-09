@@ -12,7 +12,7 @@ func TestCreateAWSSession(t *testing.T) {
 	os.Setenv("SECRET_KEY", "your_secret_key")
 
 	dbc := NewAwsUtils()
-	sess, err := dbc.GetNewSession() 
+	sess, err := dbc.GetNewSession()
 
 	os.Unsetenv("ACCESS_KEY")
 	os.Unsetenv("SECRET_KEY")
