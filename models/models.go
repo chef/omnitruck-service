@@ -21,6 +21,6 @@ type MetaData struct {
 }
 
 type Sku struct {
-	Skus     string   `json:"skus"`
+	Sku      string   `json:"sku"`
 	Products []string `json:"products"`
 }

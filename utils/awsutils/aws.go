@@ -1,7 +1,7 @@
 package awsutils
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -32,7 +32,7 @@ func (au *AwsUtilsImpl) GetNewSession() (*session.Session, error) {
 		},
 	})
 	if err != nil {
-		fmt.Printf("Error while creating session: %v", err)
+		log.Printf("Error while creating session: %v", err)
 		return nil, err
 	}
 	return session, nil

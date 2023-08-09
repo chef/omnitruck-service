@@ -1,7 +1,8 @@
 package services
 
 import (
-	"fmt"
+	"log"
+	"os"
 	"sort"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -12,12 +13,18 @@ import (
 	"github.com/chef/omnitruck-service/models"
 )
 
+const (
+	SKU_PARTITION_KEY     = "sku"
+	PRODUCT_PARTITION_KEY = "product"
+	PRODUCT_SORT_KEY      = "version"
+)
+
 type IDbOperations interface {
-	GetPackages(partitionKey string, partitionValue string, sortKey string, sortValue string, tableName string) (models.ProductDetails, error)
-	GetVersionAll(partitionKey string, partitionValue string, tableName string) ([]string, error)
-	GetMetaData(partitionKey string, partitionValue string, sortKey string, sortValue string, tableName string, platform string, platformVersion string, architecture string) (models.ProductDetails, error)
-	GetVersionLatest(partitionKey string, partitionValue string, tableName string) (string, error)
-	GetRelatedProducts(partitionKey string, partitionValue string, tableName string) (models.Sku, error)
+	GetPackages(partitionValue string, sortValue string) (models.ProductDetails, error)
+	GetVersionAll(partitionValue string) ([]string, error)
+	GetMetaData(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (models.ProductDetails, error)
+	GetVersionLatest(partitionValue string) (string, error)
+	GetRelatedProducts(partitionValue string) (models.Sku, error)
 }
 
 type IDynamoDBOps interface {
@@ -26,26 +33,31 @@ type IDynamoDBOps interface {
 }
 
 type DbOperationsService struct {
-	db IDynamoDBOps
+	db               IDynamoDBOps
+	productTableName string
+	skuTableName     string
 }
 
 func NewDbOperationsService(dbConnection dbconnection.DbConnection) *DbOperationsService {
 	return &DbOperationsService{
-		db: dbConnection.GetDbConnection(),
+		db:               dbConnection.GetDbConnection(),
+		productTableName: os.Getenv("PRODUCT_TABLE_NAME"),
+		skuTableName:     os.Getenv("SKU_TABLE_NAME"),
 	}
 }
 
-func (dbo *DbOperationsService) GetPackages(partitionKey string, partitionValue string, sortKey string, sortValue string, tableName string) (models.ProductDetails, error) {
+func (dbo *DbOperationsService) GetPackages(partitionValue string, sortValue string) (models.ProductDetails, error) {
+	log.Println(dbo.productTableName)
 	input := &dynamodb.GetItemInput{
-		TableName: aws.String(tableName),
+		TableName: aws.String(dbo.productTableName),
 		Key: map[string]*dynamodb.AttributeValue{
-			partitionKey: {S: aws.String(partitionValue)},
-			sortKey:      {S: aws.String(sortValue)},
+			PRODUCT_PARTITION_KEY: {S: aws.String(partitionValue)},
+			PRODUCT_SORT_KEY:      {S: aws.String(sortValue)},
 		},
 	}
 	res, err := dbo.db.GetItem(input)
 	if err != nil {
-		fmt.Println("error while using GetItem:", err)
+		log.Println("error while using GetItem:", err)
 		return models.ProductDetails{}, err
 	}
 	var response models.ProductDetails
@@ -55,10 +67,10 @@ func (dbo *DbOperationsService) GetPackages(partitionKey string, partitionValue 
 	return response, nil
 }
 
-func (dbo *DbOperationsService) GetVersionAll(partitionKey string, partitionValue string, tableName string) ([]string, error) {
-	res, err := dbo.fetchDataValues(partitionKey, partitionValue, tableName)
+func (dbo *DbOperationsService) GetVersionAll(partitionValue string) ([]string, error) {
+	res, err := dbo.fetchDataValues(partitionValue, dbo.productTableName)
 	if err != nil {
-		fmt.Printf("error in getting the Database value: %v", err)
+		log.Printf("error in getting the Database value: %v", err)
 		return nil, err
 	}
 	var response models.ProductDetails
@@ -67,7 +79,7 @@ func (dbo *DbOperationsService) GetVersionAll(partitionKey string, partitionValu
 		err = dynamodbattribute.UnmarshalMap(i, &response)
 		versionsArray = append(versionsArray, response.Version)
 		if err != nil {
-			fmt.Printf("Got error unmarshalling: %s", err)
+			log.Printf("Got error unmarshalling: %s", err)
 			return nil, err
 		}
 
@@ -75,12 +87,12 @@ func (dbo *DbOperationsService) GetVersionAll(partitionKey string, partitionValu
 	return versionsArray, nil
 }
 
-func (dbo *DbOperationsService) GetMetaData(partitionKey string, partitionValue string, sortKey string, sortValue string, tableName string, platform string, platformVersion string, architecture string) (models.ProductDetails, error) {
+func (dbo *DbOperationsService) GetMetaData(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (models.ProductDetails, error) {
 	input := &dynamodb.GetItemInput{
-		TableName: aws.String(tableName),
+		TableName: aws.String(dbo.productTableName),
 		Key: map[string]*dynamodb.AttributeValue{
-			partitionKey: {S: aws.String(partitionValue)},
-			sortKey:      {S: aws.String(sortValue)},
+			PRODUCT_PARTITION_KEY: {S: aws.String(partitionValue)},
+			PRODUCT_SORT_KEY:      {S: aws.String(sortValue)},
 		},
 	}
 	res, err := dbo.db.GetItem(input)
@@ -108,26 +120,26 @@ func (dbo *DbOperationsService) GetMetaData(partitionKey string, partitionValue 
 	return productDetails, nil
 }
 
-func (dbo *DbOperationsService) GetVersionLatest(partitionKey string, partitionValue string, tableName string) (string, error) {
-	versions, err := dbo.GetVersionAll(partitionKey, partitionValue, tableName)
+func (dbo *DbOperationsService) GetVersionLatest(partitionValue string) (string, error) {
+	versions, err := dbo.GetVersionAll(partitionValue)
 	if err != nil {
-		fmt.Printf("Error in getting versions list: %v", err)
+		log.Printf("Error in getting versions list: %v", err)
 		return "", err
 	}
 	sort.Sort(sort.Reverse(sort.StringSlice(versions)))
 	sortValue := versions[0]
-	latestVersionDetails, err := dbo.GetPackages(partitionKey, partitionValue, "Version", sortValue, tableName)
+	latestVersionDetails, err := dbo.GetPackages(partitionValue, sortValue)
 	if err != nil {
-		fmt.Printf("Error in fetching the latest version: %v", err)
+		log.Printf("Error in fetching the latest version: %v", err)
 		return "", err
 	}
 	return latestVersionDetails.Version, nil
 }
 
-func (dbo *DbOperationsService) GetRelatedProducts(partitionKey string, partitionValue string, tableName string) (models.Sku, error) {
-	res, err := dbo.fetchDataValues(partitionKey, partitionValue, tableName)
+func (dbo *DbOperationsService) GetRelatedProducts(partitionValue string) (models.Sku, error) {
+	res, err := dbo.fetchDataValues(partitionValue, dbo.skuTableName)
 	if err != nil {
-		fmt.Printf("error in fetching the database values: %v", err)
+		log.Printf("error in fetching the database values: %v", err)
 		return models.Sku{}, err
 	}
 	var sku models.Sku
@@ -136,22 +148,22 @@ func (dbo *DbOperationsService) GetRelatedProducts(partitionKey string, partitio
 		err = dynamodbattribute.UnmarshalMap(i, &sku)
 		responseArray = append(responseArray, sku.Products...)
 		if err != nil {
-			fmt.Printf("Got error unmarshalling: %s", err)
+			log.Printf("Got error unmarshalling: %s", err)
 			return models.Sku{}, err
 		}
 	}
-	sku.Skus = partitionValue
+	sku.Sku = partitionValue
 	sku.Products = responseArray
 
 	return sku, nil
 }
 
-func (dbo *DbOperationsService) fetchDataValues(partitionKey string, partitionValue string, tableName string) (*dynamodb.ScanOutput, error) {
-	filt := expression.Name(partitionKey).Equal(expression.Value(partitionValue))
+func (dbo *DbOperationsService) fetchDataValues(partitionValue string, tableName string) (*dynamodb.ScanOutput, error) {
+	filt := expression.Name(SKU_PARTITION_KEY).Equal(expression.Value(partitionValue))
 
 	expr, err := expression.NewBuilder().WithFilter(filt).Build()
 	if err != nil {
-		fmt.Printf("Got error building expression: %v", err)
+		log.Printf("Got error building expression: %v", err)
 	}
 	params := &dynamodb.ScanInput{
 		ExpressionAttributeNames:  expr.Names(),
@@ -161,7 +173,7 @@ func (dbo *DbOperationsService) fetchDataValues(partitionKey string, partitionVa
 	}
 	res, err := dbo.db.Scan(params)
 	if err != nil {
-		fmt.Printf("Query API call failed: %v", err)
+		log.Printf("Query API call failed: %v", err)
 		return nil, err
 	}
 	return res, nil

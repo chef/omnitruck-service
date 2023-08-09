@@ -25,11 +25,8 @@ func (mdb *MDB) Scan(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
 
 func TestGetPackagesSuccess(t *testing.T) {
 	type args struct {
-		partitionKey   string
 		partitionValue string
-		sortKey        string
 		sortValue      string
-		tableName      string
 	}
 	tests := []struct {
 		name    string
@@ -40,11 +37,8 @@ func TestGetPackagesSuccess(t *testing.T) {
 		{
 			name: "Successful",
 			args: args{
-				partitionKey:   "product",
 				partitionValue: "automate",
-				sortKey:        "version",
 				sortValue:      "4.3.9",
-				tableName:      "test-table",
 			},
 			want: models.ProductDetails{
 				Product: "automate",
@@ -67,7 +61,7 @@ func TestGetPackagesSuccess(t *testing.T) {
 					},
 				},
 			}
-			got, _ := ser.GetPackages(tt.args.partitionKey, tt.args.partitionValue, tt.args.sortKey, tt.args.sortValue, tt.args.tableName)
+			got, _ := ser.GetPackages(tt.args.partitionValue, tt.args.sortValue)
 			assert.Equal(t, got, tt.want)
 		})
 	}
@@ -75,11 +69,8 @@ func TestGetPackagesSuccess(t *testing.T) {
 
 func TestGetPackagesFailure(t *testing.T) {
 	type args struct {
-		partitionKey   string
 		partitionValue string
-		sortKey        string
 		sortValue      string
-		tableName      string
 	}
 	tests := []struct {
 		name    string
@@ -90,13 +81,10 @@ func TestGetPackagesFailure(t *testing.T) {
 		{
 			name: "Failure in reading the DataBase",
 			args: args{
-				partitionKey:   "product",
 				partitionValue: "automate",
-				sortKey:        "version",
 				sortValue:      "4.3.9",
-				tableName:      "test-table",
 			},
-			want: models.ProductDetails{},
+			want:    models.ProductDetails{},
 			wantErr: errors.New("ReplicaNotFoundException: Requested resource not found"),
 		},
 	}
@@ -111,7 +99,7 @@ func TestGetPackagesFailure(t *testing.T) {
 					},
 				},
 			}
-			_, err := ser.GetPackages(tt.args.partitionKey, tt.args.partitionValue, tt.args.sortKey, tt.args.sortValue, tt.args.tableName)
+			_, err := ser.GetPackages(tt.args.partitionValue, tt.args.sortValue)
 			assert.Equal(t, err.Error(), tt.wantErr.Error())
 		})
 	}
@@ -119,9 +107,7 @@ func TestGetPackagesFailure(t *testing.T) {
 
 func TestGetVersionAllSuccess(t *testing.T) {
 	type args struct {
-		partitionKey   string
 		partitionValue string
-		tableName      string
 	}
 	tests := []struct {
 		name    string
@@ -132,9 +118,7 @@ func TestGetVersionAllSuccess(t *testing.T) {
 		{
 			name: "SuccessFull",
 			args: args{
-				partitionKey:   "product",
 				partitionValue: "autoamte",
-				tableName:      "test-table",
 			},
 			want: []string{
 				"4.0.54",
@@ -163,15 +147,14 @@ func TestGetVersionAllSuccess(t *testing.T) {
 					},
 				},
 			}
-			got, _ := ser.GetVersionAll(tt.args.partitionKey, tt.args.partitionValue, tt.args.tableName)
+			got, _ := ser.GetVersionAll(tt.args.partitionValue)
 			assert.Equal(t, got, tt.want)
 		})
 	}
 }
 
-func TestGetVersionAllFailure(t* testing.T) {
+func TestGetVersionAllFailure(t *testing.T) {
 	type args struct {
-		partitionKey   string
 		partitionValue string
 		tableName      string
 	}
@@ -184,11 +167,10 @@ func TestGetVersionAllFailure(t* testing.T) {
 		{
 			name: "Failure in reading the DataBase",
 			args: args{
-				partitionKey:   "product",
 				partitionValue: "autoamte",
 				tableName:      "test-table",
 			},
-			want: nil,
+			want:    nil,
 			wantErr: errors.New("ReplicaNotFoundException: Requested resource not found"),
 		},
 	}
@@ -203,7 +185,7 @@ func TestGetVersionAllFailure(t* testing.T) {
 					},
 				},
 			}
-			got, err := ser.GetVersionAll(tt.args.partitionKey, tt.args.partitionValue, tt.args.tableName)
+			got, err := ser.GetVersionAll(tt.args.partitionValue)
 			assert.Equal(t, got, tt.want)
 			assert.Equal(t, err.Error(), tt.wantErr.Error())
 		})
@@ -212,11 +194,8 @@ func TestGetVersionAllFailure(t* testing.T) {
 
 func TestGetMetaDataSuccess(t *testing.T) {
 	type args struct {
-		partitionKey    string
 		partitionValue  string
-		sortKey         string
 		sortValue       string
-		tableName       string
 		platform        string
 		platformVersion string
 		architecture    string
@@ -230,11 +209,8 @@ func TestGetMetaDataSuccess(t *testing.T) {
 		{
 			name: "Success",
 			args: args{
-				partitionKey:    "product",
 				partitionValue:  "automate",
-				sortKey:         "version",
 				sortValue:       "4.0.54",
-				tableName:       "test-table",
 				platform:        "amazon",
 				platformVersion: "2",
 				architecture:    "arch64",
@@ -289,7 +265,7 @@ func TestGetMetaDataSuccess(t *testing.T) {
 					},
 				},
 			}
-			got, _ := ser.GetMetaData(tt.args.partitionKey, tt.args.partitionValue, tt.args.sortKey, tt.args.sortValue, tt.args.tableName, tt.args.platform, tt.args.platformVersion, tt.args.architecture)
+			got, _ := ser.GetMetaData(tt.args.partitionValue, tt.args.sortValue, tt.args.platform, tt.args.platformVersion, tt.args.architecture)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -297,11 +273,8 @@ func TestGetMetaDataSuccess(t *testing.T) {
 
 func TestGetMetaDataFailure(t *testing.T) {
 	type args struct {
-		partitionKey    string
 		partitionValue  string
-		sortKey         string
 		sortValue       string
-		tableName       string
 		platform        string
 		platformVersion string
 		architecture    string
@@ -315,16 +288,15 @@ func TestGetMetaDataFailure(t *testing.T) {
 		{
 			name: "Failure in reading the DataBase",
 			args: args{
-				partitionKey:    "product",
-				partitionValue:  "automate",
-				sortKey:         "version",
+
+				partitionValue: "automate",
+
 				sortValue:       "4.0.54",
-				tableName:       "test-table",
 				platform:        "amazon",
 				platformVersion: "2",
 				architecture:    "arch64",
 			},
-			want: models.ProductDetails{},
+			want:    models.ProductDetails{},
 			wantErr: errors.New("ReplicaNotFoundException: Requested resource not found"),
 		},
 	}
@@ -339,7 +311,7 @@ func TestGetMetaDataFailure(t *testing.T) {
 					},
 				},
 			}
-			got, err := ser.GetMetaData(tt.args.partitionKey, tt.args.partitionValue, tt.args.sortKey, tt.args.sortValue, tt.args.tableName, tt.args.platform, tt.args.platformVersion, tt.args.architecture)
+			got, err := ser.GetMetaData(tt.args.partitionValue, tt.args.sortValue, tt.args.platform, tt.args.platformVersion, tt.args.architecture)
 			assert.Equal(t, tt.want, got)
 			assert.Equal(t, tt.wantErr.Error(), err.Error())
 		})
@@ -348,9 +320,7 @@ func TestGetMetaDataFailure(t *testing.T) {
 
 func TestGetVersionLatestSuccess(t *testing.T) {
 	type args struct {
-		partitionKey   string
 		partitionValue string
-		tableName      string
 	}
 	tests := []struct {
 		name    string
@@ -361,9 +331,8 @@ func TestGetVersionLatestSuccess(t *testing.T) {
 		{
 			name: "Success",
 			args: args{
-				partitionKey:   "product",
+
 				partitionValue: "automate",
-				tableName:      "test-table",
 			},
 			want:    "4.0.91",
 			wantErr: false,
@@ -393,7 +362,7 @@ func TestGetVersionLatestSuccess(t *testing.T) {
 					},
 				},
 			}
-			got, _ := ser.GetVersionLatest(tt.args.partitionKey, tt.args.partitionValue, tt.args.tableName)
+			got, _ := ser.GetVersionLatest(tt.args.partitionValue)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -401,9 +370,7 @@ func TestGetVersionLatestSuccess(t *testing.T) {
 
 func TestGetVersionLatestFailure(t *testing.T) {
 	type args struct {
-		partitionKey   string
 		partitionValue string
-		tableName      string
 	}
 	tests := []struct {
 		name    string
@@ -414,9 +381,8 @@ func TestGetVersionLatestFailure(t *testing.T) {
 		{
 			name: "Failure in reading the DataBase",
 			args: args{
-				partitionKey:   "product",
+
 				partitionValue: "automate",
-				tableName:      "test-table",
 			},
 			want:    "",
 			wantErr: errors.New("ReplicaNotFoundException: Requested resource not found"),
@@ -438,7 +404,7 @@ func TestGetVersionLatestFailure(t *testing.T) {
 					},
 				},
 			}
-			got, err := ser.GetVersionLatest(tt.args.partitionKey, tt.args.partitionValue, tt.args.tableName)
+			got, err := ser.GetVersionLatest(tt.args.partitionValue)
 			assert.Equal(t, tt.want, got)
 			assert.Equal(t, tt.wantErr.Error(), err.Error())
 		})
@@ -447,9 +413,7 @@ func TestGetVersionLatestFailure(t *testing.T) {
 
 func TestGetRelatedProductsSuccess(t *testing.T) {
 	type args struct {
-		partitionKey   string
 		partitionValue string
-		tableName      string
 	}
 	tests := []struct {
 		name    string
@@ -460,12 +424,11 @@ func TestGetRelatedProductsSuccess(t *testing.T) {
 		{
 			name: "SuccessFull",
 			args: args{
-				partitionKey:   "skus",
+
 				partitionValue: "habitat",
-				tableName:      "test-table",
 			},
 			want: models.Sku{
-				Skus: "habitat",
+				Sku: "habitat",
 				Products: []string{
 					"Habitat Premium",
 					"Habitat CLI",
@@ -492,7 +455,7 @@ func TestGetRelatedProductsSuccess(t *testing.T) {
 					},
 				},
 			}
-			got, _ := ser.GetRelatedProducts(tt.args.partitionKey, tt.args.partitionValue, tt.args.tableName)
+			got, _ := ser.GetRelatedProducts(tt.args.partitionValue)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -500,9 +463,7 @@ func TestGetRelatedProductsSuccess(t *testing.T) {
 
 func TestGetRelatedProductsFailure(t *testing.T) {
 	type args struct {
-		partitionKey   string
 		partitionValue string
-		tableName      string
 	}
 	tests := []struct {
 		name    string
@@ -513,11 +474,10 @@ func TestGetRelatedProductsFailure(t *testing.T) {
 		{
 			name: "Failure in reading the DataBase",
 			args: args{
-				partitionKey:   "skus",
+
 				partitionValue: "habitat",
-				tableName:      "test-table",
 			},
-			want: models.Sku{},
+			want:    models.Sku{},
 			wantErr: errors.New("ReplicaNotFoundException: Requested resource not found"),
 		},
 	}
@@ -532,7 +492,7 @@ func TestGetRelatedProductsFailure(t *testing.T) {
 					},
 				},
 			}
-			got, _ := ser.GetRelatedProducts(tt.args.partitionKey, tt.args.partitionValue, tt.args.tableName)
+			got, _ := ser.GetRelatedProducts(tt.args.partitionValue)
 			assert.Equal(t, tt.want, got)
 		})
 	}

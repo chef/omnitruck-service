@@ -1,7 +1,7 @@
 package dbconnection
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/chef/omnitruck-service/utils/awsutils"
@@ -27,7 +27,7 @@ func (dbc *DbConectionService) GetDbConnection() *dynamodb.DynamoDB {
 	if svc == nil {
 		sess, err := dbc.AwsUtil.GetNewSession()
 		if err != nil {
-			fmt.Printf("Error while reading the session: %v", err)
+			log.Printf("Error while reading the session: %v", err)
 			return nil
 		}
 		svc = dynamodb.New(sess)
