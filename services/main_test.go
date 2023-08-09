@@ -15,6 +15,71 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestRelatedProductsHandler(t *testing.T) {
+
+	tests := []struct {
+		name             string
+		requestPath      string
+		expectedStatus   int
+		expectedResponse string
+		relatedProducts  models.RelatedProducts
+		err              error
+	}{
+		{
+			name:             "Valid SKU with related products",
+			requestPath:      "/relatedProducts?sku=Chef%20Desktop%20Management",
+			expectedStatus:   http.StatusOK,
+			expectedResponse: `{"relatedProducts": {"inspec": "Chef InSpec"}}`,
+			relatedProducts:  models.RelatedProducts{Products: map[string]string{"inspec": "Chef InSpec"}},
+			err:              nil,
+		},
+		{
+			name:             "Invalid SKU",
+			requestPath:      "/relatedProducts?sku=invalid-sku",
+			expectedStatus:   http.StatusInternalServerError,
+			expectedResponse: `{"code":500, "message":"Unable to retrieve related products for invalid-sku", "status_text":"Internal Server Error"}`,
+			relatedProducts:  models.RelatedProducts{},
+			err:              errors.New("No Related products found for SKU "),
+		},
+		{
+			name:             "No related products",
+			requestPath:      "/relatedProducts?sku=Chef%20123",
+			expectedStatus:   http.StatusBadRequest,
+			expectedResponse: `{"code":400, "message":"No related products found for SKU", "status_text":"Bad Request"}`,
+			relatedProducts:  models.RelatedProducts{},
+			err:              nil,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			app := fiber.New()
+			mockDbService := new(dboperations.MockIDbOperations)
+			mockDbService.GetRelatedProductsfunc = func(partitionValue string) (*models.RelatedProducts, error) {
+				return &test.relatedProducts, test.err
+			}
+
+			server := &ApiService{
+				App:             app,
+				DatabaseService: mockDbService,
+				Log:             logrus.NewEntry(logrus.New()),
+			}
+			server.buildRouter()
+			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+
+			assert.Equal(t, test.expectedStatus, resp.StatusCode)
+
+			if test.expectedResponse != "" {
+				bodyBytes, err := io.ReadAll(resp.Body)
+				assert.NoError(t, err)
+				assert.JSONEq(t, test.expectedResponse, string(bodyBytes))
+			}
+		})
+	}
+}
+
 func TestApiService_productMetadataHandler(t *testing.T) {
 	tests := []struct {
 		name             string

@@ -40,6 +40,7 @@ func (server *ApiService) buildRouter() {
 	server.App.Get("/:channel/:product/packages", server.productPackagesHandler)
 	server.App.Get("/:channel/:product/metadata", server.productMetadataHandler)
 	server.App.Get("/:channel/:product/download", server.productDownloadHandler)
+	server.App.Get("/:sku/relatedProducts", server.relatedProductsHandler)
 
 }
 
@@ -468,4 +469,36 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 	} else {
 		return server.SendError(c, request)
 	}
+}
+
+// @description Get related products for a given SKU
+// @description The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned
+// @Param       sku    	   path   string true  "sku"
+// @Param       license_id query string false "License ID"
+// @Success     200
+// @Failure     400 {object} services.ErrorResponse
+// @Failure     403 {object} services.ErrorResponse
+// @Router      /{sku}/relatedProducts [get]
+func (server *ApiService) relatedProductsHandler(c *fiber.Ctx) error {
+
+	params := getRequestParams(c)
+
+	err, ok := server.ValidateRequest(params, c)
+	if !ok {
+		return err
+	}
+
+	relatedProducts, err := server.DatabaseService.GetRelatedProducts(params.SKU)
+
+	if err != nil {
+		request := clients.Request{}
+		return server.SendError(c, request.Failure(400, "No Related products found for SKU"))
+	}
+
+	response := map[string]interface{}{
+		"relatedProducts": relatedProducts.Products,
+	}
+
+	return server.SendResponse(c, response)
+
 }
