@@ -36,7 +36,10 @@ def get_Columns(file_path):
         response_dict = {}
         for i, j in enumerate(columns[1:]):
             response = filter_rows(file_path, columns[0], j)
-            response_dict[j] = response
+            if "-" in j:
+                j = j.replace(" - ", "-").replace(" -", "-").replace("- ","-")
+            sku_product = j.replace(" ", "-").lower()
+            response_dict[sku_product] = response
         return response_dict
     except Exception as e:
         return f"An error occurred: {str(e)}"
