@@ -20,11 +20,11 @@ const (
 )
 
 type IDbOperations interface {
-	GetPackages(partitionValue string, sortValue string) (models.ProductDetails, error)
+	GetPackages(partitionValue string, sortValue string) (*models.ProductDetails, error)
 	GetVersionAll(partitionValue string) ([]string, error)
-	GetMetaData(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (models.ProductDetails, error)
+	GetMetaData(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (*models.MetaData, error)
 	GetVersionLatest(partitionValue string) (string, error)
-	GetRelatedProducts(partitionValue string) (models.Sku, error)
+	GetRelatedProducts(partitionValue string) (*models.RelatedProducts, error)
 }
 
 type IDynamoDBOps interface {
@@ -42,11 +42,11 @@ func NewDbOperationsService(dbConnection dbconnection.DbConnection) *DbOperation
 	return &DbOperationsService{
 		db:               dbConnection.GetDbConnection(),
 		productTableName: os.Getenv("PRODUCT_TABLE_NAME"),
-		skuTableName:     os.Getenv("SKU_TABLE_NAME"),
+		skuTableName:     os.Getenv("RELATED_PRODUCTS_TABLE_NAME"),
 	}
 }
 
-func (dbo *DbOperationsService) GetPackages(partitionValue string, sortValue string) (models.ProductDetails, error) {
+func (dbo *DbOperationsService) GetPackages(partitionValue string, sortValue string) (*models.ProductDetails, error) {
 	log.Println(dbo.productTableName)
 	input := &dynamodb.GetItemInput{
 		TableName: aws.String(dbo.productTableName),
@@ -58,13 +58,13 @@ func (dbo *DbOperationsService) GetPackages(partitionValue string, sortValue str
 	res, err := dbo.db.GetItem(input)
 	if err != nil {
 		log.Println("error while using GetItem:", err)
-		return models.ProductDetails{}, err
+		return nil, err
 	}
 	var response models.ProductDetails
 	if err := dynamodbattribute.UnmarshalMap(res.Item, &response); err != nil {
-		return models.ProductDetails{}, err
+		return nil, err
 	}
-	return response, nil
+	return &response, nil
 }
 
 func (dbo *DbOperationsService) GetVersionAll(partitionValue string) ([]string, error) {
@@ -87,7 +87,7 @@ func (dbo *DbOperationsService) GetVersionAll(partitionValue string) ([]string, 
 	return versionsArray, nil
 }
 
-func (dbo *DbOperationsService) GetMetaData(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (models.ProductDetails, error) {
+func (dbo *DbOperationsService) GetMetaData(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (*models.MetaData, error) {
 	input := &dynamodb.GetItemInput{
 		TableName: aws.String(dbo.productTableName),
 		Key: map[string]*dynamodb.AttributeValue{
@@ -97,15 +97,14 @@ func (dbo *DbOperationsService) GetMetaData(partitionValue string, sortValue str
 	}
 	res, err := dbo.db.GetItem(input)
 	if err != nil {
-		return models.ProductDetails{}, err
+		return nil, err
 	}
 	var productDetails models.ProductDetails
 	if err := dynamodbattribute.UnmarshalMap(res.Item, &productDetails); err != nil {
-		return models.ProductDetails{}, err
+		return nil, err
 	}
 	MetaData := productDetails.MetaData
 	var response models.MetaData
-	var responseArray []models.MetaData
 	for _, j := range MetaData {
 		if j.Architecture == architecture && j.Platform == platform && j.Platform_Version == platformVersion {
 			response.Architecture = architecture
@@ -115,9 +114,7 @@ func (dbo *DbOperationsService) GetMetaData(partitionValue string, sortValue str
 			response.SHA256 = j.SHA256
 		}
 	}
-	responseArray = append(responseArray, response)
-	productDetails.MetaData = responseArray
-	return productDetails, nil
+	return &response, nil
 }
 
 func (dbo *DbOperationsService) GetVersionLatest(partitionValue string) (string, error) {
@@ -136,32 +133,32 @@ func (dbo *DbOperationsService) GetVersionLatest(partitionValue string) (string,
 	return latestVersionDetails.Version, nil
 }
 
-func (dbo *DbOperationsService) GetRelatedProducts(partitionValue string) (models.Sku, error) {
+func (dbo *DbOperationsService) GetRelatedProducts(partitionValue string) (*models.RelatedProducts, error) {
 	res, err := dbo.fetchDataValues(partitionValue, dbo.skuTableName)
 	if err != nil {
 		log.Printf("error in fetching the database values: %v", err)
-		return models.Sku{}, err
+		return nil, err
 	}
-	var sku models.Sku
+	var sku models.RelatedProducts
 	var responseArray []string
 	for _, i := range res.Items {
 		err = dynamodbattribute.UnmarshalMap(i, &sku)
 		responseArray = append(responseArray, sku.Products...)
 		if err != nil {
 			log.Printf("Got error unmarshalling: %s", err)
-			return models.Sku{}, err
+			return nil, err
 		}
 	}
 	sku.Sku = partitionValue
 	sku.Products = responseArray
 
-	return sku, nil
+	return &sku, nil
 }
 
 func (dbo *DbOperationsService) fetchDataValues(partitionValue string, tableName string) (*dynamodb.ScanOutput, error) {
-	filt := expression.Name(SKU_PARTITION_KEY).Equal(expression.Value(partitionValue))
+	filter := expression.Name(SKU_PARTITION_KEY).Equal(expression.Value(partitionValue))
 
-	expr, err := expression.NewBuilder().WithFilter(filt).Build()
+	expr, err := expression.NewBuilder().WithFilter(filter).Build()
 	if err != nil {
 		log.Printf("Got error building expression: %v", err)
 	}

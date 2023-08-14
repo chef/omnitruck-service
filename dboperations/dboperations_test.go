@@ -31,7 +31,7 @@ func TestGetPackagesSuccess(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    models.ProductDetails
+		want    *models.ProductDetails
 		wantErr bool
 	}{
 		{
@@ -40,7 +40,7 @@ func TestGetPackagesSuccess(t *testing.T) {
 				partitionValue: "automate",
 				sortValue:      "4.3.9",
 			},
-			want: models.ProductDetails{
+			want: &models.ProductDetails{
 				Product: "automate",
 				Version: "4.3.9",
 			},
@@ -75,7 +75,7 @@ func TestGetPackagesFailure(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    models.ProductDetails
+		want    *models.ProductDetails
 		wantErr error
 	}{
 		{
@@ -84,7 +84,7 @@ func TestGetPackagesFailure(t *testing.T) {
 				partitionValue: "automate",
 				sortValue:      "4.3.9",
 			},
-			want:    models.ProductDetails{},
+			want:    nil,
 			wantErr: errors.New("ReplicaNotFoundException: Requested resource not found"),
 		},
 	}
@@ -203,7 +203,7 @@ func TestGetMetaDataSuccess(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    models.ProductDetails
+		want    *models.MetaData
 		wantErr bool
 	}{
 		{
@@ -215,18 +215,13 @@ func TestGetMetaDataSuccess(t *testing.T) {
 				platformVersion: "2",
 				architecture:    "arch64",
 			},
-			want: models.ProductDetails{
-				Product: "automate",
-				Version: "4.3.9",
-				MetaData: []models.MetaData{
-					{
-						Architecture:     "arch64",
-						Platform:         "amazon",
-						Platform_Version: "2",
-						SHA1:             "SHA1arch64",
-						SHA256:           "SHA256arch64",
-					},
-				},
+			want: &models.MetaData{
+
+				Architecture:     "arch64",
+				Platform:         "amazon",
+				Platform_Version: "2",
+				SHA1:             "SHA1arch64",
+				SHA256:           "SHA256arch64",
 			},
 			wantErr: false,
 		},
@@ -282,7 +277,7 @@ func TestGetMetaDataFailure(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    models.ProductDetails
+		want    *models.MetaData
 		wantErr error
 	}{
 		{
@@ -296,7 +291,7 @@ func TestGetMetaDataFailure(t *testing.T) {
 				platformVersion: "2",
 				architecture:    "arch64",
 			},
-			want:    models.ProductDetails{},
+			want:    nil,
 			wantErr: errors.New("ReplicaNotFoundException: Requested resource not found"),
 		},
 	}
@@ -418,7 +413,7 @@ func TestGetRelatedProductsSuccess(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    models.Sku
+		want    *models.RelatedProducts
 		wantErr bool
 	}{
 		{
@@ -427,7 +422,7 @@ func TestGetRelatedProductsSuccess(t *testing.T) {
 
 				partitionValue: "habitat",
 			},
-			want: models.Sku{
+			want: &models.RelatedProducts{
 				Sku: "habitat",
 				Products: []string{
 					"Habitat Premium",
@@ -468,7 +463,7 @@ func TestGetRelatedProductsFailure(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    models.Sku
+		want    *models.RelatedProducts
 		wantErr error
 	}{
 		{
@@ -477,7 +472,7 @@ func TestGetRelatedProductsFailure(t *testing.T) {
 
 				partitionValue: "habitat",
 			},
-			want:    models.Sku{},
+			want:    nil,
 			wantErr: errors.New("ReplicaNotFoundException: Requested resource not found"),
 		},
 	}

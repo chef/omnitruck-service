@@ -14,14 +14,14 @@ type ProductDetails struct {
 
 type MetaData struct {
 	Architecture     string `json:"architecture"`
-	Filename         string `json:"string"`
+	FileName         string `json:"filename"`
 	Platform         string `json:"platform"`
 	Platform_Version string `json:"platform_version"`
 	SHA1             string `json:"sha1"`
 	SHA256           string `json:"sha256"`
 }
 
-type Sku struct {
+type RelatedProducts struct {
 	Sku      string   `json:"sku"`
 	Products []string `json:"products"`
 }
