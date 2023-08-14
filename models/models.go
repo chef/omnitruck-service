@@ -14,6 +14,7 @@ type ProductDetails struct {
 
 type MetaData struct {
 	Architecture     string `json:"architecture"`
+	Filename         string `json:"string"`
 	Platform         string `json:"platform"`
 	Platform_Version string `json:"platform_version"`
 	SHA1             string `json:"sha1"`
