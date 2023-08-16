@@ -67,7 +67,7 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	server.Log = c.Log
 	server.Config = c
 	server.Validator = omnitruck.NewValidator()
-	server.DatabaseService = NewDbOperationsService(dbconnection.NewDbConnectionService(awsutils.NewAwsUtils()))
+	server.DatabaseService = dboperations.NewDbOperationsService(dbconnection.NewDbConnectionService(awsutils.NewAwsUtils()))
 	server.Mode = c.Mode
 	server.DatabaseService = dboperations.NewDbOperationsService(dbconnection.NewDbConnectionService(awsutils.NewAwsUtils()))
 
