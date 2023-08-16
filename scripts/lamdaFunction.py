@@ -57,7 +57,7 @@ def fetchPlatformInfoHab(shaContent, version):
    for shaInfo in shaContent:
       archValue = shaInfo.split(" ")[-1].strip()
       archStruct = archValue.split("-")
-      productData["metadata"].append({"platform": archStruct[1], "sha256": shaInfo.split(" ")[0], "arch": archStruct[-1].split(".")[0], "name": archValue })
+      productData["metadata"].append({"platform": archStruct[1], "sha256": shaInfo.split(" ")[0], "architecture": archStruct[-1].split(".")[0], "filename": archValue })
    addDataToDynamo(productData)
    
 def fetchPlatformInfoAutomate(shaContent, ver):
@@ -67,7 +67,7 @@ def fetchPlatformInfoAutomate(shaContent, ver):
    for shaInfo in shaContent:
       archValue = shaInfo.split(" ")[-1].strip()
       archStruct = archValue.split("_")
-      productData["metadata"].append({"platform": archStruct[1], "sha256": shaInfo.split(" ")[0], "arch": archStruct[-1].split(".")[0], "name": archValue })
+      productData["metadata"].append({"platform": archStruct[1], "sha256": shaInfo.split(" ")[0], "architecture": archStruct[-1].split(".")[0], "filename": archValue })
    addDataToDynamo(productData)
    
 def getReleasedHabVersionsAPI(range):
