@@ -474,7 +474,6 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 	}
 }
 
-// @description Get related products for a given SKU
 // @description The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned
 // @Param       sku    	   query string true  "sku"
 // @Param       license_id query string false "License ID"
