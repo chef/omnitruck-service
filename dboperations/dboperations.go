@@ -47,17 +47,8 @@ func NewDbOperationsService(dbConnection dbconnection.DbConnection) *DbOperation
 }
 
 func (dbo *DbOperationsService) GetPackages(partitionValue string, sortValue string) (*models.ProductDetails, error) {
-	log.Println(dbo.productTableName)
-	input := &dynamodb.GetItemInput{
-		TableName: aws.String(dbo.productTableName),
-		Key: map[string]*dynamodb.AttributeValue{
-			PRODUCT_PARTITION_KEY: {S: aws.String(partitionValue)},
-			PRODUCT_SORT_KEY:      {S: aws.String(sortValue)},
-		},
-	}
-	res, err := dbo.db.GetItem(input)
+	res, err := dbo.fetchDataValuesWithSortKey(partitionValue, sortValue)
 	if err != nil {
-		log.Println("error while using GetItem:", err)
 		return nil, err
 	}
 	var response models.ProductDetails
@@ -68,7 +59,7 @@ func (dbo *DbOperationsService) GetPackages(partitionValue string, sortValue str
 }
 
 func (dbo *DbOperationsService) GetVersionAll(partitionValue string) ([]string, error) {
-	res, err := dbo.fetchDataValues(partitionValue, dbo.productTableName)
+	res, err := dbo.fetchDataValues(partitionValue, dbo.productTableName, PRODUCT_PARTITION_KEY)
 	if err != nil {
 		log.Printf("error in getting the Database value: %v", err)
 		return nil, err
@@ -88,14 +79,7 @@ func (dbo *DbOperationsService) GetVersionAll(partitionValue string) ([]string, 
 }
 
 func (dbo *DbOperationsService) GetMetaData(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (*models.MetaData, error) {
-	input := &dynamodb.GetItemInput{
-		TableName: aws.String(dbo.productTableName),
-		Key: map[string]*dynamodb.AttributeValue{
-			PRODUCT_PARTITION_KEY: {S: aws.String(partitionValue)},
-			PRODUCT_SORT_KEY:      {S: aws.String(sortValue)},
-		},
-	}
-	res, err := dbo.db.GetItem(input)
+	res, err := dbo.fetchDataValuesWithSortKey(partitionValue, sortValue)
 	if err != nil {
 		return nil, err
 	}
@@ -112,6 +96,7 @@ func (dbo *DbOperationsService) GetMetaData(partitionValue string, sortValue str
 			response.Platform_Version = platformVersion
 			response.SHA1 = j.SHA1
 			response.SHA256 = j.SHA256
+			response.FileName = j.FileName
 		}
 	}
 	return &response, nil
@@ -134,7 +119,7 @@ func (dbo *DbOperationsService) GetVersionLatest(partitionValue string) (string,
 }
 
 func (dbo *DbOperationsService) GetRelatedProducts(partitionValue string) (*models.RelatedProducts, error) {
-	res, err := dbo.fetchDataValues(partitionValue, dbo.skuTableName)
+	res, err := dbo.fetchDataValues(partitionValue, dbo.skuTableName, SKU_PARTITION_KEY)
 	if err != nil {
 		log.Printf("error in fetching the database values: %v", err)
 		return nil, err
@@ -155,8 +140,8 @@ func (dbo *DbOperationsService) GetRelatedProducts(partitionValue string) (*mode
 	return &sku, nil
 }
 
-func (dbo *DbOperationsService) fetchDataValues(partitionValue string, tableName string) (*dynamodb.ScanOutput, error) {
-	filter := expression.Name(SKU_PARTITION_KEY).Equal(expression.Value(partitionValue))
+func (dbo *DbOperationsService) fetchDataValues(partitionValue string, tableName string, partitionKey string) (*dynamodb.ScanOutput, error) {
+	filter := expression.Name(partitionKey).Equal(expression.Value(partitionValue))
 
 	expr, err := expression.NewBuilder().WithFilter(filter).Build()
 	if err != nil {
@@ -170,7 +155,23 @@ func (dbo *DbOperationsService) fetchDataValues(partitionValue string, tableName
 	}
 	res, err := dbo.db.Scan(params)
 	if err != nil {
-		log.Printf("Query API call failed: %v", err)
+		log.Printf("Query API call failed for ScanInput: %v", err)
+		return nil, err
+	}
+	return res, nil
+}
+
+func (dbo *DbOperationsService) fetchDataValuesWithSortKey(partitionValue string, sortValue string) (*dynamodb.GetItemOutput, error) {
+	input := &dynamodb.GetItemInput{
+		TableName: aws.String(dbo.productTableName),
+		Key: map[string]*dynamodb.AttributeValue{
+			PRODUCT_PARTITION_KEY: {S: aws.String(partitionValue)},
+			PRODUCT_SORT_KEY:      {S: aws.String(sortValue)},
+		},
+	}
+	res, err := dbo.db.GetItem(input)
+	if err != nil {
+		log.Println("error while using GetItem to get dataBase values: %v", err)
 		return nil, err
 	}
 	return res, nil
