@@ -2,10 +2,12 @@ package services
 
 import (
 	"os"
+	"strings"
 	"time"
 
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
+	"github.com/chef/omnitruck-service/constants"
 	_ "github.com/chef/omnitruck-service/docs"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/swagger"
@@ -41,6 +43,7 @@ func (server *ApiService) buildRouter() {
 	server.App.Get("/:channel/:product/metadata", server.productMetadataHandler)
 	server.App.Get("/:channel/:product/download", server.productDownloadHandler)
 	server.App.Get("/relatedProducts", server.relatedProductsHandler)
+	server.App.Get("/:channel/:product/fileName", server.fileNameHandler)
 
 }
 
@@ -462,7 +465,7 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 
 	if request.Ok {
 		if flag {
-			data.Url =  data.Url + substring
+			data.Url = data.Url + substring
 		}
 		server.logCtx(c).Infof("Redirecting user to %s", data.Url)
 		return c.Redirect(data.Url, 302)
@@ -510,4 +513,80 @@ func (server *ApiService) relatedProductsHandler(c *fiber.Ctx) error {
 	server.Log.Info("Returning success response from related products API for " + params.SKU)
 	return server.SendResponse(c, response)
 
+}
+
+// @description The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned
+// @Param       channel    path     string true  "Channel"                                                                                                                      Enums(current, stable)
+// @Param       product    path     string true  "Product"                                                                                                                      Example(chef)
+// @Param       p          query    string true  "Platform, valid values are returned from the `/platforms` endpoint."                                                          Example(ubuntu)
+// @Param       pv         query    string true  "Platform Version, possible values depend on the platform. For example, Ubuntu: 16.04, or 18.04 or for macOS: 10.14 or 10.15." Example(20.04)
+// @Param       m          query    string true  "Machine architecture, valid values are returned by the `/architectures` endpoint."                                            Example(x86_64)
+// @Param       v          query    string false "Version of the product to be installed. A version always takes the form `x.y.z`"                                              Default(latest)
+// @Param       license_id query   string false "License ID"
+// @Success     200        {object}
+// @Failure     400        {object} services.ErrorResponse
+// @Failure     403        {object} services.ErrorResponse
+// @Router      /{channel}/{product}/fileName [get]
+func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
+	params := getRequestParams(c)
+	server.Log.Info("Validating download file name for " + params.Product + "in channel " + params.Channel)
+	err, ok := server.ValidateRequest(params, c)
+	if !ok {
+		server.Log.Error("Validation of file name API for "+params.Product+"failed", err.Error())
+		return err
+	}
+
+	//assuming that the metadata table will always have only the latest version record for automate, querying db without sortkey
+	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
+		version := params.Version
+		if params.Version == constants.LATEST || params.Version == "" {
+			latestVersion, err := server.DatabaseService.GetVersionLatest(params.Product)
+			if err != nil {
+				request := clients.Request{}
+				server.Log.Error("Error while getting latest version for fetching fileName for "+params.Product, err.Error())
+				return server.SendError(c, request.Failure(500, "Unable to get latest version of "+params.Product))
+			} else {
+				version = latestVersion
+			}
+		}
+		metadata, err := server.DatabaseService.GetMetaData(params.Product, version, params.Platform, params.PlatformVersion, params.Architecture)
+
+		if err != nil {
+			request := clients.Request{}
+			server.Log.Error("Error while fetching fileName for "+params.Product, err.Error())
+			return server.SendError(c, request.Failure(500, "Error while fetching file name"))
+		}
+		if metadata == nil || metadata.FileName == "" {
+			request := clients.Request{}
+			server.Log.Error("Error while fetching fileName for "+params.Product, "Unable to find the product information for given parameters")
+			return server.SendError(c, request.Failure(400, "Unable to find the product information for given parameters"))
+		}
+		response := map[string]interface{}{
+			"fileName": metadata.FileName,
+		}
+		server.Log.Info("Returning success response from fileName API for " + params.Product)
+		return server.SendResponse(c, response)
+
+	} else {
+		var data omnitruck.PackageMetadata
+		request := server.Omnitruck(c).ProductMetadata(params).ParseData(&data)
+
+		if request.Ok {
+			url := data.Url
+			fileName := getFileNameFromURL(url)
+			response := map[string]interface{}{
+				"fileName": fileName,
+			}
+			server.Log.Info("Returning success response from fileName API for " + params.Product)
+			return server.SendResponse(c, response)
+		} else {
+			return server.SendError(c, request)
+		}
+
+	}
+}
+
+func getFileNameFromURL(url string) string {
+	segments := strings.Split(url, "/")
+	return segments[len(segments)-1]
 }

@@ -11,14 +11,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"github.com/chef/omnitruck-service/constants"
 	dbconnection "github.com/chef/omnitruck-service/middleware/db"
 	"github.com/chef/omnitruck-service/models"
-)
-
-const (
-	SKU_PARTITION_KEY     = "sku"
-	PRODUCT_PARTITION_KEY = "product"
-	PRODUCT_SORT_KEY      = "version"
 )
 
 type IDbOperations interface {
@@ -61,7 +56,7 @@ func (dbo *DbOperationsService) GetPackages(partitionValue string, sortValue str
 }
 
 func (dbo *DbOperationsService) GetVersionAll(partitionValue string) ([]string, error) {
-	res, err := dbo.fetchDataValues(partitionValue, dbo.productTableName, PRODUCT_PARTITION_KEY)
+	res, err := dbo.fetchDataValues(partitionValue, dbo.productTableName, constants.PRODUCT_PARTITION_KEY)
 	if err != nil {
 		log.Errorf("error in getting the Database value: %v", err)
 		return nil, err
@@ -121,7 +116,7 @@ func (dbo *DbOperationsService) GetVersionLatest(partitionValue string) (string,
 }
 
 func (dbo *DbOperationsService) GetRelatedProducts(partitionValue string) (*models.RelatedProducts, error) {
-	res, err := dbo.fetchDataValues(partitionValue, dbo.skuTableName, SKU_PARTITION_KEY)
+	res, err := dbo.fetchDataValues(partitionValue, dbo.skuTableName, constants.SKU_PARTITION_KEY)
 	if err != nil {
 		log.Errorf("error in fetching the database values: %v", err)
 		return nil, err
@@ -171,8 +166,8 @@ func (dbo *DbOperationsService) fetchDataValuesWithSortKey(partitionValue string
 	input := &dynamodb.GetItemInput{
 		TableName: aws.String(dbo.productTableName),
 		Key: map[string]*dynamodb.AttributeValue{
-			PRODUCT_PARTITION_KEY: {S: aws.String(partitionValue)},
-			PRODUCT_SORT_KEY:      {S: aws.String(sortValue)},
+			constants.PRODUCT_PARTITION_KEY: {S: aws.String(partitionValue)},
+			constants.PRODUCT_SORT_KEY:      {S: aws.String(sortValue)},
 		},
 	}
 	res, err := dbo.db.GetItem(input)
