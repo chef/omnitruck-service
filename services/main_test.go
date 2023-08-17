@@ -7,8 +7,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/chef/omnitruck-service/dboperations"
+	"time"
+
 	_ "github.com/chef/omnitruck-service/docs"
+
+	"github.com/chef/omnitruck-service/dboperations"
 	"github.com/chef/omnitruck-service/models"
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
@@ -345,6 +348,104 @@ func TestApiService_productPackagesHandler(t *testing.T) {
 				bodyBytes, err := io.ReadAll(resp.Body)
 				assert.NoError(t, err)
 				assert.JSONEq(t, test.expectedResponse, string(bodyBytes))
+			}
+		})
+	}
+}
+
+func TestFileNameHandler(t *testing.T) {
+
+	tests := []struct {
+		name             string
+		requestPath      string
+		expectedStatus   int
+		expectedResponse string
+		metadata         models.MetaData
+		version          string
+		err              error
+	}{
+		{
+			name:             "AUTOMATE_SUCCESS",
+			requestPath:      "/current/automate/fileName?p=linux&pv=16.04&m=x86_64&v=latest",
+			expectedStatus:   http.StatusOK,
+			expectedResponse: `{"fileName":"automate_4.7.52-1_amd64.deb"}`,
+			metadata:         models.MetaData{FileName: "automate_4.7.52-1_amd64.deb"},
+			err:              nil,
+		},
+		{
+			name:             "HABITAT_SUCCESS",
+			requestPath:      "/current/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=latest",
+			expectedStatus:   http.StatusOK,
+			expectedResponse: `{"fileName":"hab-x86_64-linux.tar.gz"}`,
+			metadata:         models.MetaData{FileName: "hab-x86_64-linux.tar.gz"},
+			err:              nil,
+			version:          "1.6.652",
+		},
+		{
+			name:             "AUTOMATE_FAIL",
+			requestPath:      "/current/automate/fileName?p=linux&pv=16.04&m=x86_64&v=latest",
+			expectedStatus:   http.StatusInternalServerError,
+			expectedResponse: `{"code":500, "message":"Unable to get latest version of automate", "status_text":"Internal Server Error"}`,
+			metadata:         models.MetaData{},
+			err:              errors.New("Unable to get latest version of automate"),
+		},
+		{
+			name:             "HABITAT_FAIL",
+			requestPath:      "/current/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=latest",
+			expectedStatus:   http.StatusInternalServerError,
+			expectedResponse: `{"code":500, "message":"Unable to get latest version of habitat", "status_text":"Internal Server Error"}`,
+			metadata:         models.MetaData{},
+			err:              errors.New("Unable to get latest version of habitat"),
+		},
+		{
+			name:             "HABITAT_FAIL_1",
+			requestPath:      "/current/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=1.6.652",
+			expectedStatus:   http.StatusInternalServerError,
+			expectedResponse: `{"code":500, "message":"Error while fetching file name", "status_text":"Internal Server Error"}`,
+			metadata:         models.MetaData{},
+			err:              errors.New("Error while fetching file name"),
+		},
+	}
+
+	for _, test := range tests {
+		timeout := 1 * time.Minute
+		t.Run(test.name, func(t *testing.T) {
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				app := fiber.New()
+				mockDbService := new(dboperations.MockIDbOperations)
+
+				mockDbService.GetMetaDatafunc = func(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (*models.MetaData, error) {
+					return &test.metadata, test.err
+				}
+				mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
+					return test.version, test.err
+				}
+
+				server := &ApiService{
+					App:             app,
+					DatabaseService: mockDbService,
+					Log:             logrus.NewEntry(logrus.New()),
+				}
+				server.buildRouter()
+				req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
+				resp, err := app.Test(req)
+				assert.NoError(t, err)
+
+				assert.Equal(t, test.expectedStatus, resp.StatusCode)
+
+				if test.expectedResponse != "" {
+					bodyBytes, err := io.ReadAll(resp.Body)
+					assert.NoError(t, err)
+					assert.JSONEq(t, test.expectedResponse, string(bodyBytes))
+				}
+			}()
+			select {
+			case <-done:
+				// Test completed within the timeout, nothing to do here
+			case <-time.After(timeout):
+				t.Errorf("Test took too long to complete (timeout: %s)", timeout)
 			}
 		})
 	}

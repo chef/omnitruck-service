@@ -5,11 +5,12 @@ import (
 )
 
 type MockIDbOperations struct {
-	GetPackagesfunc        func(partitionValue string, sortValue string) (*models.ProductDetails, error)
-	GetVersionAllfunc      func(partitionValue string) ([]string, error)
-	GetMetaDatafunc        func(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (*models.MetaData, error)
-	GetVersionLatestfunc   func(partitionValue string) (string, error)
-	GetRelatedProductsfunc func(partitionValue string) (*models.RelatedProducts, error)
+	GetPackagesfunc            func(partitionValue string, sortValue string) (*models.ProductDetails, error)
+	GetVersionAllfunc          func(partitionValue string) ([]string, error)
+	GetMetaDatafunc            func(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (*models.MetaData, error)
+	GetMetaDataWithoutSortfunc func(partitionValue string, platform string, platformVersion string, architecture string) (*models.MetaData, error)
+	GetVersionLatestfunc       func(partitionValue string) (string, error)
+	GetRelatedProductsfunc     func(partitionValue string) (*models.RelatedProducts, error)
 }
 
 func (mdbop *MockIDbOperations) GetPackages(partitionValue string, sortValue string) (*models.ProductDetails, error) {
@@ -30,4 +31,8 @@ func (mdbop *MockIDbOperations) GetVersionLatest(partitionValue string) (string,
 
 func (mdbop *MockIDbOperations) GetRelatedProducts(partitionValue string) (*models.RelatedProducts, error) {
 	return mdbop.GetRelatedProductsfunc(partitionValue)
+}
+
+func (mdop *MockIDbOperations) GetMetaDataWithoutSort(partitionValue string, platform string, platformVersion string, architecture string) (*models.MetaData, error) {
+	return mdop.GetMetaDataWithoutSortfunc(partitionValue, platform, platformVersion, architecture)
 }
