@@ -4,9 +4,19 @@ Omnitruck API service that provides license validation and entitlement checking 
 
 ## Requirements
 
-* golang 1.19+
+- golang 1.19+
 
 ## Getting Started
+
+For getting the automate, habitat and related products information
+
+```bash
+ACCESS_KEY="AWS access key"
+SECRET_KEY="AWS secret key"
+REGION="AWS region in which Dynamodb database is present"
+PRODUCT_TABLE_NAME="To get the information regarding Automate and Habitat details"
+RELATED_PRODUCTS_TABLE_NAME="To get information regarding the relatedProducts"
+```
 
 Building the service and swagger documentation
 
