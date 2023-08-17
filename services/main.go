@@ -2,6 +2,7 @@ package services
 
 import (
 	"os"
+	"strings"
 	"time"
 
 	"github.com/chef/omnitruck-service/clients"
@@ -71,6 +72,8 @@ func (server *ApiService) productsHandler(c *fiber.Ctx) error {
 	var data omnitruck.ItemList
 	request := server.Omnitruck(c).Products(params, &data)
 
+	data = server.DynamoServices(server.DatabaseService, c).Products(data, params.Eol)
+
 	if server.Mode == Opensource {
 		server.logCtx(c).Info("filtering opensource products")
 		data = omnitruck.SelectList(data, omnitruck.OsProductName)
@@ -95,6 +98,7 @@ func (server *ApiService) platformsHandler(c *fiber.Ctx) error {
 	var data omnitruck.PlatformList
 	request := server.Omnitruck(c).Platforms().ParseData(&data)
 
+	data = server.DynamoServices(server.DatabaseService, c).Platforms(data)
 	if request.Ok {
 		return server.SendResponse(c, &data)
 	} else {
@@ -291,7 +295,25 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 // @Router      /{channel}/{product}/metadata [get]
 func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
+	var data omnitruck.PackageMetadata
+	if params.Product == "automate" {
+		err, ok := server.ValidateRequest(params, c)
+		if !ok {
+			return err
+		}
+		data, err = server.DynamoServices(server.DatabaseService, c).ProductMetadata(params)
 
+		if err != nil {
+			if strings.Contains(err.Error(), "Product information not found. Please check the input parameters") {
+				return server.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
+			}
+			return server.SendErrorResponse(c, fiber.StatusInternalServerError, "Error while fetching the information for the product.")
+		}
+		// Remap the package url to our download URL
+		url := getDownloadUrl(params, c)
+		data.Url = url
+		return server.SendResponse(c, &data)
+	}
 	if server.Mode == Opensource && isLatest(params.Version) {
 		v, _ := server.fetchLatestOSVersion(params, c)
 		params.Version = string(v)
@@ -302,7 +324,6 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	var data omnitruck.PackageMetadata
 	request := server.Omnitruck(c).ProductMetadata(params).ParseData(&data)
 
 	// Remap the package url to our download URL
@@ -332,6 +353,22 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 // @Router      /{channel}/{product}/download [get]
 func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
+
+	if params.Product == "automate" {
+		err, ok := server.ValidateRequest(params, c)
+		if !ok {
+			return err
+		}
+		url, err := server.DynamoServices(server.DatabaseService, c).ProductDownload(params)
+		if err != nil {
+			if strings.Contains(err.Error(), "Product information not found. Please check the input parameters") {
+				return server.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
+			}
+			return server.SendErrorResponse(c, fiber.StatusInternalServerError, "Error while fetching the information for the product.")
+		}
+		server.logCtx(c).Infof("Redirecting user to %s", url)
+		return c.Redirect(url, 302)
+	}
 
 	if server.Mode == Opensource && isLatest(params.Version) {
 		v, _ := server.fetchLatestOSVersion(params, c)

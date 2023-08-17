@@ -7,7 +7,10 @@ import (
 
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
+	"github.com/chef/omnitruck-service/dboperations"
+	dbconnection "github.com/chef/omnitruck-service/middleware/db"
 	"github.com/chef/omnitruck-service/middleware/license"
+	"github.com/chef/omnitruck-service/utils/awsutils"
 	fiber "github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -45,11 +48,12 @@ type Service interface {
 
 type ApiService struct {
 	sync.Mutex
-	Config    Config
-	Log       *log.Entry
-	App       *fiber.App
-	Validator omnitruck.RequestValidator
-	Mode      ApiType
+	Config          Config
+	Log             *log.Entry
+	App             *fiber.App
+	Validator       omnitruck.RequestValidator
+	Mode            ApiType
+	DatabaseService dboperations.IDbOperations
 }
 
 func New(c Config) *ApiService {
@@ -64,6 +68,7 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	server.Config = c
 	server.Validator = omnitruck.NewValidator()
 	server.Mode = c.Mode
+	server.DatabaseService = dboperations.NewDbOperationsService(dbconnection.NewDbConnectionService(awsutils.NewAwsUtils()))
 
 	engine := mustache.New("./views", ".html")
 
@@ -167,6 +172,12 @@ func (server *ApiService) Omnitruck(c *fiber.Ctx) *omnitruck.Omnitruck {
 	return &client
 }
 
+func (server *ApiService) DynamoServices(db dboperations.IDbOperations, c *fiber.Ctx) *omnitruck.DynamoServices {
+	service := omnitruck.NewDynamoServices(db, server.logCtx(c))
+
+	return &service
+}
+
 func (server *ApiService) logCtx(c *fiber.Ctx) *log.Entry {
 	return server.Log.WithField("license_id", c.Locals("license_id"))
 }
@@ -206,6 +217,14 @@ func (server *ApiService) SendError(c *fiber.Ctx, request *clients.Request) erro
 		Code:       request.Code,
 		StatusText: http.StatusText(request.Code),
 		Message:    request.Message,
+	})
+}
+
+func (server *ApiService) SendErrorResponse(c *fiber.Ctx, code int, msg string) error {
+	return c.Status(code).JSON(ErrorResponse{
+		Code:       code,
+		StatusText: http.StatusText(code),
+		Message:    msg,
 	})
 }
 
