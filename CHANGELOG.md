@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.22 -->
-## [0.0.22](https://github.com/chef/omnitruck-service/tree/0.0.22) (2023-07-06)
+<!-- latest_release 0.0.23 -->
+## [0.0.23](https://github.com/chef/omnitruck-service/tree/0.0.23) (2023-08-17)
 
 #### Merged Pull Requests
-- Add download url remapping for packages [#28](https://github.com/chef/omnitruck-service/pull/28) ([teknofire](https://github.com/teknofire))
+- Lambda script for data load [#32](https://github.com/chef/omnitruck-service/pull/32) ([sandhi18](https://github.com/sandhi18))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Lambda script for data load [#32](https://github.com/chef/omnitruck-service/pull/32) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.23 -->
 - Add download url remapping for packages [#28](https://github.com/chef/omnitruck-service/pull/28) ([teknofire](https://github.com/teknofire)) <!-- 0.0.22 -->
 - Added IP path licenseId to middleware [#26](https://github.com/chef/omnitruck-service/pull/26) ([gangwarshivendra](https://github.com/gangwarshivendra)) <!-- 0.0.21 -->
 - Fixed supermarket bug filtering out apha version [#25](https://github.com/chef/omnitruck-service/pull/25) ([gangwarshivendra](https://github.com/gangwarshivendra)) <!-- 0.0.20 -->
