@@ -16,6 +16,11 @@ func NewConstraint(i string) version.Constraints {
 }
 
 var supportedProducts = map[string]Product{
+	"automate": {
+		Name:              "automate",
+		SupportedVersion:  NewConstraint(">= 0"),
+		OpensourceVersion: NewConstraint(">= 0"),
+	},
 	"chef": {
 		Name:              "chef",
 		SupportedVersion:  NewConstraint(">= 16.0.0"),

@@ -171,7 +171,7 @@ func (dbo *DbOperationsService) fetchDataValuesWithSortKey(partitionValue string
 	}
 	res, err := dbo.db.GetItem(input)
 	if err != nil {
-		log.Println("error while using GetItem to get dataBase values: %v", err)
+		log.Printf("error while using GetItem to get dataBase values: %v", err)
 		return nil, err
 	}
 	return res, nil
