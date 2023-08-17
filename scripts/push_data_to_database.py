@@ -12,9 +12,8 @@ def create_session():
     return session
 
 
-def filter_rows(file_path, product_name, sku_name):
+def filter_rows(df, product_name, sku_name):
     try:
-        df = pd.read_excel(file_path)
         if product_name in df.columns and sku_name in df.columns:
             filtered_rows = []
             for index, row in df.iterrows():
@@ -26,7 +25,7 @@ def filter_rows(file_path, product_name, sku_name):
         else:
             return "One or both of the specified columns not found in the Excel sheet."
     except Exception as e:
-        return f"An error occurred: {str(e)}"
+        return f"An error occurred while filtering the columns: {str(e)}"
 
 
 def get_Columns(file_path):
@@ -35,20 +34,19 @@ def get_Columns(file_path):
         columns = df.columns.tolist()
         response_dict = {}
         for i, j in enumerate(columns[1:]):
-            response = filter_rows(file_path, columns[0], j)
-            if "-" in j:
-                j = j.replace(" - ", "-").replace(" -", "-").replace("- ","-")
-            sku_product = j.replace(" ", "-").lower()
-            response_dict[sku_product] = response
+            response = filter_rows(df, columns[0], j)
+            response_dict[j] = response
         return response_dict
     except Exception as e:
         return f"An error occurred: {str(e)}"
 
 
 def push_to_database(filepath):
+    if os.path.exists(filepath) == False:
+        return f"The given filepath doesnot exist: {str(filepath)}"
     data = get_Columns(filepath)
     session = create_session()
-    table_name = os.getenv('SKU_TABLE_NAME')
+    table_name = os.getenv('RELATED_PRODUCTS_TABLE_NAME')
     try:
         dynamodb = session.resource('dynamodb')
         table = dynamodb.Table(table_name)
