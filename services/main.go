@@ -495,7 +495,13 @@ func (server *ApiService) relatedProductsHandler(c *fiber.Ctx) error {
 	if err != nil {
 		request := clients.Request{}
 		server.Log.Error("Error while fetching related products for "+params.SKU, err.Error())
-		return server.SendError(c, request.Failure(400, "No Related products found for SKU"))
+		return server.SendError(c, request.Failure(500, "Unable to retrieve related products for SKU "))
+	}
+
+	if len(relatedProducts.Products) == 0 {
+		request := clients.Request{}
+		server.Log.Error("No related products found for " + params.SKU)
+		return server.SendError(c, request.Failure(400, "No related products found for SKU"))
 	}
 
 	response := map[string]interface{}{
