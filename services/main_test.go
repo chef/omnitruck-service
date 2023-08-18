@@ -18,6 +18,7 @@ import (
 func TestApiService_productMetadataHandler(t *testing.T) {
 	tests := []struct {
 		name             string
+		servermode       ApiType
 		requestPath      string
 		expectedStatus   int
 		expectedResponse string
@@ -26,6 +27,7 @@ func TestApiService_productMetadataHandler(t *testing.T) {
 	}{
 		{
 			name:             "automate success",
+			servermode:       Trial,
 			requestPath:      "/stable/automate/metadata?p=linux&m=x86_64&eol=false",
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"sha1": "","sha256": "1234","url": "http://example.com/stable/automate/download?eol=false&m=x86_64&p=linux&v=latest","version": "latest"}`,
@@ -41,6 +43,7 @@ func TestApiService_productMetadataHandler(t *testing.T) {
 		},
 		{
 			name:             "automate parameter incorrect",
+			servermode:       Trial,
 			requestPath:      "/stable/automate/metadata?p=linux&m=x86&eol=false",
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"Product information not found. Please check the input parameters", "status_text":"Bad Request"}`,
@@ -49,11 +52,21 @@ func TestApiService_productMetadataHandler(t *testing.T) {
 		},
 		{
 			name:             "automate db connection error",
+			servermode:       Trial,
 			requestPath:      "/stable/automate/metadata?p=linux&m=x86_64&eol=false",
 			expectedStatus:   fiber.StatusInternalServerError,
 			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product.", "status_text":"Internal Server Error"}`,
 			metadata:         models.MetaData{},
 			err:              errors.New("ResourceNotFoundException: Requested resource not found"),
+		},
+		{
+			name:             "server mode opensource",
+			servermode:       Opensource,
+			requestPath:      "/stable/automate/metadata?p=linux&m=x86_64&eol=false",
+			expectedStatus:   fiber.StatusForbidden,
+			expectedResponse: `{"code":403, "message":"Product not supported.", "status_text":"Forbidden"}`,
+			metadata:         models.MetaData{},
+			err:              nil,
 		},
 	}
 	for _, test := range tests {
@@ -68,6 +81,7 @@ func TestApiService_productMetadataHandler(t *testing.T) {
 				App:             app,
 				DatabaseService: mockDbService,
 				Log:             logrus.NewEntry(logrus.New()),
+				Mode:            test.servermode,
 			}
 			server.buildRouter()
 			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
