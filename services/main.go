@@ -40,7 +40,7 @@ func (server *ApiService) buildRouter() {
 	server.App.Get("/:channel/:product/packages", server.productPackagesHandler)
 	server.App.Get("/:channel/:product/metadata", server.productMetadataHandler)
 	server.App.Get("/:channel/:product/download", server.productDownloadHandler)
-	server.App.Get("/:sku/relatedProducts", server.relatedProductsHandler)
+	server.App.Get("/relatedProducts", server.relatedProductsHandler)
 
 }
 
@@ -473,7 +473,7 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 
 // @description Get related products for a given SKU
 // @description The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned
-// @Param       sku    	   path   string true  "sku"
+// @Param       sku    	   query string true  "sku"
 // @Param       license_id query string false "License ID"
 // @Success     200
 // @Failure     400 {object} services.ErrorResponse
