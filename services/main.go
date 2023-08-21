@@ -348,7 +348,7 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 
 	if request.Ok {
 		if flag {
-			data.Url += substring
+			data.Url =  data.Url + substring
 		}
 		server.logCtx(c).Infof("Redirecting user to %s", data.Url)
 		return c.Redirect(data.Url, 302)
