@@ -20,7 +20,6 @@ type IDbOperations interface {
 	GetPackages(partitionValue string, sortValue string) (*models.ProductDetails, error)
 	GetVersionAll(partitionValue string) ([]string, error)
 	GetMetaData(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (*models.MetaData, error)
-	GetMetaDataWithoutSort(partitionValue string, platform string, platformVersion string, architecture string) (*models.MetaData, error)
 	GetVersionLatest(partitionValue string) (string, error)
 	GetRelatedProducts(partitionValue string) (*models.RelatedProducts, error)
 }
@@ -87,34 +86,6 @@ func (dbo *DbOperationsService) GetMetaData(partitionValue string, sortValue str
 	}
 	MetaData := productDetails.MetaData
 	var response models.MetaData
-	for _, j := range MetaData {
-		if j.Architecture == architecture && j.Platform == platform && j.Platform_Version == platformVersion {
-			response.Architecture = architecture
-			response.Platform = platform
-			response.Platform_Version = platformVersion
-			response.SHA1 = j.SHA1
-			response.SHA256 = j.SHA256
-			response.FileName = j.FileName
-		}
-	}
-	return &response, nil
-}
-
-func (dbo *DbOperationsService) GetMetaDataWithoutSort(partitionValue string, platform string, platformVersion string, architecture string) (*models.MetaData, error) {
-	res, err := dbo.fetchDataValues(partitionValue, dbo.productTableName, constants.PRODUCT_PARTITION_KEY)
-	if err != nil {
-		return nil, err
-	}
-	var productDetails models.ProductDetails
-	var response models.MetaData
-	if len(res.Items) == 0 {
-		return &response, nil
-	}
-	//assuming the first record, since no sort key is used
-	if err := dynamodbattribute.UnmarshalMap(res.Items[0], &productDetails); err != nil {
-		return nil, err
-	}
-	MetaData := productDetails.MetaData
 	for _, j := range MetaData {
 		if j.Architecture == architecture && j.Platform == platform && j.Platform_Version == platformVersion {
 			response.Architecture = architecture
