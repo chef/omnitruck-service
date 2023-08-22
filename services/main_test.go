@@ -28,11 +28,11 @@ func TestApiService_productMetadataHandler(t *testing.T) {
 		{
 			name:             "automate success",
 			servermode:       Trial,
-			requestPath:      "/stable/automate/metadata?p=linux&m=x86_64&eol=false",
+			requestPath:      "/stable/automate/metadata?p=linux&m=amd64&eol=false",
 			expectedStatus:   fiber.StatusOK,
-			expectedResponse: `{"sha1": "","sha256": "1234","url": "http://example.com/stable/automate/download?eol=false&m=x86_64&p=linux&v=latest","version": "latest"}`,
+			expectedResponse: `{"sha1": "","sha256": "1234","url": "http://example.com/stable/automate/download?eol=false&m=amd64&p=linux&v=latest","version": "latest"}`,
 			metadata: models.MetaData{
-				Architecture:     "x86_64",
+				Architecture:     "amd64",
 				FileName:         "",
 				Platform:         "linux",
 				Platform_Version: "",
@@ -46,7 +46,7 @@ func TestApiService_productMetadataHandler(t *testing.T) {
 			servermode:       Trial,
 			requestPath:      "/stable/automate/metadata?p=linux&m=x86&eol=false",
 			expectedStatus:   fiber.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"Product information not found. Please check the input parameters", "status_text":"Bad Request"}`,
+			expectedResponse: `{"code":400, "message":"Product information not found. Please check the input parameters.", "status_text":"Bad Request"}`,
 			metadata:         models.MetaData{},
 			err:              nil,
 		},

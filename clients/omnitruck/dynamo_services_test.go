@@ -8,7 +8,6 @@ import (
 	"github.com/chef/omnitruck-service/dboperations"
 	"github.com/chef/omnitruck-service/models"
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,7 +15,7 @@ func TestNewDBServices(t *testing.T) {
 	mockDbService := new(dboperations.MockIDbOperations)
 	type args struct {
 		db  dboperations.IDbOperations
-		log *log.Entry
+		log *logrus.Entry
 	}
 	tests := []struct {
 		name string
@@ -148,7 +147,7 @@ func TestProductDownload(t *testing.T) {
 		{
 			name: "success",
 			metadata: &models.MetaData{
-				Architecture:     "x86_64",
+				Architecture:     "amd64",
 				FileName:         "automate-cli.zip",
 				Platform:         "linux",
 				Platform_Version: "",
@@ -159,10 +158,10 @@ func TestProductDownload(t *testing.T) {
 				p: &RequestParams{
 					Channel:         "stable",
 					Product:         "automate",
-					Version:         "1.2",
+					Version:         "",
 					Platform:        "linux",
 					PlatformVersion: "",
-					Architecture:    "x86_64",
+					Architecture:    "amd64",
 					Eol:             "false",
 					LicenseId:       "",
 				},
@@ -187,7 +186,7 @@ func TestProductDownload(t *testing.T) {
 				},
 			},
 			want:    "",
-			wantErr: true,
+			wantErr: false,
 			err:     nil,
 		},
 		{
@@ -248,7 +247,7 @@ func TestProductMetadata(t *testing.T) {
 		{
 			name: "success",
 			metadata: &models.MetaData{
-				Architecture:     "x86_64",
+				Architecture:     "amd64",
 				FileName:         "automate-cli.zip",
 				Platform:         "linux",
 				Platform_Version: "",
@@ -259,10 +258,10 @@ func TestProductMetadata(t *testing.T) {
 				p: &RequestParams{
 					Channel:         "stable",
 					Product:         "automate",
-					Version:         "1.2",
+					Version:         "",
 					Platform:        "linux",
-					PlatformVersion: "1.2",
-					Architecture:    "x86_64",
+					PlatformVersion: "pv",
+					Architecture:    "amd64",
 					Eol:             "",
 					LicenseId:       "",
 				},
@@ -291,7 +290,7 @@ func TestProductMetadata(t *testing.T) {
 				},
 			},
 			want:    PackageMetadata{},
-			wantErr: true,
+			wantErr: false,
 			err:     nil,
 		},
 		{

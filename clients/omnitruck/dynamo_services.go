@@ -1,19 +1,17 @@
 package omnitruck
 
 import (
-	"errors"
 	"fmt"
 	"sort"
 
 	"github.com/chef/omnitruck-service/dboperations"
 	"github.com/chef/omnitruck-service/models"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
 type DynamoServices struct {
 	db  dboperations.IDbOperations
-	log *logrus.Entry
+	log *log.Entry
 }
 
 const (
@@ -30,70 +28,81 @@ func NewDynamoServices(db dboperations.IDbOperations, log *log.Entry) DynamoServ
 	}
 }
 
-func (svc *DynamoServices) Products(p []string, eol string) []string {
-	p = append(p, "habitat")
+func (svc *DynamoServices) Products(products []string, eol string) []string {
+	products = append(products, "habitat")
 	if eol == "true" {
-		p = append(p, "automate-1")
+		products = append(products, "automate-1")
 	}
-	sort.Strings(p)
-	return p
+	sort.Strings(products)
+	return products
 }
 
-func (svc *DynamoServices) Platforms(pl PlatformList) PlatformList {
-	pl["linux"] = "Linux"
-	pl["linux-kernel2"] = "Linux Kernel 2"
-	pl["darwin"] = "Darwin"
-	return pl
+func (svc *DynamoServices) Platforms(platforms PlatformList) PlatformList {
+	platforms["linux"] = "Linux"
+	platforms["linux-kernel2"] = "Linux Kernel 2"
+	platforms["darwin"] = "Darwin"
+	return platforms
 }
 
-func (svc *DynamoServices) ProductDownload(p *RequestParams) (string, error) {
+func (svc *DynamoServices) ProductDownload(params *RequestParams) (string, error) {
 	var url string
 
-	if p.Product == "automate" {
-		p.Version = AUTOMATE_CLI_VERSION
-		p.Channel = AUTOMATE_CHANNEL
-		p.PlatformVersion = ""
+	switch params.Product {
+	case "automate":
+		if params.Version == "" {
+			params.Version = AUTOMATE_CLI_VERSION
+		}
+		params.Channel = AUTOMATE_CHANNEL
+		params.PlatformVersion = ""
+	case "habitat":
+		params.PlatformVersion = ""
 	}
 
-	details, err := svc.db.GetMetaData(p.Product, p.Version, p.Platform, p.PlatformVersion, p.Architecture)
+	details, err := svc.db.GetMetaData(params.Product, params.Version, params.Platform, params.PlatformVersion, params.Architecture)
 
 	if err != nil {
 		svc.log.WithError(err).Error("Error while fetching filename")
 		return "", err
 	}
 	if *details == (models.MetaData{}) {
-		return "", errors.New("Product information not found. Please check the input parameters")
+		return "", nil
 	}
 
-	switch p.Product {
+	switch params.Product {
 	case "automate":
-		url = fmt.Sprintf(DOWNLOAD_URL, p.Channel, p.Version, CHEF_AUTOMATE_CLI, details.FileName)
+		url = fmt.Sprintf(DOWNLOAD_URL, params.Channel, params.Version, CHEF_AUTOMATE_CLI, details.FileName)
 	}
 
 	return url, nil
 }
 
-func (svc *DynamoServices) ProductMetadata(p *RequestParams) (PackageMetadata, error) {
+func (svc *DynamoServices) ProductMetadata(params *RequestParams) (PackageMetadata, error) {
 
-	if p.Product == "automate" {
-		p.Version = AUTOMATE_CLI_VERSION
-		p.PlatformVersion = ""
+	switch params.Product {
+	case "automate":
+		if params.Version == "" {
+			params.Version = AUTOMATE_CLI_VERSION
+		}
+		params.PlatformVersion = ""
+	case "habitat":
+		params.PlatformVersion = ""
 	}
-	details, err := svc.db.GetMetaData(p.Product, p.Version, p.Platform, p.PlatformVersion, p.Architecture)
+
+	details, err := svc.db.GetMetaData(params.Product, params.Version, params.Platform, params.PlatformVersion, params.Architecture)
 
 	if err != nil {
 		svc.log.WithError(err).Error("Error while fetching metadata")
 		return PackageMetadata{}, err
 	}
 	if *details == (models.MetaData{}) {
-		return PackageMetadata{}, errors.New("Product information not found. Please check the input parameters")
+		return PackageMetadata{}, nil
 	}
 
 	metadata := PackageMetadata{
 		Url:     "",
 		Sha1:    details.SHA1,
 		Sha256:  details.SHA256,
-		Version: p.Version,
+		Version: params.Version,
 	}
 	return metadata, nil
 }
