@@ -46,6 +46,7 @@ func (svc *DynamoServices) Platforms(platforms PlatformList) PlatformList {
 
 func (svc *DynamoServices) ProductDownload(params *RequestParams) (string, error) {
 	var url string
+	var err error
 
 	switch params.Product {
 	case "automate":
@@ -55,6 +56,13 @@ func (svc *DynamoServices) ProductDownload(params *RequestParams) (string, error
 		params.Channel = AUTOMATE_CHANNEL
 		params.PlatformVersion = ""
 	case "habitat":
+		if params.Version == "" || params.Version == "latest" {
+			params.Version, err = svc.db.GetVersionLatest(params.Product)
+			if err != nil {
+				svc.log.WithError(err).Error("Error while fetching metadata")
+				return "", err
+			}
+		}
 		params.PlatformVersion = ""
 	}
 
@@ -71,12 +79,15 @@ func (svc *DynamoServices) ProductDownload(params *RequestParams) (string, error
 	switch params.Product {
 	case "automate":
 		url = fmt.Sprintf(DOWNLOAD_URL, params.Channel, params.Version, CHEF_AUTOMATE_CLI, details.FileName)
+	case "habitat":
+		url = fmt.Sprintf(DOWNLOAD_URL, params.Channel, params.Product, params.Version, details.FileName)
 	}
 
 	return url, nil
 }
 
 func (svc *DynamoServices) ProductMetadata(params *RequestParams) (PackageMetadata, error) {
+	var err error
 
 	switch params.Product {
 	case "automate":
@@ -85,6 +96,13 @@ func (svc *DynamoServices) ProductMetadata(params *RequestParams) (PackageMetada
 		}
 		params.PlatformVersion = ""
 	case "habitat":
+		if params.Version == "" || params.Version == "latest" {
+			params.Version, err = svc.db.GetVersionLatest(params.Product)
+			if err != nil {
+				svc.log.WithError(err).Error("Error while fetching metadata")
+				return PackageMetadata{}, err
+			}
+		}
 		params.PlatformVersion = ""
 	}
 
@@ -105,4 +123,50 @@ func (svc *DynamoServices) ProductMetadata(params *RequestParams) (PackageMetada
 		Version: params.Version,
 	}
 	return metadata, nil
+}
+
+func (svc *DynamoServices) ProductPackages(params *RequestParams) (PackageList, error) {
+	var err error
+
+	switch params.Product {
+	case "automate":
+		params.PlatformVersion = ""
+	case "habitat":
+		if params.Version == "" || params.Version == "latest" {
+			params.Version, err = svc.db.GetVersionLatest(params.Product)
+			if err != nil {
+				svc.log.WithError(err).Error("Error while fetching metadata")
+				return PackageList{}, err
+			}
+		}
+	}
+
+	details, err := svc.db.GetPackages(params.Product, params.Version)
+	if err != nil {
+		svc.log.WithError(err).Error("Error while fetching metadata")
+		return PackageList{}, err
+	}
+	if len(details.MetaData) == 0 {
+		return PackageList{}, nil
+	}
+
+	packageList := PackageList{}
+	for _, v := range details.MetaData {
+		v.Platform_Version = "pv"
+		if _, ok := packageList[v.Platform]; !ok {
+			packageList[v.Platform] = PlatformVersionList{}
+		}
+		if _, ok := packageList[v.Platform][v.Platform_Version]; !ok {
+			packageList[v.Platform][v.Platform_Version] = ArchList{}
+		}
+		if _, ok := packageList[v.Platform][v.Platform_Version][v.Architecture]; !ok {
+			packageList[v.Platform][v.Platform_Version][v.Architecture] = PackageMetadata{
+				Sha1:    v.SHA1,
+				Sha256:  v.SHA256,
+				Url:     "",
+				Version: details.Version,
+			}
+		}
+	}
+	return packageList, nil
 }
