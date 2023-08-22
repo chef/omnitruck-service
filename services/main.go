@@ -2,7 +2,6 @@ package services
 
 import (
 	"os"
-	"strings"
 	"time"
 
 	"github.com/chef/omnitruck-service/clients"
@@ -307,10 +306,9 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 		data, err = server.DynamoServices(server.DatabaseService, c).ProductMetadata(params)
 
 		if err != nil {
-			if strings.Contains(err.Error(), "Product information not found. Please check the input parameters") {
-				return server.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
-			}
 			return server.SendErrorResponse(c, fiber.StatusInternalServerError, "Error while fetching the information for the product.")
+		} else if data == (omnitruck.PackageMetadata{}) {
+			return server.SendErrorResponse(c, fiber.StatusBadRequest, "Product information not found. Please check the input parameters.")
 		}
 		// Remap the package url to our download URL
 		url := getDownloadUrl(params, c)
@@ -367,10 +365,9 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 		}
 		url, err := server.DynamoServices(server.DatabaseService, c).ProductDownload(params)
 		if err != nil {
-			if strings.Contains(err.Error(), "Product information not found. Please check the input parameters") {
-				return server.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
-			}
 			return server.SendErrorResponse(c, fiber.StatusInternalServerError, "Error while fetching the information for the product.")
+		} else if url == "" {
+			return server.SendErrorResponse(c, fiber.StatusBadRequest, "Product information not found. Please check the input parameters.")
 		}
 		server.logCtx(c).Infof("Redirecting user to %s", url)
 		return c.Redirect(url, 302)
