@@ -244,6 +244,33 @@ func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 // @Router      /{channel}/{product}/packages [get]
 func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
+	var data omnitruck.PackageList
+	if params.Product == "automate" || params.Product == "habitat" {
+		if server.Mode == Opensource {
+			return server.SendErrorResponse(c, fiber.StatusForbidden, "Product not supported.")
+		}
+		err, ok := server.ValidateRequest(params, c)
+		if !ok {
+			return err
+		}
+		data, err = server.DynamoServices(server.DatabaseService, c).ProductPackages(params)
+		if err != nil {
+			return server.SendErrorResponse(c, fiber.StatusInternalServerError, "Error while fetching the information for the product.")
+		} else if len(data) == 0 {
+			return server.SendErrorResponse(c, fiber.StatusBadRequest, "Product information not found. Please check the input parameters.")
+		}
+
+		data.UpdatePackages(func(platform string, pv string, arch string, m omnitruck.PackageMetadata) omnitruck.PackageMetadata {
+			params.Version = m.Version
+			params.Platform = platform
+			params.Architecture = arch
+
+			m.Url = getDownloadUrl(params, c)
+
+			return m
+		})
+		return server.SendResponse(c, &data)
+	}
 
 	if server.Mode == Opensource && isLatest(params.Version) {
 		v, _ := server.fetchLatestOSVersion(params, c)
@@ -255,9 +282,7 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	var data omnitruck.PackageList
 	request := server.Omnitruck(c).ProductPackages(params).ParseData(&data)
-
 	p := getRequestParams(c)
 	data.UpdatePackages(func(platform string, pv string, arch string, m omnitruck.PackageMetadata) omnitruck.PackageMetadata {
 		p.Version = m.Version
@@ -295,7 +320,7 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
 	var data omnitruck.PackageMetadata
-	if params.Product == "automate" {
+	if params.Product == "automate" || params.Product == "habitat" {
 		if server.Mode == Opensource {
 			return server.SendErrorResponse(c, fiber.StatusForbidden, "Product not supported.")
 		}
@@ -355,7 +380,7 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
 
-	if params.Product == "automate" {
+	if params.Product == "automate" || params.Product == "habitat" {
 		if server.Mode == Opensource {
 			return server.SendErrorResponse(c, fiber.StatusForbidden, "Product not supported.")
 		}

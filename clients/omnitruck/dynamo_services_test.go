@@ -137,12 +137,14 @@ func TestProductDownload(t *testing.T) {
 		p *RequestParams
 	}
 	tests := []struct {
-		name     string
-		metadata *models.MetaData
-		args     args
-		want     string
-		wantErr  bool
-		err      error
+		name        string
+		metadata    *models.MetaData
+		args        args
+		want        string
+		wantErr     bool
+		err         error
+		version     string
+		version_err error
 	}{
 		{
 			name: "success",
@@ -208,12 +210,64 @@ func TestProductDownload(t *testing.T) {
 			wantErr: true,
 			err:     errors.New("ResourceNotFoundException: Requested resource not found"),
 		},
+		{
+			name: "success for habitat",
+			metadata: &models.MetaData{
+				Architecture:     "x86_64",
+				FileName:         "hab-x86_64-linux.tar.gz",
+				Platform:         "linux",
+				Platform_Version: "",
+				SHA1:             "",
+				SHA256:           "1234",
+			},
+			args: args{
+				p: &RequestParams{
+					Channel:         "stable",
+					Product:         "habitat",
+					Version:         "",
+					Platform:        "linux",
+					PlatformVersion: "",
+					Architecture:    "x86_64",
+					Eol:             "",
+					LicenseId:       "",
+				},
+			},
+			version:     "1.6.862",
+			version_err: nil,
+			want:        "https://packages.chef.io/files/stable/habitat/1.6.862/hab-x86_64-linux.tar.gz",
+			wantErr:     false,
+			err:         nil,
+		},
+		{
+			name:     "failure for habitat",
+			metadata: &models.MetaData{},
+			args: args{
+				p: &RequestParams{
+					Channel:         "stable",
+					Product:         "habitat",
+					Version:         "",
+					Platform:        "linux",
+					PlatformVersion: "",
+					Architecture:    "x86_64",
+					Eol:             "",
+					LicenseId:       "",
+				},
+			},
+			version:     "",
+			version_err: errors.New("ResourceNotFoundException: Requested resource not found"),
+			want:        "",
+			wantErr:     true,
+			err:         nil,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDbService := new(dboperations.MockIDbOperations)
 			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture string) (*models.MetaData, error) {
 				return tt.metadata, tt.err
+			}
+			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
+				return tt.version, tt.version_err
 			}
 			svc := &DynamoServices{
 				db:  mockDbService,
@@ -237,12 +291,14 @@ func TestProductMetadata(t *testing.T) {
 		p *RequestParams
 	}
 	tests := []struct {
-		name     string
-		metadata *models.MetaData
-		args     args
-		want     PackageMetadata
-		wantErr  bool
-		err      error
+		name        string
+		metadata    *models.MetaData
+		args        args
+		want        PackageMetadata
+		wantErr     bool
+		err         error
+		version     string
+		version_err error
 	}{
 		{
 			name: "success",
@@ -312,12 +368,69 @@ func TestProductMetadata(t *testing.T) {
 			wantErr: true,
 			err:     errors.New("ResourceNotFoundException: Requested resource not found"),
 		},
+		{
+			name: "success for habitat",
+			metadata: &models.MetaData{
+				Architecture:     "x86_64",
+				FileName:         "hab-x86_64-linux.tar.gz",
+				Platform:         "linux",
+				Platform_Version: "",
+				SHA1:             "",
+				SHA256:           "1234",
+			},
+			args: args{
+				p: &RequestParams{
+					Channel:         "stable",
+					Product:         "habitat",
+					Version:         "",
+					Platform:        "linux",
+					PlatformVersion: "",
+					Architecture:    "x86_64",
+					Eol:             "",
+					LicenseId:       "",
+				},
+			},
+			version:     "1.6.862",
+			version_err: nil,
+			want: PackageMetadata{
+				Sha1:    "",
+				Sha256:  "1234",
+				Url:     "",
+				Version: "1.6.862",
+			},
+			wantErr: false,
+			err:     nil,
+		},
+		{
+			name:     "failure for habitat",
+			metadata: &models.MetaData{},
+			args: args{
+				p: &RequestParams{
+					Channel:         "stable",
+					Product:         "habitat",
+					Version:         "",
+					Platform:        "linux",
+					PlatformVersion: "",
+					Architecture:    "x86_64",
+					Eol:             "",
+					LicenseId:       "",
+				},
+			},
+			version:     "",
+			version_err: errors.New("ResourceNotFoundException: Requested resource not found"),
+			want:        PackageMetadata{},
+			wantErr:     true,
+			err:         nil,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDbService := new(dboperations.MockIDbOperations)
 			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture string) (*models.MetaData, error) {
 				return tt.metadata, tt.err
+			}
+			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
+				return tt.version, tt.version_err
 			}
 			svc := &DynamoServices{
 				db:  mockDbService,
@@ -330,6 +443,153 @@ func TestProductMetadata(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("DynamoServices.ProductMetadata() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestProductPackages(t *testing.T) {
+	type args struct {
+		params *RequestParams
+	}
+	tests := []struct {
+		name        string
+		args        args
+		version     string
+		packages    models.ProductDetails
+		want        PackageList
+		wantErr     bool
+		package_err error
+		version_err error
+	}{
+		{
+			name: "success",
+			args: args{
+				params: &RequestParams{
+					Channel:         "stable",
+					Product:         "habitat",
+					Version:         "",
+					Platform:        "",
+					PlatformVersion: "",
+					Architecture:    "",
+					Eol:             "",
+					LicenseId:       "",
+				},
+			},
+			version: "1.6.826",
+			packages: models.ProductDetails{
+				Product: "habitat",
+				Version: "1.6.826",
+				MetaData: []models.MetaData{
+					{
+						Architecture:     "aarch64",
+						FileName:         "hab-aarch64-darwin.zip",
+						Platform:         "darwin",
+						Platform_Version: "",
+						SHA1:             "abcde",
+						SHA256:           "079e5",
+					},
+				},
+			},
+			want: map[string]PlatformVersionList{
+				"darwin": {
+					"pv": ArchList{
+						"aarch64": PackageMetadata{
+							Sha1:    "abcde",
+							Sha256:  "079e5",
+							Version: "1.6.826",
+						},
+					},
+				},
+			},
+			wantErr:     false,
+			package_err: nil,
+			version_err: nil,
+		},
+		{
+			name: "failure not able to fetch latest version",
+			args: args{
+				params: &RequestParams{
+					Channel:         "stable",
+					Product:         "habitat",
+					Version:         "",
+					Platform:        "",
+					PlatformVersion: "",
+					Architecture:    "",
+					Eol:             "",
+					LicenseId:       "",
+				},
+			},
+			version:     "",
+			packages:    models.ProductDetails{},
+			want:        map[string]PlatformVersionList{},
+			wantErr:     true,
+			package_err: nil,
+			version_err: errors.New("ResourceNotFoundException: Requested resource not found"),
+		},
+		{
+			name: "failure not able to fetch package details",
+			args: args{
+				params: &RequestParams{
+					Channel:         "stable",
+					Product:         "habitat",
+					Version:         "",
+					Platform:        "",
+					PlatformVersion: "",
+					Architecture:    "",
+					Eol:             "",
+					LicenseId:       "",
+				},
+			},
+			version:     "1.6.826",
+			packages:    models.ProductDetails{},
+			want:        map[string]PlatformVersionList{},
+			wantErr:     true,
+			package_err: errors.New("ResourceNotFoundException: Requested resource not found"),
+			version_err: nil,
+		},
+		{
+			name: "failure empty response",
+			args: args{
+				params: &RequestParams{
+					Channel:         "stable",
+					Product:         "habitat",
+					Version:         "",
+					Platform:        "",
+					PlatformVersion: "",
+					Architecture:    "",
+					Eol:             "",
+					LicenseId:       "",
+				},
+			},
+			version:     "1.6.826",
+			packages:    models.ProductDetails{},
+			want:        map[string]PlatformVersionList{},
+			wantErr:     false,
+			package_err: nil,
+			version_err: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDbService := new(dboperations.MockIDbOperations)
+			mockDbService.GetPackagesfunc = func(partitionValue, sortValue string) (*models.ProductDetails, error) {
+				return &tt.packages, tt.package_err
+			}
+			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
+				return tt.version, tt.version_err
+			}
+			svc := &DynamoServices{
+				db:  mockDbService,
+				log: logrus.NewEntry(logrus.New()),
+			}
+			got, err := svc.ProductPackages(tt.args.params)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DynamoServices.ProductPackages() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("DynamoServices.ProductPackages() = %v, want %v", got, tt.want)
 			}
 		})
 	}
