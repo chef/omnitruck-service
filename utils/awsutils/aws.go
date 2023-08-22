@@ -24,7 +24,7 @@ func (au *AwsUtilsImpl) GetNewSession() (*session.Session, error) {
 	var awsConfig awsConfig.AWSConfig
 	awsConfig.AccessKey = os.Getenv("ACCESS_KEY")
 	awsConfig.SecretKey = os.Getenv("SECRET_KEY")
-	awsConfig.Region = os.Getenv("AWS_REGION")
+	awsConfig.Region = os.Getenv("REGION")
 	session, err := session.NewSessionWithOptions(session.Options{
 		Config: aws.Config{
 			Credentials: credentials.NewStaticCredentials(awsConfig.AccessKey, awsConfig.SecretKey, ""),
