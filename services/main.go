@@ -145,12 +145,21 @@ func (server *ApiService) latestVersionHandler(c *fiber.Ctx) error {
 
 	if params.Product == "automate" || params.Product == "habitat" {
 
-		data, err = server.DynamoServices(server.DatabaseService, c).VersionLatest(params)
+		if server.Mode == Opensource {
+			data, err := server.DynamoServices(server.DatabaseService, c).FetchLatestOsVersion(params)
+			if err != nil {
+				return server.SendErrorResponse(c, fiber.StatusInternalServerError, "Error while fetching the latest version for the product.")
+			}
+			return server.SendResponse(c, &data)
+		} else {
+			data, err = server.DynamoServices(server.DatabaseService, c).VersionLatest(params)
 
-		if err != nil {
-			return server.SendErrorResponse(c, fiber.StatusInternalServerError, "Error while fetching the latest version for the product.")
+			if err != nil {
+				return server.SendErrorResponse(c, fiber.StatusInternalServerError, "Error while fetching the latest version for the product.")
+			}
+			return server.SendResponse(c, &data)
 		}
-		return server.SendResponse(c, &data)
+
 	}
 
 	if server.Mode == Opensource {
