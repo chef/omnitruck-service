@@ -89,22 +89,15 @@ func (svc *DynamoServices) ProductDownload(params *RequestParams) (string, error
 func (svc *DynamoServices) ProductMetadata(params *RequestParams) (PackageMetadata, error) {
 	var err error
 	version := ""
-	switch params.Product {
-	case "automate":
-		if params.Version == "" {
-			version = AUTOMATE_CLI_VERSION
+
+	if params.Version == "" || params.Version == "latest" {
+		version, err = svc.db.GetVersionLatest(params.Product)
+		if err != nil {
+			svc.log.WithError(err).Error("Error while fetching metadata")
+			return PackageMetadata{}, err
 		}
-		params.PlatformVersion = ""
-	case "habitat":
-		if params.Version == "" || params.Version == "latest" {
-			version, err = svc.db.GetVersionLatest(params.Product)
-			if err != nil {
-				svc.log.WithError(err).Error("Error while fetching metadata")
-				return PackageMetadata{}, err
-			}
-		}
-		params.PlatformVersion = ""
 	}
+	params.PlatformVersion = ""
 
 	details, err := svc.db.GetMetaData(params.Product, version, params.Platform, params.PlatformVersion, params.Architecture)
 
@@ -128,16 +121,11 @@ func (svc *DynamoServices) ProductMetadata(params *RequestParams) (PackageMetada
 func (svc *DynamoServices) ProductPackages(params *RequestParams) (PackageList, error) {
 	var err error
 
-	switch params.Product {
-	case "automate":
-		params.PlatformVersion = ""
-	case "habitat":
-		if params.Version == "" || params.Version == "latest" {
-			params.Version, err = svc.db.GetVersionLatest(params.Product)
-			if err != nil {
-				svc.log.WithError(err).Error("Error while fetching metadata")
-				return PackageList{}, err
-			}
+	if params.Version == "" || params.Version == "latest" {
+		params.Version, err = svc.db.GetVersionLatest(params.Product)
+		if err != nil {
+			svc.log.WithError(err).Error("Error while fetching metadata")
+			return PackageList{}, err
 		}
 	}
 
