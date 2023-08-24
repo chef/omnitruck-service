@@ -246,9 +246,6 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
 	var data omnitruck.PackageList
 	if params.Product == "automate" || params.Product == "habitat" {
-		if server.Mode == Opensource {
-			return server.SendErrorResponse(c, fiber.StatusForbidden, "Product not supported.")
-		}
 		err, ok := server.ValidateRequest(params, c)
 		if !ok {
 			return err
@@ -321,9 +318,6 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
 	var data omnitruck.PackageMetadata
 	if params.Product == "automate" || params.Product == "habitat" {
-		if server.Mode == Opensource {
-			return server.SendErrorResponse(c, fiber.StatusForbidden, "Product not supported.")
-		}
 		err, ok := server.ValidateRequest(params, c)
 		if !ok {
 			return err
@@ -381,9 +375,6 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
 
 	if params.Product == "automate" || params.Product == "habitat" {
-		if server.Mode == Opensource {
-			return server.SendErrorResponse(c, fiber.StatusForbidden, "Product not supported.")
-		}
 		err, ok := server.ValidateRequest(params, c)
 		if !ok {
 			return err

@@ -48,22 +48,17 @@ func (svc *DynamoServices) ProductDownload(params *RequestParams) (string, error
 	var url string
 	var err error
 
-	switch params.Product {
-	case "automate":
-		if params.Version == "" {
-			params.Version = AUTOMATE_CLI_VERSION
+	if params.Version == "" || params.Version == "latest" {
+		params.Version, err = svc.db.GetVersionLatest(params.Product)
+		if err != nil {
+			svc.log.WithError(err).Error("Error while fetching metadata")
+			return "", err
 		}
+	}
+	params.PlatformVersion = ""
+
+	if params.Product == "automate" {
 		params.Channel = AUTOMATE_CHANNEL
-		params.PlatformVersion = ""
-	case "habitat":
-		if params.Version == "" || params.Version == "latest" {
-			params.Version, err = svc.db.GetVersionLatest(params.Product)
-			if err != nil {
-				svc.log.WithError(err).Error("Error while fetching metadata")
-				return "", err
-			}
-		}
-		params.PlatformVersion = ""
 	}
 
 	details, err := svc.db.GetMetaData(params.Product, params.Version, params.Platform, params.PlatformVersion, params.Architecture)
