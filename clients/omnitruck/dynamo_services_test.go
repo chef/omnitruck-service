@@ -679,3 +679,134 @@ func TestFetchLatestOsVersion(t *testing.T) {
 		})
 	}
 }
+
+func TestDynamoServices_VersionAll(t *testing.T) {
+	type args struct {
+		p *RequestParams
+	}
+	tests := []struct {
+		name     string
+		versions []string
+		args     args
+		want     []ProductVersion
+		wantErr  bool
+		err      error
+	}{
+		// TODO: Add test cases.
+		{
+			name:     "Success",
+			versions: []string{"0.70.0", "0.71.0", "0.72.0", "0.73.0"},
+			args: args{
+				p: &RequestParams{
+					Channel:   "stable",
+					Product:   "habitat",
+					Eol:       "",
+					LicenseId: "",
+				},
+			},
+			want:    []ProductVersion{ProductVersion("0.70.0"), ProductVersion("0.71.0"), ProductVersion("0.72.0"), ProductVersion("0.73.0")},
+			wantErr: false,
+			err:     nil,
+		},
+		{
+			name:     "Fail",
+			versions: []string{},
+			args: args{
+				p: &RequestParams{
+					Channel:   "stable",
+					Product:   "habitat",
+					Eol:       "",
+					LicenseId: "",
+				},
+			},
+			want:    []ProductVersion{},
+			wantErr: true,
+			err:     errors.New("ResourceNotFoundException: Requested resource not found"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDbService := new(dboperations.MockIDbOperations)
+			mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
+				return tt.versions, tt.err
+			}
+			svc := &DynamoServices{
+				db:  mockDbService,
+				log: logrus.NewEntry(logrus.New()),
+			}
+			got, err := svc.VersionAll(tt.args.p)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DynamoServices.VersionAll() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("DynamoServices.VersionAll() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDynamoServices_VersionLatest(t *testing.T) {
+	type args struct {
+		p *RequestParams
+	}
+	tests := []struct {
+		name    string
+		version string
+		args    args
+		want    ProductVersion
+		wantErr bool
+		err     error
+	}{
+		{
+			name:    "Success",
+			version: "0.70.0",
+			args: args{
+				p: &RequestParams{
+					Channel:   "stable",
+					Product:   "habitat",
+					Eol:       "",
+					LicenseId: "",
+				},
+			},
+			want:    ProductVersion("0.70.0"),
+			wantErr: false,
+			err:     nil,
+		},
+		{
+			name:    "Fail",
+			version: "",
+			args: args{
+				p: &RequestParams{
+					Channel:   "stable",
+					Product:   "habitat",
+					Eol:       "",
+					LicenseId: "",
+				},
+			},
+			want:    "",
+			wantErr: true,
+			err:     errors.New("ResourceNotFoundException: Requested resource not found"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDbService := new(dboperations.MockIDbOperations)
+			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
+				return tt.version, tt.err
+			}
+			svc := &DynamoServices{
+				db:  mockDbService,
+				log: logrus.NewEntry(logrus.New()),
+			}
+			got, err := svc.VersionLatest(tt.args.p)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DynamoServices.VersionLatest() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("DynamoServices.VersionLatest() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

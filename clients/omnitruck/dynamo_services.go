@@ -178,3 +178,34 @@ func (svc *DynamoServices) FetchLatestOsVersion(params *RequestParams) (string, 
 
 	return version, nil
 }
+
+func (svc *DynamoServices) VersionAll(params *RequestParams) ([]ProductVersion, error) {
+	versions, err := svc.db.GetVersionAll(params.Product)
+
+	if err != nil {
+		svc.log.WithError(err).Error("Error while fetching Versions")
+		return []ProductVersion{}, err
+	}
+	if len(versions) == 0 {
+		svc.log.Warn("Recieved empty version list while fetching Versions")
+	}
+	productVersions := []ProductVersion{}
+	sort.Strings(versions)
+
+	for _, version := range versions {
+		productVersions = append(productVersions, ProductVersion(version))
+	}
+	return productVersions, nil
+}
+
+func (svc *DynamoServices) VersionLatest(params *RequestParams) (ProductVersion, error) {
+
+	version, err := svc.db.GetVersionLatest(params.Product)
+	if err != nil {
+		svc.log.WithError(err).Error("Error while fetching Versions")
+		return "", err
+	}
+
+	return ProductVersion(version), nil
+
+}
