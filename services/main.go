@@ -143,6 +143,16 @@ func (server *ApiService) latestVersionHandler(c *fiber.Ctx) error {
 	var data omnitruck.ProductVersion
 	var request *clients.Request
 
+	if params.Product == "automate" || params.Product == "habitat" {
+
+		data, err = server.DynamoServices(server.DatabaseService, c).VersionLatest(params)
+
+		if err != nil {
+			return server.SendErrorResponse(c, fiber.StatusInternalServerError, "Error while fetching the latest version for the product.")
+		}
+		return server.SendResponse(c, &data)
+	}
+
 	if server.Mode == Opensource {
 		data, request = server.fetchLatestOSVersion(params, c)
 	} else {
@@ -196,6 +206,21 @@ func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 	err, ok := server.ValidateRequest(params, c)
 	if !ok {
 		return err
+	}
+
+	if params.Product == "automate" || params.Product == "habitat" {
+		data, err := server.DynamoServices(server.DatabaseService, c).VersionAll(params)
+		if err != nil {
+			return server.SendErrorResponse(c, fiber.StatusInternalServerError, "Error while fetching product versions")
+		}
+
+		if params.Product == "habitat" && server.Mode == Opensource {
+			data = omnitruck.FilterList(data, func(v omnitruck.ProductVersion) bool {
+				return !omnitruck.OsProductVersion(params.Product, v)
+			})
+		}
+		return server.SendResponse(c, &data)
+
 	}
 
 	var data []omnitruck.ProductVersion
