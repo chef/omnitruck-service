@@ -19,15 +19,19 @@ func TestApiService_productMetadataHandler(t *testing.T) {
 	tests := []struct {
 		name             string
 		requestPath      string
+		serverMode       ApiType
 		expectedStatus   int
 		expectedResponse string
 		metadata         models.MetaData
 		err              error
 		version          string
 		version_err      error
+		versions         []string
+		versions_err     error
 	}{
 		{
 			name:             "automate success",
+			serverMode:       Trial,
 			requestPath:      "/stable/automate/metadata?p=linux&m=amd64&eol=false&v=latest",
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"sha1": "","sha256": "1234","url": "http://example.com/stable/automate/download?eol=false&m=amd64&p=linux&v=latest","version": "latest"}`,
@@ -39,25 +43,66 @@ func TestApiService_productMetadataHandler(t *testing.T) {
 				SHA1:             "",
 				SHA256:           "1234",
 			},
-			err:         nil,
-			version:     "latest",
-			version_err: nil,
+			err:          nil,
+			version:      "latest",
+			version_err:  nil,
+			versions:     []string{},
+			versions_err: nil,
 		},
 		{
 			name:             "automate parameter incorrect",
+			serverMode:       Trial,
 			requestPath:      "/stable/automate/metadata?p=linux&m=x86&eol=false",
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"Product information not found. Please check the input parameters.", "status_text":"Bad Request"}`,
 			metadata:         models.MetaData{},
 			err:              nil,
+			versions:         []string{},
+			versions_err:     nil,
 		},
 		{
 			name:             "automate db connection error",
+			serverMode:       Trial,
 			requestPath:      "/stable/automate/metadata?p=linux&m=x86_64&eol=false",
 			expectedStatus:   fiber.StatusInternalServerError,
 			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product.", "status_text":"Internal Server Error"}`,
 			metadata:         models.MetaData{},
 			err:              errors.New("ResourceNotFoundException: Requested resource not found"),
+			versions:         []string{},
+			versions_err:     nil,
+		},
+		{
+			name:             "opensource check success",
+			serverMode:       Opensource,
+			requestPath:      "/stable/habitat/metadata?p=linux&m=x86_64&eol=false",
+			expectedStatus:   fiber.StatusOK,
+			expectedResponse: `{"sha1":"", "sha256":"abcd", "url":"http://example.com/stable/habitat/download?eol=false&m=x86_64&p=linux&v=0.9.3", "version":"0.9.3"}`,
+			metadata: models.MetaData{
+				Architecture:     "x86_64",
+				FileName:         "",
+				Platform:         "linux",
+				Platform_Version: "",
+				SHA1:             "",
+				SHA256:           "abcd",
+			},
+			err:          nil,
+			version:      "",
+			version_err:  nil,
+			versions:     []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0"},
+			versions_err: nil,
+		},
+		{
+			name:             "opensource check failure",
+			serverMode:       Opensource,
+			requestPath:      "/stable/habitat/metadata?p=linux&m=x86_64&eol=false",
+			expectedStatus:   fiber.StatusInternalServerError,
+			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product.", "status_text":"Internal Server Error"}`,
+			metadata:         models.MetaData{},
+			err:              nil,
+			version:          "",
+			version_err:      nil,
+			versions:         []string{},
+			versions_err:     errors.New("ResourceNotFoundException: Requested resource not found"),
 		},
 	}
 	for _, test := range tests {
@@ -70,11 +115,15 @@ func TestApiService_productMetadataHandler(t *testing.T) {
 			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
 				return test.version, test.version_err
 			}
+			mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
+				return test.versions, test.versions_err
+			}
 
 			server := &ApiService{
 				App:             app,
 				DatabaseService: mockDbService,
 				Log:             logrus.NewEntry(logrus.New()),
+				Mode:            test.serverMode,
 			}
 			server.buildRouter()
 			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
@@ -95,6 +144,7 @@ func TestApiService_productMetadataHandler(t *testing.T) {
 func TestApiService_productPackagesHandler(t *testing.T) {
 	tests := []struct {
 		name             string
+		serverMode       ApiType
 		requestPath      string
 		expectedStatus   int
 		expectedResponse string
@@ -102,9 +152,12 @@ func TestApiService_productPackagesHandler(t *testing.T) {
 		err              error
 		version          string
 		version_err      error
+		versions         []string
+		versions_err     error
 	}{
 		{
 			name:             "success",
+			serverMode:       Trial,
 			requestPath:      "/stable/automate/packages?eol=false",
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"linux": {"pv": {"amd64": {"sha1": "","sha256": "abcd","url": "http://example.com/stable/automate/download?eol=false&m=amd64&p=linux&v=latest","version": "latest"}}}}`,
@@ -122,12 +175,15 @@ func TestApiService_productPackagesHandler(t *testing.T) {
 					},
 				},
 			},
-			err:         nil,
-			version:     "latest",
-			version_err: nil,
+			err:          nil,
+			version:      "latest",
+			version_err:  nil,
+			versions:     []string{},
+			versions_err: nil,
 		},
 		{
 			name:             "db connection  error",
+			serverMode:       Trial,
 			requestPath:      "/stable/automate/packages?eol=false",
 			expectedStatus:   fiber.StatusInternalServerError,
 			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product.", "status_text":"Internal Server Error"}`,
@@ -135,9 +191,49 @@ func TestApiService_productPackagesHandler(t *testing.T) {
 			err:              nil,
 			version:          "",
 			version_err:      errors.New("ResourceNotFoundException: Requested resource not found"),
+			versions:         []string{},
+			versions_err:     nil,
 		},
 		{
-			name:             "success",
+			name:             "opensource check success",
+			serverMode:       Opensource,
+			requestPath:      "/stable/habitat/packages?eol=false",
+			expectedStatus:   fiber.StatusOK,
+			expectedResponse: `{"linux": {"pv": {"x86_64": {"sha1":"", "sha256":"abcd", "url":"http://example.com/stable/habitat/download?eol=false&m=x86_64&p=linux&v=0.9.3", "version":"0.9.3"}}}}`,
+			details: models.ProductDetails{
+				Product: "habitat",
+				Version: "0.9.3",
+				MetaData: []models.MetaData{{
+					Architecture:     "x86_64",
+					FileName:         "",
+					Platform:         "linux",
+					Platform_Version: "",
+					SHA1:             "",
+					SHA256:           "abcd",
+				}},
+			},
+			err:          nil,
+			version:      "",
+			version_err:  nil,
+			versions:     []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0"},
+			versions_err: nil,
+		},
+		{
+			name:             "opensource check failure",
+			serverMode:       Opensource,
+			requestPath:      "/stable/habitat/packages?eol=false",
+			expectedStatus:   fiber.StatusInternalServerError,
+			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product.", "status_text":"Internal Server Error"}`,
+			details:          models.ProductDetails{},
+			err:              nil,
+			version:          "",
+			version_err:      nil,
+			versions:         []string{},
+			versions_err:     errors.New("ResourceNotFoundException: Requested resource not found"),
+		},
+		{
+			name:             "empty metadate info",
+			serverMode:       Trial,
 			requestPath:      "/stable/habitat/packages?eol=false",
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"Product information not found. Please check the input parameters.", "status_text":"Bad Request"}`,
@@ -146,9 +242,11 @@ func TestApiService_productPackagesHandler(t *testing.T) {
 				Version:  "1.6.826",
 				MetaData: []models.MetaData{},
 			},
-			err:         nil,
-			version:     "1.6.826",
-			version_err: nil,
+			err:          nil,
+			version:      "1.6.826",
+			version_err:  nil,
+			versions:     []string{},
+			versions_err: nil,
 		},
 	}
 	for _, test := range tests {
@@ -161,11 +259,15 @@ func TestApiService_productPackagesHandler(t *testing.T) {
 			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
 				return test.version, test.version_err
 			}
+			mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
+				return test.versions, test.versions_err
+			}
 
 			server := &ApiService{
 				App:             app,
 				DatabaseService: mockDbService,
 				Log:             logrus.NewEntry(logrus.New()),
+				Mode:            test.serverMode,
 			}
 			server.buildRouter()
 			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)

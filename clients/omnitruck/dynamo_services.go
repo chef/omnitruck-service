@@ -19,6 +19,8 @@ const (
 	CHEF_AUTOMATE_CLI    = "chef-automate-cli"
 	AUTOMATE_CLI_VERSION = "latest"
 	AUTOMATE_CHANNEL     = "current"
+	AUTOMATE_PRODUCT     = "automate"
+	HABITAT_PRODUCT      = "habitat"
 )
 
 func NewDynamoServices(db dboperations.IDbOperations, log *log.Entry) DynamoServices {
@@ -57,7 +59,7 @@ func (svc *DynamoServices) ProductDownload(params *RequestParams) (string, error
 	}
 	params.PlatformVersion = ""
 
-	if params.Product == "automate" {
+	if params.Product == AUTOMATE_PRODUCT {
 		params.Channel = AUTOMATE_CHANNEL
 	}
 
@@ -72,9 +74,9 @@ func (svc *DynamoServices) ProductDownload(params *RequestParams) (string, error
 	}
 
 	switch params.Product {
-	case "automate":
+	case AUTOMATE_PRODUCT:
 		url = fmt.Sprintf(DOWNLOAD_URL, params.Channel, params.Version, CHEF_AUTOMATE_CLI, details.FileName)
-	case "habitat":
+	case HABITAT_PRODUCT:
 		url = fmt.Sprintf(DOWNLOAD_URL, params.Channel, params.Product, params.Version, details.FileName)
 	}
 
@@ -83,12 +85,12 @@ func (svc *DynamoServices) ProductDownload(params *RequestParams) (string, error
 
 func (svc *DynamoServices) ProductMetadata(params *RequestParams) (PackageMetadata, error) {
 	var err error
-	version := ""
+	version := params.Version
 
 	if params.Version == "" || params.Version == "latest" {
 		version, err = svc.db.GetVersionLatest(params.Product)
 		if err != nil {
-			svc.log.WithError(err).Error("Error while fetching metadata")
+			svc.log.WithError(err).Error("Error while latest version for fetching metadata")
 			return PackageMetadata{}, err
 		}
 	}
@@ -119,14 +121,14 @@ func (svc *DynamoServices) ProductPackages(params *RequestParams) (PackageList, 
 	if params.Version == "" || params.Version == "latest" {
 		params.Version, err = svc.db.GetVersionLatest(params.Product)
 		if err != nil {
-			svc.log.WithError(err).Error("Error while fetching metadata")
+			svc.log.WithError(err).Error("Error while fetching latest version for packages")
 			return PackageList{}, err
 		}
 	}
 
 	details, err := svc.db.GetPackages(params.Product, params.Version)
 	if err != nil {
-		svc.log.WithError(err).Error("Error while fetching metadata")
+		svc.log.WithError(err).Error("Error while fetching packages")
 		return PackageList{}, err
 	}
 	if len(details.MetaData) == 0 {
@@ -152,4 +154,27 @@ func (svc *DynamoServices) ProductPackages(params *RequestParams) (PackageList, 
 		}
 	}
 	return packageList, nil
+}
+
+func (svc *DynamoServices) FetchLatestOsVersion(params *RequestParams) (string, error) {
+	var version string
+	versions, err := svc.db.GetVersionAll(params.Product)
+	if err != nil {
+		svc.log.WithError(err).Error("Error while fetching all versions")
+		return version, err
+	}
+
+	sort.Strings(versions)
+	if params.Product == HABITAT_PRODUCT {
+		versions = FilterList(versions, func(v string) bool {
+			return !OsProductVersion(params.Product, ProductVersion(v))
+		})
+	}
+
+	// Return the last opensource version
+	// This assumes the versions are returned in ascending order
+	// Also assuming versions list is not empty
+	version = versions[len(versions)-1]
+
+	return version, nil
 }
