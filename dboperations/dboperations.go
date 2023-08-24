@@ -1,9 +1,11 @@
 package dboperations
 
 import (
-	"log"
+	"errors"
 	"os"
 	"sort"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -61,7 +63,7 @@ func (dbo *DbOperationsService) GetPackages(partitionValue string, sortValue str
 func (dbo *DbOperationsService) GetVersionAll(partitionValue string) ([]string, error) {
 	res, err := dbo.fetchDataValues(partitionValue, dbo.productTableName, PRODUCT_PARTITION_KEY)
 	if err != nil {
-		log.Printf("error in getting the Database value: %v", err)
+		log.Errorf("error in getting the Database value: %v", err)
 		return nil, err
 	}
 	var response models.ProductDetails
@@ -70,7 +72,7 @@ func (dbo *DbOperationsService) GetVersionAll(partitionValue string) ([]string, 
 		err = dynamodbattribute.UnmarshalMap(i, &response)
 		versionsArray = append(versionsArray, response.Version)
 		if err != nil {
-			log.Printf("Got error unmarshalling: %s", err)
+			log.Errorf("Got error unmarshalling: %s", err)
 			return nil, err
 		}
 
@@ -105,14 +107,14 @@ func (dbo *DbOperationsService) GetMetaData(partitionValue string, sortValue str
 func (dbo *DbOperationsService) GetVersionLatest(partitionValue string) (string, error) {
 	versions, err := dbo.GetVersionAll(partitionValue)
 	if err != nil {
-		log.Printf("Error in getting versions list: %v", err)
+		log.Errorf("Error in getting versions list: %v", err)
 		return "", err
 	}
 	sort.Sort(sort.Reverse(sort.StringSlice(versions)))
 	sortValue := versions[0]
 	latestVersionDetails, err := dbo.GetPackages(partitionValue, sortValue)
 	if err != nil {
-		log.Printf("Error in fetching the latest version: %v", err)
+		log.Errorf("Error in fetching the latest version: %v", err)
 		return "", err
 	}
 	return latestVersionDetails.Version, nil
@@ -121,22 +123,26 @@ func (dbo *DbOperationsService) GetVersionLatest(partitionValue string) (string,
 func (dbo *DbOperationsService) GetRelatedProducts(partitionValue string) (*models.RelatedProducts, error) {
 	res, err := dbo.fetchDataValues(partitionValue, dbo.skuTableName, SKU_PARTITION_KEY)
 	if err != nil {
-		log.Printf("error in fetching the database values: %v", err)
+		log.Errorf("error in fetching the database values: %v", err)
 		return nil, err
 	}
-	var sku models.RelatedProducts
-	var responseArray []string
-	for _, i := range res.Items {
-		err = dynamodbattribute.UnmarshalMap(i, &sku)
-		responseArray = append(responseArray, sku.Products...)
-		if err != nil {
-			log.Printf("Got error unmarshalling: %s", err)
-			return nil, err
-		}
-	}
-	sku.Sku = partitionValue
-	sku.Products = responseArray
 
+	lenght := len(res.Items)
+	if lenght == 0 {
+		return nil, errors.New("cannot find the specific sku inside the dataBase")
+	}
+
+	var sku models.RelatedProducts
+	skuErr := dynamodbattribute.Unmarshal(res.Items[0]["sku"], &sku.Sku)
+	if skuErr != nil {
+		log.Errorf("Error in unmarshalling the skuName: ", skuErr)
+		return nil, skuErr
+	}
+	productErr := dynamodbattribute.Unmarshal(res.Items[0]["relatedProducts"], &sku.Products)
+	if productErr != nil {
+		log.Errorf("Error in unmarshalling the map of RelatedProducts: ", skuErr)
+		return nil, productErr
+	}
 	return &sku, nil
 }
 
@@ -155,7 +161,7 @@ func (dbo *DbOperationsService) fetchDataValues(partitionValue string, tableName
 	}
 	res, err := dbo.db.Scan(params)
 	if err != nil {
-		log.Printf("Query API call failed for ScanInput: %v", err)
+		log.Errorf("Query API call failed for ScanInput: %v", err)
 		return nil, err
 	}
 	return res, nil
@@ -171,7 +177,7 @@ func (dbo *DbOperationsService) fetchDataValuesWithSortKey(partitionValue string
 	}
 	res, err := dbo.db.GetItem(input)
 	if err != nil {
-		log.Printf("error while using GetItem to get dataBase values: %v", err)
+		log.Errorf("error while using GetItem to get dataBase values: %v", err)
 		return nil, err
 	}
 	return res, nil

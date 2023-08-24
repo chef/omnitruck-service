@@ -61,7 +61,7 @@ func (server *ApiService) docsHandler(baseUrl string) func(*fiber.Ctx) error {
 }
 
 // @description Returns a valid list of valid product keys.
-// @description Any of these product keys can be used in the <PRODUCT> value of other endpoints. Please note many of these products are used for internal tools only and many have been EOL’d.
+// @description Any of these product keys can be used in the <PRODUCT> value of other endpoints. Please note many of these products are used for internal tools only and many have been EOL'd.
 // @Param       eol query    bool false "EOL Products"
 // @Success     200 {object} omnitruck.ItemList
 // @Failure     500 {object} services.ErrorResponse
@@ -495,7 +495,7 @@ func (server *ApiService) relatedProductsHandler(c *fiber.Ctx) error {
 	if err != nil {
 		request := clients.Request{}
 		server.Log.Error("Error while fetching related products for "+params.SKU, err.Error())
-		return server.SendError(c, request.Failure(500, "Unable to retrieve related products for SKU "))
+		return server.SendError(c, request.Failure(500, "Unable to retrieve related products for "+params.SKU))
 	}
 
 	if len(relatedProducts.Products) == 0 {
