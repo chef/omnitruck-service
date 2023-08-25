@@ -438,7 +438,7 @@ func TestGetRelatedProductsSuccess(t *testing.T) {
 							Items: []map[string]*dynamodb.AttributeValue{
 								{
 									"sku": {S: aws.String("Chef InSpec")},
-									"RelatedProducts": {M: map[string]*dynamodb.AttributeValue{
+									"products": {M: map[string]*dynamodb.AttributeValue{
 										"inspec": {S: aws.String("Chef InSpec")},
 									}},
 								},

@@ -478,7 +478,7 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 // @Success     200
 // @Failure     400 {object} services.ErrorResponse
 // @Failure     403 {object} services.ErrorResponse
-// @Router      /{sku}/relatedProducts [get]
+// @Router      /relatedProducts [get]
 func (server *ApiService) relatedProductsHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
 
@@ -495,13 +495,13 @@ func (server *ApiService) relatedProductsHandler(c *fiber.Ctx) error {
 	if err != nil {
 		request := clients.Request{}
 		server.Log.Error("Error while fetching related products for "+params.SKU, err.Error())
-		return server.SendError(c, request.Failure(500, "Unable to retrieve related products for "+params.SKU))
+		return server.SendError(c, request.Failure(fiber.StatusInternalServerError, "Unable to retrieve related products for "+params.SKU))
 	}
 
 	if len(relatedProducts.Products) == 0 {
 		request := clients.Request{}
 		server.Log.Error("No related products found for " + params.SKU)
-		return server.SendError(c, request.Failure(400, "No related products found for SKU"))
+		return server.SendError(c, request.Failure(fiber.StatusBadRequest, "No related products found for SKU"))
 	}
 
 	response := map[string]interface{}{

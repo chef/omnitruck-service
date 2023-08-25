@@ -127,20 +127,20 @@ func (dbo *DbOperationsService) GetRelatedProducts(partitionValue string) (*mode
 		return nil, err
 	}
 
-	lenght := len(res.Items)
-	if lenght == 0 {
-		return nil, errors.New("cannot find the specific sku inside the dataBase")
+	length := len(res.Items)
+	if length == 0 {
+		return nil, errors.New("cannot find the specific sku inside the database")
 	}
 
 	var sku models.RelatedProducts
 	skuErr := dynamodbattribute.Unmarshal(res.Items[0]["sku"], &sku.Sku)
 	if skuErr != nil {
-		log.Errorf("Error in unmarshalling the skuName: ", skuErr)
+		log.Errorf("Error in unmarshalling the sku name: %v", skuErr)
 		return nil, skuErr
 	}
-	productErr := dynamodbattribute.Unmarshal(res.Items[0]["relatedProducts"], &sku.Products)
+	productErr := dynamodbattribute.Unmarshal(res.Items[0]["products"], &sku.Products)
 	if productErr != nil {
-		log.Errorf("Error in unmarshalling the map of RelatedProducts: ", skuErr)
+		log.Errorf("Error in unmarshalling the map of products: %v", skuErr)
 		return nil, productErr
 	}
 	return &sku, nil
@@ -151,7 +151,7 @@ func (dbo *DbOperationsService) fetchDataValues(partitionValue string, tableName
 
 	expr, err := expression.NewBuilder().WithFilter(filter).Build()
 	if err != nil {
-		log.Printf("Got error building expression: %v", err)
+		log.Printf("error while building filter for this request: %v", err)
 	}
 	params := &dynamodb.ScanInput{
 		ExpressionAttributeNames:  expr.Names(),
@@ -161,7 +161,7 @@ func (dbo *DbOperationsService) fetchDataValues(partitionValue string, tableName
 	}
 	res, err := dbo.db.Scan(params)
 	if err != nil {
-		log.Errorf("Query API call failed for ScanInput: %v", err)
+		log.Errorf("error while using getting the dataBase values: %v", err)
 		return nil, err
 	}
 	return res, nil
@@ -177,7 +177,7 @@ func (dbo *DbOperationsService) fetchDataValuesWithSortKey(partitionValue string
 	}
 	res, err := dbo.db.GetItem(input)
 	if err != nil {
-		log.Errorf("error while using GetItem to get dataBase values: %v", err)
+		log.Errorf("error while using getting the dataBase values: %v", err)
 		return nil, err
 	}
 	return res, nil
