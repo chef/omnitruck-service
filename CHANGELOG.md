@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.26 -->
-## [0.0.26](https://github.com/chef/omnitruck-service/tree/0.0.26) (2023-08-29)
+<!-- latest_release 0.0.27 -->
+## [0.0.27](https://github.com/chef/omnitruck-service/tree/0.0.27) (2023-08-29)
 
 #### Merged Pull Requests
-- Corrections for habitat information [#37](https://github.com/chef/omnitruck-service/pull/37) ([sandhi18](https://github.com/sandhi18))
+- Adding the check for json file at the end of Download url [#34](https://github.com/chef/omnitruck-service/pull/34) ([vviveksharma](https://github.com/vviveksharma))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Adding the check for json file at the end of Download url [#34](https://github.com/chef/omnitruck-service/pull/34) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.27 -->
 - Corrections for habitat information [#37](https://github.com/chef/omnitruck-service/pull/37) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.26 -->
 - Script to add csv data to database [#31](https://github.com/chef/omnitruck-service/pull/31) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.25 -->
 - DB Operations for traversing over the DynamoDB [#29](https://github.com/chef/omnitruck-service/pull/29) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.24 -->
