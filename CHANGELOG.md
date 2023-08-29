@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.24 -->
-## [0.0.24](https://github.com/chef/omnitruck-service/tree/0.0.24) (2023-08-17)
+<!-- latest_release 0.0.25 -->
+## [0.0.25](https://github.com/chef/omnitruck-service/tree/0.0.25) (2023-08-29)
 
 #### Merged Pull Requests
-- DB Operations for traversing over the DynamoDB [#29](https://github.com/chef/omnitruck-service/pull/29) ([vviveksharma](https://github.com/vviveksharma))
+- Script to add csv data to database [#31](https://github.com/chef/omnitruck-service/pull/31) ([vviveksharma](https://github.com/vviveksharma))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Script to add csv data to database [#31](https://github.com/chef/omnitruck-service/pull/31) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.25 -->
 - DB Operations for traversing over the DynamoDB [#29](https://github.com/chef/omnitruck-service/pull/29) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.24 -->
 - Lambda script for data load [#32](https://github.com/chef/omnitruck-service/pull/32) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.23 -->
 - Add download url remapping for packages [#28](https://github.com/chef/omnitruck-service/pull/28) ([teknofire](https://github.com/teknofire)) <!-- 0.0.22 -->
