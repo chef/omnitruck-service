@@ -6,6 +6,7 @@ import (
 
 	"github.com/chef/omnitruck-service/clients/omnitruck"
 	_ "github.com/chef/omnitruck-service/docs"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_buildEndpointUrl(t *testing.T) {
@@ -142,6 +143,102 @@ func Test_getRequestParams(t *testing.T) {
 			if got := getRequestParams(tt.ctx); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getRequestParams() = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+func TestVerifyRequestType(t *testing.T) {
+	type args struct {
+		params *omnitruck.RequestParams
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "The .metadata.json is attached to Version",
+			args: args{
+				&omnitruck.RequestParams{
+					Version:         "latest.metadata.json",
+					Platform:        "amazon",
+					PlatformVersion: "2",
+					Architecture:    "x86_64",
+					Eol:             "false",
+				},
+			},
+			want: true,
+		},
+		{
+			name: "The .metadata.json is attached to Archetecture",
+			args: args{
+				&omnitruck.RequestParams{
+					Version:         "latest",
+					Platform:        "amazon",
+					PlatformVersion: "2",
+					Architecture:    "x86_64.metadata.json",
+					Eol:             "false",
+				},
+			},
+			want: true,
+		},
+		{
+			name: "The .metadata.json is attached to Platform",
+			args: args{
+				&omnitruck.RequestParams{
+					Version:         "latest",
+					Platform:        "amazon.metadata.json",
+					PlatformVersion: "2",
+					Architecture:    "x86_64",
+					Eol:             "false",
+				},
+			},
+			want: true,
+		},
+		{
+			name: "The .metadata.json is attached to PlatformVersion",
+			args: args{
+				&omnitruck.RequestParams{
+					Version:         "latest",
+					Platform:        "amazon",
+					PlatformVersion: "2.metadata.json",
+					Architecture:    "x86_64",
+					Eol:             "false",
+				},
+			},
+			want: true,
+		},
+		{
+			name: "The .metadata.json is attached to End of Life",
+			args: args{
+				&omnitruck.RequestParams{
+					Version:         "latest",
+					Platform:        "amazon",
+					PlatformVersion: "2",
+					Architecture:    "x86_64",
+					Eol:             "false.metadata.json",
+				},
+			},
+			want: true,
+		},
+		{
+			name: "The .metadata.json is not attached to any of the query parameters",
+			args: args{
+				&omnitruck.RequestParams{
+					Version:         "latest",
+					Platform:        "amazon",
+					PlatformVersion: "2",
+					Architecture:    "x86_64",
+					Eol:             "false",
+				},
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := verifyRequestType(tt.args.params)
+			assert.Equal(t, got, tt.want)
 		})
 	}
 }

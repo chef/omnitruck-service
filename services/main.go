@@ -332,12 +332,12 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 // @Router      /{channel}/{product}/download [get]
 func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
+	flag := verifyRequestType(params)
 
 	if server.Mode == Opensource && isLatest(params.Version) {
 		v, _ := server.fetchLatestOSVersion(params, c)
 		params.Version = string(v)
 	}
-
 	err, ok := server.ValidateRequest(params, c)
 	if !ok {
 		return err
@@ -347,6 +347,9 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 	request := server.Omnitruck(c).ProductDownload(params).ParseData(&data)
 
 	if request.Ok {
+		if flag {
+			data.Url =  data.Url + substring
+		}
 		server.logCtx(c).Infof("Redirecting user to %s", data.Url)
 		return c.Redirect(data.Url, 302)
 	} else {
