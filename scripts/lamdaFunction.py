@@ -57,7 +57,9 @@ def fetchPlatformInfoHab(shaContent, version):
    for shaInfo in shaContent:
       archValue = shaInfo.split(" ")[-1].strip()
       archStruct = archValue.split("-")
-      productData["metadata"].append({"platform": archStruct[1], "sha256": shaInfo.split(" ")[0], "architecture": archStruct[-1].split(".")[0], "filename": archValue })
+      if "kernel2" in archStruct[-1]:
+         archStruct[-1] = "linux-"+archStruct[-1]
+      productData["metadata"].append({"architecture": archStruct[1], "sha256": shaInfo.split(" ")[0], "platform": archStruct[-1].split(".")[0], "filename": archValue })
    addDataToDynamo(productData)
    
 def fetchPlatformInfoAutomate(shaContent, ver):
