@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
-	"github.com/chef/omnitruck-service/middleware/db"
+	dbconnection "github.com/chef/omnitruck-service/middleware/db"
 	"github.com/chef/omnitruck-service/models"
 )
 
@@ -171,7 +171,7 @@ func (dbo *DbOperationsService) fetchDataValuesWithSortKey(partitionValue string
 	}
 	res, err := dbo.db.GetItem(input)
 	if err != nil {
-		log.Println("error while using GetItem to get dataBase values: %v", err)
+		log.Printf("error while using GetItem to get dataBase values: %v", err)
 		return nil, err
 	}
 	return res, nil
