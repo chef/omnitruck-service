@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -127,8 +128,28 @@ func (server *ApiService) StartService() {
 	lw := server.Log.Writer()
 	defer lw.Close()
 	server.App.Use(logger.New(logger.Config{
-		Format: "LicenseId :- ${locals:license_id} : Method :- ${method} : IP :- ${ip} : EndPoint :- ${path} : status :- ${status} : latency :- ${latency} : Time :- [${time}] : request-id ${locals:requestid} \n",
+		Format: "LicenseId :- ${locals:licenseId} : Method :- ${method} : IP :- ${ip} : EndPoint :- ${path} : channel :- ${channel} : product :- ${product} : platform :- ${platform} : platform version :- ${platformVersion} : architecture :- ${architecture} : version :- ${version} : status :- ${status} : latency :- ${latency} : Time :- [${time}] : request-id ${locals:requestid} \n",
 		Output: lw,
+		CustomTags: map[string]logger.LogFunc{
+			"channel": func(output logger.Buffer, c *fiber.Ctx, data *logger.Data, extraParam string) (int, error) {
+				return output.WriteString(fmt.Sprint(c.Params("channel")))
+			},
+			"product": func(output logger.Buffer, c *fiber.Ctx, data *logger.Data, extraParam string) (int, error) {
+				return output.WriteString(fmt.Sprint(c.Params("product")))
+			},
+			"version": func(output logger.Buffer, c *fiber.Ctx, data *logger.Data, extraParam string) (int, error) {
+				return output.WriteString(fmt.Sprint(c.Query("v")))
+			},
+			"platform": func(output logger.Buffer, c *fiber.Ctx, data *logger.Data, extraParam string) (int, error) {
+				return output.WriteString(fmt.Sprint(c.Query("p")))
+			},
+			"platformVersion": func(output logger.Buffer, c *fiber.Ctx, data *logger.Data, extraParam string) (int, error) {
+				return output.WriteString(fmt.Sprint(c.Query("pv")))
+			},
+			"architecture": func(output logger.Buffer, c *fiber.Ctx, data *logger.Data, extraParam string) (int, error) {
+				return output.WriteString(fmt.Sprint(c.Query("m")))
+			},
+		},
 	}))
 
 	server.App.Use(cors.New())
