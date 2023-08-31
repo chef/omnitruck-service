@@ -40,6 +40,7 @@ func (server *ApiService) buildRouter() {
 	server.App.Get("/:channel/:product/packages", server.productPackagesHandler)
 	server.App.Get("/:channel/:product/metadata", server.productMetadataHandler)
 	server.App.Get("/:channel/:product/download", server.productDownloadHandler)
+	server.App.Get("/relatedProducts", server.relatedProductsHandler)
 
 }
 
@@ -60,7 +61,7 @@ func (server *ApiService) docsHandler(baseUrl string) func(*fiber.Ctx) error {
 }
 
 // @description Returns a valid list of valid product keys.
-// @description Any of these product keys can be used in the <PRODUCT> value of other endpoints. Please note many of these products are used for internal tools only and many have been EOL’d.
+// @description Any of these product keys can be used in the <PRODUCT> value of other endpoints. Please note many of these products are used for internal tools only and many have been EOL'd.
 // @Param       eol query    bool false "EOL Products"
 // @Success     200 {object} omnitruck.ItemList
 // @Failure     500 {object} services.ErrorResponse
@@ -468,4 +469,45 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 	} else {
 		return server.SendError(c, request)
 	}
+}
+
+// @description Get related products for a given SKU
+// @description The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned
+// @Param       sku    	   query string true  "sku"
+// @Param       license_id query string false "License ID"
+// @Success     200
+// @Failure     400 {object} services.ErrorResponse
+// @Failure     403 {object} services.ErrorResponse
+// @Router      /relatedProducts [get]
+func (server *ApiService) relatedProductsHandler(c *fiber.Ctx) error {
+	params := getRequestParams(c)
+
+	server.Log.Info("Validating related products API for " + params.SKU)
+
+	err, ok := server.ValidateRequest(params, c)
+	if !ok {
+		server.Log.Error("Validation of related products API for "+params.SKU+"failed", err.Error())
+		return err
+	}
+
+	relatedProducts, err := server.DatabaseService.GetRelatedProducts(params.SKU)
+
+	if err != nil {
+		request := clients.Request{}
+		server.Log.Error("Error while fetching related products for "+params.SKU, err.Error())
+		return server.SendError(c, request.Failure(fiber.StatusInternalServerError, "Unable to retrieve related products for "+params.SKU))
+	}
+
+	if len(relatedProducts.Products) == 0 {
+		request := clients.Request{}
+		server.Log.Error("No related products found for " + params.SKU)
+		return server.SendError(c, request.Failure(fiber.StatusBadRequest, "No related products found for SKU"))
+	}
+
+	response := map[string]interface{}{
+		"relatedProducts": relatedProducts.Products,
+	}
+	server.Log.Info("Returning success response from related products API for " + params.SKU)
+	return server.SendResponse(c, response)
+
 }

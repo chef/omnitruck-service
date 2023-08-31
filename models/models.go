@@ -22,6 +22,6 @@ type MetaData struct {
 }
 
 type RelatedProducts struct {
-	Sku      string   `json:"sku"`
-	Products []string `json:"products"`
+	Sku      string            `json:"sku"`
+	Products map[string]string `json:"products"`
 }

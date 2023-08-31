@@ -419,14 +419,12 @@ func TestGetRelatedProductsSuccess(t *testing.T) {
 		{
 			name: "SuccessFull",
 			args: args{
-
-				partitionValue: "habitat",
+				partitionValue: "Chef Inspec",
 			},
 			want: &models.RelatedProducts{
-				Sku: "habitat",
-				Products: []string{
-					"Habitat Premium",
-					"Habitat CLI",
+				Sku: "Chef InSpec",
+				Products: map[string]string{
+					"inspec": "Chef InSpec",
 				},
 			},
 		},
@@ -439,10 +437,9 @@ func TestGetRelatedProductsSuccess(t *testing.T) {
 						return &dynamodb.ScanOutput{
 							Items: []map[string]*dynamodb.AttributeValue{
 								{
-									"skus": {S: aws.String("habitat")},
-									"products": {L: []*dynamodb.AttributeValue{
-										{S: aws.String("Habitat Premium")},
-										{S: aws.String("Habitat CLI")},
+									"sku": {S: aws.String("Chef InSpec")},
+									"products": {M: map[string]*dynamodb.AttributeValue{
+										"inspec": {S: aws.String("Chef InSpec")},
 									}},
 								},
 							},

@@ -67,6 +67,7 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	server.Log = c.Log
 	server.Config = c
 	server.Validator = omnitruck.NewValidator()
+	server.DatabaseService = dboperations.NewDbOperationsService(dbconnection.NewDbConnectionService(awsutils.NewAwsUtils()))
 	server.Mode = c.Mode
 	server.DatabaseService = dboperations.NewDbOperationsService(dbconnection.NewDbConnectionService(awsutils.NewAwsUtils()))
 
@@ -213,6 +214,7 @@ func (server *ApiService) SendResponse(c *fiber.Ctx, data clients.RequestDataInt
 }
 
 func (server *ApiService) SendError(c *fiber.Ctx, request *clients.Request) error {
+
 	return c.Status(request.Code).JSON(ErrorResponse{
 		Code:       request.Code,
 		StatusText: http.StatusText(request.Code),
