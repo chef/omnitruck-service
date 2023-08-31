@@ -10,7 +10,7 @@ import (
 	awsConfig "github.com/chef/omnitruck-service/models"
 )
 
-type AwsUtilsImpl struct {}
+type AwsUtilsImpl struct{}
 
 type AwsUtils interface {
 	GetNewSession() (*session.Session, error)
@@ -25,7 +25,7 @@ func (au *AwsUtilsImpl) GetNewSession() (*session.Session, error) {
 	awsConfig.AccessKey = os.Getenv("ACCESS_KEY")
 	awsConfig.SecretKey = os.Getenv("SECRET_KEY")
 	awsConfig.Region = os.Getenv("REGION")
-	session, err :=  session.NewSessionWithOptions(session.Options{
+	session, err := session.NewSessionWithOptions(session.Options{
 		Config: aws.Config{
 			Credentials: credentials.NewStaticCredentials(awsConfig.AccessKey, awsConfig.SecretKey, ""),
 			Region:      aws.String(awsConfig.Region),
