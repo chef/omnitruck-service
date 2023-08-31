@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.28 -->
-## [0.0.28](https://github.com/chef/omnitruck-service/tree/0.0.28) (2023-08-30)
+<!-- latest_release 0.0.29 -->
+## [0.0.29](https://github.com/chef/omnitruck-service/tree/0.0.29) (2023-08-31)
 
 #### Merged Pull Requests
-- Changes for automate in existing wrapper api [#33](https://github.com/chef/omnitruck-service/pull/33) ([vipin230](https://github.com/vipin230))
+- CHEF-4554 : GET /{sku}/relatedProducts API [#30](https://github.com/chef/omnitruck-service/pull/30) ([shanmugapriya-tr](https://github.com/shanmugapriya-tr))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- CHEF-4554 : GET /{sku}/relatedProducts API [#30](https://github.com/chef/omnitruck-service/pull/30) ([shanmugapriya-tr](https://github.com/shanmugapriya-tr)) <!-- 0.0.29 -->
 - Changes for automate in existing wrapper api [#33](https://github.com/chef/omnitruck-service/pull/33) ([vipin230](https://github.com/vipin230)) <!-- 0.0.28 -->
 - Adding the check for json file at the end of Download url [#34](https://github.com/chef/omnitruck-service/pull/34) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.27 -->
 - Corrections for habitat information [#37](https://github.com/chef/omnitruck-service/pull/37) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.26 -->
