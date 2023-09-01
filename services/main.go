@@ -232,6 +232,12 @@ func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 				return !omnitruck.OsProductVersion(params.Product, v)
 			})
 		}
+		if server.Mode == Trial {
+			data = []omnitruck.ProductVersion{
+				data[len(data)-1],
+			}
+		}
+
 		return server.SendResponse(c, &data)
 
 	}
