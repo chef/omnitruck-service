@@ -10,7 +10,13 @@ DYNAMO_TABLE = 'metadata-production'
 def lambda_handler(event, context):
    if "manualTrigger" in event:
       bucket = event["s3Bucket"]
-      addOldHabData(getAllReleasedHabVersions(), bucket)
+      key = event["key"]
+      if "automate" in key:
+         shaFiles = readAllFiles(bucket, key, "automate")
+         shaContent = readSHAValue(bucket, shaFiles)
+         fetchPlatformInfoAutomate(shaContent, "latest")
+      else:
+         addOldHabData(getAllReleasedHabVersions(), bucket, key)
    else:
       bucket = event['Records'][0]['s3']['bucket']['name']
       fileupdated = event['Records'][0]['s3']['object']['key']
@@ -30,11 +36,12 @@ def readAllFiles(bucket, key, setup):
    files = files_resp["Contents"]
    shaFiles = []
    for file in files:
-      if ".txt" in file["Key"] or "documentation" in file["Key"] or ".asc" in file["Key"] or "manifest" in file["Key"]:
+      if ".txt" in file["Key"] or "documentation" in file["Key"] or ".asc" in file["Key"] or "manifest" in file["Key"] or "airgap" in file["Key"] or "cli" in file["Key"]:
          continue
       elif ".sha256sum" in file["Key"]:
          if setup == "automate" and file["LastModified"].year < 2023:
             continue
+         print(file["Key"])
          shaFiles.append(file["Key"])
    return shaFiles
 
@@ -91,9 +98,9 @@ def getAllReleasedHabVersions():
       range = range + len(versions)
       allReleasedVersions += list(set(versions))
 
-def addOldHabData(versions, bucket):
+def addOldHabData(versions, bucket, key):
    for ver in versions:
-      key = "files/habitat/"+ver+"/"
+      key = key+ver+"/"
       file_content = s3_client.list_objects_v2(Bucket=bucket, Prefix=key, StartAfter=key)
       if "Contents" in file_content:
          shaFiles = readAllFiles(bucket, key, "hab")
@@ -106,4 +113,3 @@ def addDataToDynamo(productData):
    table = dynamo_client.Table(DYNAMO_TABLE)
    response = table.put_item(Item = productData)
    print(response)
-   
