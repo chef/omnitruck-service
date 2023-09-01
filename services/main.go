@@ -129,7 +129,7 @@ func (server *ApiService) architecturesHandler(c *fiber.Ctx) error {
 // @description Get the latest version number for a particular channel and product combination.
 // @Param       channel    path     string true  "Channel" Enums(current, stable)
 // @Param       product    path     string true  "Product"
-// @Param       license_id query   string false "License ID"
+// @Param       license_id query    string false "License ID"
 // @Success     200        {object} omnitruck.ProductVersion
 // @Failure     400        {object} services.ErrorResponse
 // @Failure     403        {object} services.ErrorResponse
@@ -207,7 +207,7 @@ func (server *ApiService) fetchLatestOSVersion(params *omnitruck.RequestParams, 
 // @description Get a list of all available version numbers for a particular channel and product combination
 // @Param       channel    path     string true  "Channel" Enums(current, stable)
 // @Param       product    path     string true  "Product"
-// @Param       license_id query   string false "License ID"
+// @Param       license_id query    string false "License ID"
 // @Param       eol        query    bool   false "EOL Products" Default(false)
 // @Success     200        {object} omnitruck.ItemList
 // @Failure     400        {object} services.ErrorResponse
@@ -274,7 +274,7 @@ func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 // @Param       channel    path     string true  "Channel" Enums(current, stable)
 // @Param       product    path     string true  "Product" Example(chef)
 // @Param       v          query    string false "Version"
-// @Param       license_id query   string false "License ID"
+// @Param       license_id query    string false "License ID"
 // @Param       eol        query    bool   false "EOL Products" Default(false)
 // @Success     200        {object} omnitruck.PackageList
 // @Failure     400        {object} services.ErrorResponse
@@ -355,7 +355,7 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 // @Param       pv         query    string true  "Platform Version, possible values depend on the platform. For example, Ubuntu: 16.04, or 18.04 or for macOS: 10.14 or 10.15." Example(20.04)
 // @Param       m          query    string true  "Machine architecture, valid values are returned by the `/architectures` endpoint."                                            Example(x86_64)
 // @Param       v          query    string false "Version of the product to be installed. A version always takes the form `x.y.z`"                                              Default(latest)
-// @Param       license_id query   string false "License ID"
+// @Param       license_id query    string false "License ID"
 // @Param       eol        query    bool   false "EOL Products" Default(false)
 // @Success     200        {object} omnitruck.PackageMetadata
 // @Failure     400        {object} services.ErrorResponse
@@ -419,7 +419,7 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 // @Param       pv         query  string true  "Platform Version, possible values depend on the platform. For example, Ubuntu: 16.04, or 18.04 or for macOS: 10.14 or 10.15." Example(20.04)
 // @Param       m          query  string true  "Machine architecture, valid values are returned by the `/architectures` endpoint."                                            Example(x86_64)
 // @Param       v          query  string false "Version of the product to be installed. A version always takes the form `x.y.z`"                                              Default(latest)
-// @Param       license_id query string false "License ID"
+// @Param       license_id query  string false "License ID"
 // @Param       eol        query  bool   false "EOL Products" Default(false)
 // @Success     302
 // @Failure     400 {object} services.ErrorResponse
@@ -521,8 +521,8 @@ func (server *ApiService) relatedProductsHandler(c *fiber.Ctx) error {
 // @Param       pv         query    string true  "Platform Version, possible values depend on the platform. For example, Ubuntu: 16.04, or 18.04 or for macOS: 10.14 or 10.15." Example(20.04)
 // @Param       m          query    string true  "Machine architecture, valid values are returned by the `/architectures` endpoint."                                            Example(x86_64)
 // @Param       v          query    string false "Version of the product to be installed. A version always takes the form `x.y.z`"                                              Default(latest)
-// @Param       license_id query   string false "License ID"
-// @Success     200        {object}
+// @Param       license_id query    string false "License ID"
+// @Success     200        {object} map[string]interface{}
 // @Failure     400        {object} services.ErrorResponse
 // @Failure     403        {object} services.ErrorResponse
 // @Router      /{channel}/{product}/fileName [get]
