@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
-
-const licenseApi = "https://licensing-acceptance.chef.co"
 
 type License struct {
 	client *http.Client
@@ -66,6 +65,7 @@ func (c *License) Get(url string) *Request {
 }
 
 func (c *License) Validate(id string, data *Response) *Request {
+	licenseApi := os.Getenv("LICENSE_API")
 	url := fmt.Sprintf("%s/License/v1/validate?licenseId=%s", licenseApi, id)
 	return c.Get(url).ParseData(&data)
 }
