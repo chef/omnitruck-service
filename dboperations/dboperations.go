@@ -87,7 +87,7 @@ func (dbo *DbOperationsService) GetMetaData(partitionValue string, sortValue str
 	MetaData := productDetails.MetaData
 	var response models.MetaData
 	for _, j := range MetaData {
-		if j.Architecture == architecture && j.Platform == platform && j.Platform_Version == platformVersion {
+		if j.Architecture == architecture && j.Platform == platform {
 			response.Architecture = architecture
 			response.Platform = platform
 			response.Platform_Version = platformVersion
