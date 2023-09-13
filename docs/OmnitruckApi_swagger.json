@@ -54,7 +54,7 @@
         },
         "/products": {
             "get": {
-                "description": "Returns a valid list of valid product keys.\nAny of these product keys can be used in the \u003cPRODUCT\u003e value of other endpoints. Please note many of these products are used for internal tools only and many have been EOL’d.",
+                "description": "Returns a valid list of valid product keys.\nAny of these product keys can be used in the \u003cPRODUCT\u003e value of other endpoints. Please note many of these products are used for internal tools only and many have been EOL'd.",
                 "parameters": [
                     {
                         "type": "boolean",
@@ -75,6 +75,43 @@
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/relatedProducts": {
+            "get": {
+                "description": "The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "sku",
+                        "name": "sku",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "License ID",
+                        "name": "license_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/ErrorResponse"
                         }
@@ -153,6 +190,90 @@
                 "responses": {
                     "302": {
                         "description": "Found"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/{channel}/{product}/fileName": {
+            "get": {
+                "description": "The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned",
+                "parameters": [
+                    {
+                        "enum": [
+                            "current",
+                            "stable"
+                        ],
+                        "type": "string",
+                        "description": "Channel",
+                        "name": "channel",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "chef",
+                        "description": "Product",
+                        "name": "product",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "ubuntu",
+                        "description": "Platform, valid values are returned from the `/platforms` endpoint.",
+                        "name": "p",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "20.04",
+                        "description": "Platform Version, possible values depend on the platform. For example, Ubuntu: 16.04, or 18.04 or for macOS: 10.14 or 10.15.",
+                        "name": "pv",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "x86_64",
+                        "description": "Machine architecture, valid values are returned by the `/architectures` endpoint.",
+                        "name": "m",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "default": "latest",
+                        "description": "Version of the product to be installed. A version always takes the form `x.y.z`",
+                        "name": "v",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "License ID",
+                        "name": "license_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
                     },
                     "400": {
                         "description": "Bad Request",
