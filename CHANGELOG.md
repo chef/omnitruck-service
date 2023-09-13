@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.31 -->
-## [0.0.31](https://github.com/chef/omnitruck-service/tree/0.0.31) (2023-09-01)
+<!-- latest_release 0.0.32 -->
+## [0.0.32](https://github.com/chef/omnitruck-service/tree/0.0.32) (2023-09-13)
 
 #### Merged Pull Requests
-- logging query params for api [#39](https://github.com/chef/omnitruck-service/pull/39) ([vipin230](https://github.com/vipin230))
+- Swagger [#40](https://github.com/chef/omnitruck-service/pull/40) ([vipin230](https://github.com/vipin230))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Swagger [#40](https://github.com/chef/omnitruck-service/pull/40) ([vipin230](https://github.com/vipin230)) <!-- 0.0.32 -->
 - logging query params for api [#39](https://github.com/chef/omnitruck-service/pull/39) ([vipin230](https://github.com/vipin230)) <!-- 0.0.31 -->
 - CHEF-5544 : GET fileName API [#35](https://github.com/chef/omnitruck-service/pull/35) ([shanmugapriya-tr](https://github.com/shanmugapriya-tr)) <!-- 0.0.30 -->
 - CHEF-4554 : GET /{sku}/relatedProducts API [#30](https://github.com/chef/omnitruck-service/pull/30) ([shanmugapriya-tr](https://github.com/shanmugapriya-tr)) <!-- 0.0.29 -->
