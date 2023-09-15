@@ -532,6 +532,12 @@ func (server *ApiService) relatedProductsHandler(c *fiber.Ctx) error {
 func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
 	server.Log.Info("Validating download file name for " + params.Product + "in channel " + params.Channel)
+	if server.Mode == Trial {
+		err := server.isLatestForTrail(params, c)
+		if !err.Ok {
+			return server.SendError(c, err)
+		}
+	}
 	err, ok := server.ValidateRequest(params, c)
 	if !ok {
 		server.Log.Error("Validation of file name API for " + params.Product + " failed")
@@ -560,7 +566,7 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 		}
 		if metadata == nil || metadata.FileName == "" {
 			request := clients.Request{}
-			server.Log.Error("Error while fetching fileName for "+params.Product, "Unable to find the product information for given parameters")
+			server.Log.Error("Error while fetching fileName for " + params.Product + ":- unable to find the product information for given parameters")
 			return server.SendError(c, request.Failure(400, "Unable to find the product information for given parameters"))
 		}
 		response := map[string]interface{}{
@@ -603,6 +609,6 @@ func (server *ApiService) isLatestForTrail(params *omnitruck.RequestParams, c *f
 		request.Failure(fiber.StatusInternalServerError, "Error while getting the requested information.")
 		return request
 	}
-	request.Failure(fiber.StatusBadRequest, "Version not latest.")
+	request.Failure(fiber.StatusBadRequest, "Version is not latest.")
 	return request
 }
