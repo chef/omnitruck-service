@@ -92,18 +92,19 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 		server.Validator.Add(&channel)
 	}
 
-	if c.Mode == Trial {
-		version := omnitruck.ContainsValidator{
-			Field:      "Version",
-			Values:     []string{"latest"},
-			Code:       400,
-			AllowEmpty: true,
-			Skip: func(c omnitruck.Context) bool {
-				return c.License
-			},
-		}
-		server.Validator.Add(&version)
-	}
+	// Commented for now
+	// if c.Mode == Trial {
+	// 	version := omnitruck.ContainsValidator{
+	// 		Field:      "Version",
+	// 		Values:     []string{"latest"},
+	// 		Code:       400,
+	// 		AllowEmpty: true,
+	// 		Skip: func(c omnitruck.Context) bool {
+	// 			return c.License
+	// 		},
+	// 	}
+	// 	server.Validator.Add(&version)
+	// }
 
 	if c.Mode == Trial || c.Mode == Commercial {
 		server.Log.Info("Adding EOL Validator")

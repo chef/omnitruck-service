@@ -8,7 +8,7 @@ Omnitruck API service that provides license validation and entitlement checking 
 
 ## Getting Started
 
-For getting the automate, habitat and related products information
+For getting the automate, habitat and related products information set following env variables
 
 ```bash
 ACCESS_KEY="AWS access key"
@@ -16,6 +16,7 @@ SECRET_KEY="AWS secret key"
 REGION="AWS region in which Dynamodb database is present"
 PRODUCT_TABLE_NAME="To get the information regarding Automate and Habitat details"
 RELATED_PRODUCTS_TABLE_NAME="To get information regarding the relatedProducts"
+LICENSE_API="Url to licence service"
 ```
 
 Building the service and swagger documentation
@@ -33,7 +34,7 @@ make build
 Copy example config and running the service
 
 ```bash
-$ cp omnitruck.yml.example .omnitruck.yml
+$ cp omnitruck.yml.example omnitruck.yml
 $ bin/omnitruck-service start
 INFO[0000] Starting OpensourceServer                     pkg=cmd/opensource
 ```

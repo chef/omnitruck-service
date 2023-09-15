@@ -6,6 +6,7 @@ import (
 
 type Product struct {
 	Name              string
+	ProductName       string
 	SupportedVersion  version.Constraints
 	OpensourceVersion version.Constraints
 }
@@ -18,49 +19,59 @@ func NewConstraint(i string) version.Constraints {
 var supportedProducts = map[string]Product{
 	"automate": {
 		Name:              "automate",
+		ProductName:       "Chef Automate",
 		SupportedVersion:  NewConstraint(">= 0"),
 		OpensourceVersion: NewConstraint(">= 0"),
 	},
 	"chef": {
 		Name:              "chef",
+		ProductName:       "Chef Infra Client",
 		SupportedVersion:  NewConstraint(">= 16.0.0"),
 		OpensourceVersion: NewConstraint("<= 14.15.6"),
 	},
 	"chef-backend": {
 		Name:             "chef-backend",
+		ProductName:      "Chef Backend",
 		SupportedVersion: NewConstraint(">= 3.0.0"),
 	},
 	"chef-server": {
 		Name:              "chef-server",
+		ProductName:       "Chef Infra Server",
 		SupportedVersion:  NewConstraint(">= 14.0.0"),
 		OpensourceVersion: NewConstraint("<= 12.19.31"),
 	},
 	"chef-workstation": {
 		Name:              "chef-workstation",
+		ProductName:       "Chef Workstation",
 		SupportedVersion:  NewConstraint(">= 21.0.0"),
 		OpensourceVersion: NewConstraint("<= 0.4.2"),
 	},
 	"habitat": {
 		Name:              "habitat",
+		ProductName:       "Chef Habitat",
 		SupportedVersion:  NewConstraint(">= 0"),
 		OpensourceVersion: NewConstraint("< 0.79.0"),
 	},
 	"inspec": {
 		Name:              "inspec",
+		ProductName:       "InSpec",
 		SupportedVersion:  NewConstraint(">= 4.0.0"),
 		OpensourceVersion: NewConstraint("<= 4.3.2"),
 	},
 	"manage": {
 		Name:             "manage",
+		ProductName:      "Chef Manage",
 		SupportedVersion: NewConstraint(">= 2.5.0"),
 	},
 	"supermarket": {
 		Name:              "supermarket",
+		ProductName:       "Chef Supermarket",
 		SupportedVersion:  NewConstraint(">= 5.0.0"),
 		OpensourceVersion: NewConstraint("<= 5.1.63"),
 	},
 	"desktop": {
 		Name:              "desktop",
+		ProductName:       "",
 		SupportedVersion:  NewConstraint(">= 0"),
 		OpensourceVersion: NewConstraint("<= 14.15.6"),
 	},
@@ -116,4 +127,15 @@ func OsProductVersion(name string, v ProductVersion) bool {
 
 	v1, _ := version.NewVersion(string(v))
 	return p.OpensourceVersion.Check(v1.Core())
+}
+
+func ProductDisplayName(data ItemList) ItemList {
+	for i, val := range data {
+		p, ok := supportedProducts[val]
+		if !ok {
+			data[i] = val
+		}
+		data[i] = val + ":" + p.ProductName
+	}
+	return data
 }
