@@ -98,14 +98,14 @@ def getAllReleasedHabVersions():
       range = range + len(versions)
       allReleasedVersions += list(set(versions))
 
-def addOldHabData(versions, bucket, key):
+def addOldHabData(versions, bucket, keys):
    for ver in versions:
-      key = key+ver+"/"
-      file_content = s3_client.list_objects_v2(Bucket=bucket, Prefix=key, StartAfter=key)
+      new_key = keys+ver+"/"
+      file_content = s3_client.list_objects_v2(Bucket=bucket, Prefix=new_key, StartAfter=new_key)
       if "Contents" in file_content:
-         shaFiles = readAllFiles(bucket, key, "hab")
+         shaFiles = readAllFiles(bucket, new_key, "hab")
          shaContent = readSHAValue(bucket, shaFiles)
-         version = readVersion(bucket, key+"manifest.json")
+         version = readVersion(bucket, new_key+"manifest.json")
          fetchPlatformInfoHab(shaContent, version)
 
 def addDataToDynamo(productData):
