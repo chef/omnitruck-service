@@ -71,7 +71,7 @@ def push_to_database(filepath):
         for key, value in data.items():
             response = getRelated(df, value)
             item = {
-                "sku": key,
+                "bom": key,
                 "products": response
             }
             table.put_item(Item=item)

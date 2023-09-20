@@ -30,7 +30,7 @@ func TestRelatedProductsHandler(t *testing.T) {
 	}{
 		{
 			name:             "Valid SKU with related products",
-			requestPath:      "/relatedProducts?sku=Chef%20Desktop%20Management",
+			requestPath:      "/relatedProducts?bom=Chef%20Desktop%20Management",
 			expectedStatus:   http.StatusOK,
 			expectedResponse: `{"relatedProducts": {"inspec": "Chef InSpec"}}`,
 			relatedProducts:  models.RelatedProducts{Products: map[string]string{"inspec": "Chef InSpec"}},
@@ -38,17 +38,17 @@ func TestRelatedProductsHandler(t *testing.T) {
 		},
 		{
 			name:             "Invalid SKU",
-			requestPath:      "/relatedProducts?sku=invalid-sku",
+			requestPath:      "/relatedProducts?bom=invalid-bom",
 			expectedStatus:   http.StatusInternalServerError,
-			expectedResponse: `{"code":500, "message":"Unable to retrieve related products for invalid-sku", "status_text":"Internal Server Error"}`,
+			expectedResponse: `{"code":500, "message":"Unable to retrieve related products for invalid-bom", "status_text":"Internal Server Error"}`,
 			relatedProducts:  models.RelatedProducts{},
 			err:              errors.New("No Related products found for SKU "),
 		},
 		{
 			name:             "No related products",
-			requestPath:      "/relatedProducts?sku=Chef%20123",
+			requestPath:      "/relatedProducts?bom=Chef%20123",
 			expectedStatus:   http.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"No related products found for SKU", "status_text":"Bad Request"}`,
+			expectedResponse: `{"code":400, "message":"No related products found for BOM", "status_text":"Bad Request"}`,
 			relatedProducts:  models.RelatedProducts{},
 			err:              nil,
 		},

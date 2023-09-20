@@ -128,7 +128,7 @@ func (dbo *DbOperationsService) GetRelatedProducts(partitionValue string) (*mode
 	}
 
 	var sku models.RelatedProducts
-	skuErr := dynamodbattribute.Unmarshal(res.Items[0]["sku"], &sku.Sku)
+	skuErr := dynamodbattribute.Unmarshal(res.Items[0]["bom"], &sku.Bom)
 	if skuErr != nil {
 		log.Errorf("Error in unmarshalling the sku name: %v", skuErr)
 		return nil, skuErr

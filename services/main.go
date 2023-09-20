@@ -481,7 +481,7 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 }
 
 // @description The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned
-// @Param       sku    	   query string true  "sku"
+// @Param       bom    	   query string true  "bom"
 // @Param       license_id query string false "License ID"
 // @Success     200
 // @Failure     400 {object} services.ErrorResponse
@@ -490,32 +490,32 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 func (server *ApiService) relatedProductsHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
 
-	server.Log.Info("Validating related products API for " + params.SKU)
+	server.Log.Info("Validating related products API for " + params.BOM)
 
 	err, ok := server.ValidateRequest(params, c)
 	if !ok {
-		server.Log.Error("Validation of related products API for "+params.SKU+"failed", err.Error())
+		server.Log.Error("Validation of related products API for "+params.BOM+"failed", err.Error())
 		return err
 	}
 
-	relatedProducts, err := server.DatabaseService.GetRelatedProducts(params.SKU)
+	relatedProducts, err := server.DatabaseService.GetRelatedProducts(params.BOM)
 
 	if err != nil {
 		request := clients.Request{}
-		server.Log.Error("Error while fetching related products for "+params.SKU, err.Error())
-		return server.SendError(c, request.Failure(fiber.StatusInternalServerError, "Unable to retrieve related products for "+params.SKU))
+		server.Log.Error("Error while fetching related products for "+params.BOM, err.Error())
+		return server.SendError(c, request.Failure(fiber.StatusInternalServerError, "Unable to retrieve related products for "+params.BOM))
 	}
 
 	if len(relatedProducts.Products) == 0 {
 		request := clients.Request{}
-		server.Log.Error("No related products found for " + params.SKU)
-		return server.SendError(c, request.Failure(fiber.StatusBadRequest, "No related products found for SKU"))
+		server.Log.Error("No related products found for " + params.BOM)
+		return server.SendError(c, request.Failure(fiber.StatusBadRequest, "No related products found for BOM"))
 	}
 
 	response := map[string]interface{}{
 		"relatedProducts": relatedProducts.Products,
 	}
-	server.Log.Info("Returning success response from related products API for " + params.SKU)
+	server.Log.Info("Returning success response from related products API for " + params.BOM)
 	return server.SendResponse(c, response)
 
 }
