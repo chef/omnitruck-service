@@ -1,21 +1,22 @@
 package awsutils
 
 import (
-	"os"
 	"testing"
 
+	"github.com/chef/omnitruck-service/config"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateAWSSession(t *testing.T) {
-	os.Setenv("ACCESS_KEY", "your_access_key")
-	os.Setenv("SECRET_KEY", "your_secret_key")
+	config := config.AWSConfig{
+		AccessKey: "your_access_key",
+		SecretKey: "your_secret_key",
+		Region:    "your_region",
+	}
 
 	dbc := NewAwsUtils()
-	sess, err := dbc.GetNewSession()
+	sess, err := dbc.GetNewSession(config)
 
-	os.Unsetenv("ACCESS_KEY")
-	os.Unsetenv("SECRET_KEY")
 	assert.NoError(t, err)
 	assert.NotNil(t, sess)
 

@@ -1,14 +1,13 @@
 package license
 
 import (
+	"regexp"
+
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/gofiber/fiber/v2"
-	"regexp"
 )
 
-
 var re = regexp.MustCompile(`platforms|architectures|products|swagger`)
-
 
 type InvalidLicense struct {
 	Code int
@@ -20,6 +19,7 @@ func (e *InvalidLicense) Error() string {
 }
 
 type Config struct {
+	URL           string
 	Required      bool
 	Next          func(c *fiber.Ctx) bool
 	LicenseClient *clients.License
@@ -27,6 +27,7 @@ type Config struct {
 }
 
 var ConfigDefault = Config{
+	URL:           "",
 	Required:      true,
 	Next:          nil,
 	LicenseClient: nil,
@@ -77,7 +78,7 @@ func New(config ...Config) fiber.Handler {
 			}
 
 			resp := clients.Response{}
-			request := cfg.LicenseClient.Validate(id, &resp)
+			request := cfg.LicenseClient.Validate(id, cfg.URL, &resp)
 
 			// Invalid license of some sort returned from license API
 			if request.Code >= 400 {

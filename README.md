@@ -11,12 +11,8 @@ Omnitruck API service that provides license validation and entitlement checking 
 For getting the automate, habitat and related products information set following env variables
 
 ```bash
-ACCESS_KEY="AWS access key"
-SECRET_KEY="AWS secret key"
-REGION="AWS region in which Dynamodb database is present"
-PRODUCT_TABLE_NAME="To get the information regarding Automate and Habitat details"
-RELATED_PRODUCTS_TABLE_NAME="To get information regarding the relatedProducts"
-LICENSE_API="Url to licence service"
+CONFIG="Secret ARN of the config stored in secret manager "
+REGION="AWS region in which secret manager is located"
 ```
 
 Building the service and swagger documentation

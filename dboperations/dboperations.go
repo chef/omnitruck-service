@@ -2,7 +2,6 @@ package dboperations
 
 import (
 	"errors"
-	"os"
 	"sort"
 
 	log "github.com/sirupsen/logrus"
@@ -35,11 +34,11 @@ type DbOperationsService struct {
 	skuTableName     string
 }
 
-func NewDbOperationsService(dbConnection dbconnection.DbConnection) *DbOperationsService {
+func NewDbOperationsService(dbConnection dbconnection.DbConnection, metadataTableName, relatedProductsTableName string) *DbOperationsService {
 	return &DbOperationsService{
 		db:               dbConnection.GetDbConnection(),
-		productTableName: os.Getenv("PRODUCT_TABLE_NAME"),
-		skuTableName:     os.Getenv("RELATED_PRODUCTS_TABLE_NAME"),
+		productTableName: metadataTableName,
+		skuTableName:     relatedProductsTableName,
 	}
 }
 
