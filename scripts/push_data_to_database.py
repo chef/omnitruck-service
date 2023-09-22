@@ -33,7 +33,7 @@ def get_Columns(df):
         columns = df.columns.tolist()
         response_dict = {}
         for i, j in enumerate(columns[1:]):
-            if "Content" in j or "UI" in j:
+            if "Content" in j or "UI" in j or "Unnamed" in j:
                 continue
             if j == "Status":
                 continue
