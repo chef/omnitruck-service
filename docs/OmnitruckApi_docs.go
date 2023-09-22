@@ -636,8 +636,6 @@ var SwaggerInfoOmnitruckApi = &swag.Spec{
 	Description:      "Licensed Omnitruck API",
 	InfoInstanceName: "OmnitruckApi",
 	SwaggerTemplate:  docTemplateOmnitruckApi,
-	LeftDelim:        "{{",
-	RightDelim:       "}}",
 }
 
 func init() {
