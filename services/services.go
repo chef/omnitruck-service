@@ -36,11 +36,11 @@ type ErrorResponse struct {
 } //@name ErrorResponse
 
 type Config struct {
-	Name     string
-	Listen   string
-	Log      *log.Entry
-	Mode     ApiType
-	DbConfig config.DbConfig
+	Name          string
+	Listen        string
+	Log           *log.Entry
+	Mode          ApiType
+	ServiceConfig config.ServiceConfig
 }
 
 type Service interface {
@@ -71,7 +71,7 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	server.Config = c
 	server.Validator = omnitruck.NewValidator()
 	server.Mode = c.Mode
-	server.DatabaseService = dboperations.NewDbOperationsService(dbconnection.NewDbConnectionService(awsutils.NewAwsUtils(), c.DbConfig), c.DbConfig.MetadataDetailsTable, c.DbConfig.RelatedProductsTabe)
+	server.DatabaseService = dboperations.NewDbOperationsService(dbconnection.NewDbConnectionService(awsutils.NewAwsUtils(), c.ServiceConfig), c.ServiceConfig)
 
 	engine := mustache.New("./views", ".html")
 
@@ -160,7 +160,7 @@ func (server *ApiService) StartService() {
 	server.App.Use(recover.New())
 
 	server.App.Use(license.New(license.Config{
-		URL:      server.Config.DbConfig.LicenseServiceUrl,
+		URL:      server.Config.ServiceConfig.LicenseServiceUrl,
 		Required: server.Config.Mode == Commercial,
 		Next: func(c *fiber.Ctx) bool {
 			switch c.Path() {

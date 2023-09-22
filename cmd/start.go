@@ -54,39 +54,39 @@ to quickly create a Cobra application.`,
 		logger := setupLogging()
 
 		var wg sync.WaitGroup
-		var dbConfig config.DbConfig
+		var serviceConfig config.ServiceConfig
 		secret := awsutils.GetSecret(os.Getenv("CONFIG"), os.Getenv("REGION"))
-		err := json.Unmarshal([]byte(secret), &dbConfig)
+		err := json.Unmarshal([]byte(secret), &serviceConfig)
 		if err != nil {
 			logger.Fatal(err)
 		}
 		if cliConfig.Opensource.Enabled {
 			os_api := services.New(services.Config{
-				Name:     cliConfig.Opensource.Name,
-				Listen:   cliConfig.Opensource.Listen,
-				Log:      logger.WithField("pkg", cliConfig.Opensource.Name),
-				Mode:     services.Opensource,
-				DbConfig: dbConfig,
+				Name:          cliConfig.Opensource.Name,
+				Listen:        cliConfig.Opensource.Listen,
+				Log:           logger.WithField("pkg", cliConfig.Opensource.Name),
+				Mode:          services.Opensource,
+				ServiceConfig: serviceConfig,
 			})
 			os_api.Start(&wg)
 		}
 		if cliConfig.Trial.Enabled {
 			trial_api := services.New(services.Config{
-				Name:     cliConfig.Trial.Name,
-				Listen:   cliConfig.Trial.Listen,
-				Log:      logger.WithField("pkg", cliConfig.Trial.Name),
-				Mode:     services.Trial,
-				DbConfig: dbConfig,
+				Name:          cliConfig.Trial.Name,
+				Listen:        cliConfig.Trial.Listen,
+				Log:           logger.WithField("pkg", cliConfig.Trial.Name),
+				Mode:          services.Trial,
+				ServiceConfig: serviceConfig,
 			})
 			trial_api.Start(&wg)
 		}
 		if cliConfig.Commercial.Enabled {
 			commercial_api := services.New(services.Config{
-				Name:     cliConfig.Commercial.Name,
-				Listen:   cliConfig.Commercial.Listen,
-				Log:      logger.WithField("pkg", cliConfig.Commercial.Name),
-				Mode:     services.Commercial,
-				DbConfig: dbConfig,
+				Name:          cliConfig.Commercial.Name,
+				Listen:        cliConfig.Commercial.Listen,
+				Log:           logger.WithField("pkg", cliConfig.Commercial.Name),
+				Mode:          services.Commercial,
+				ServiceConfig: serviceConfig,
 			})
 			commercial_api.Start(&wg)
 		}

@@ -1,8 +1,8 @@
 package config
 
-type DbConfig struct {
+type ServiceConfig struct {
 	LicenseServiceUrl    string    `json:"licenseServiceUrl"`
-	RelatedProductsTabe  string    `json:"relatedProductsTable"`
+	RelatedProductsTable string    `json:"relatedProductsTable"`
 	MetadataDetailsTable string    `json:"metadataDetailsTable"`
 	AWSConfig            AWSConfig `json:"awsConfig"`
 }

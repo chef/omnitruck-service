@@ -16,10 +16,10 @@ type DbConnection interface {
 
 type DbConectionService struct {
 	AwsUtil awsutils.AwsUtils
-	Config  config.DbConfig
+	Config  config.ServiceConfig
 }
 
-func NewDbConnectionService(awsutils awsutils.AwsUtils, config config.DbConfig) *DbConectionService {
+func NewDbConnectionService(awsutils awsutils.AwsUtils, config config.ServiceConfig) *DbConectionService {
 	return &DbConectionService{
 		AwsUtil: awsutils,
 		Config:  config,

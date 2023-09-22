@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/constants"
 	dbconnection "github.com/chef/omnitruck-service/middleware/db"
 	"github.com/chef/omnitruck-service/models"
@@ -34,11 +35,11 @@ type DbOperationsService struct {
 	skuTableName     string
 }
 
-func NewDbOperationsService(dbConnection dbconnection.DbConnection, metadataTableName, relatedProductsTableName string) *DbOperationsService {
+func NewDbOperationsService(dbConnection dbconnection.DbConnection, config config.ServiceConfig) *DbOperationsService {
 	return &DbOperationsService{
 		db:               dbConnection.GetDbConnection(),
-		productTableName: metadataTableName,
-		skuTableName:     relatedProductsTableName,
+		productTableName: config.MetadataDetailsTable,
+		skuTableName:     config.RelatedProductsTable,
 	}
 }
 

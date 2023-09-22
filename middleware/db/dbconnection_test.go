@@ -19,7 +19,7 @@ func TestGetDbConnection(t *testing.T) {
 		GetNewSessionfunc: func(config config.AWSConfig) (*session.Session, error) {
 			return mockSession, nil
 		},
-	}, config.DbConfig{})
+	}, config.ServiceConfig{})
 
 	svc := dbc.GetDbConnection()
 
