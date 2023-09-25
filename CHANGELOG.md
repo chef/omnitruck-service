@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.33 -->
-## [0.0.33](https://github.com/chef/omnitruck-service/tree/0.0.33) (2023-09-18)
+<!-- latest_release 0.0.34 -->
+## [0.0.34](https://github.com/chef/omnitruck-service/tree/0.0.34) (2023-09-25)
 
 #### Merged Pull Requests
-- Fix for bugs:- CHEF-5818 ,CHEF-6201 and CHEF-6433 [#42](https://github.com/chef/omnitruck-service/pull/42) ([vipin230](https://github.com/vipin230))
+- Sonarqube integration [#44](https://github.com/chef/omnitruck-service/pull/44) ([sandhi18](https://github.com/sandhi18))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Sonarqube integration [#44](https://github.com/chef/omnitruck-service/pull/44) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.34 -->
 - Fix for bugs:- CHEF-5818 ,CHEF-6201 and CHEF-6433 [#42](https://github.com/chef/omnitruck-service/pull/42) ([vipin230](https://github.com/vipin230)) <!-- 0.0.33 -->
 - Swagger [#40](https://github.com/chef/omnitruck-service/pull/40) ([vipin230](https://github.com/vipin230)) <!-- 0.0.32 -->
 - logging query params for api [#39](https://github.com/chef/omnitruck-service/pull/39) ([vipin230](https://github.com/vipin230)) <!-- 0.0.31 -->
