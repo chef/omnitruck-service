@@ -28,14 +28,14 @@ def filter_rows(df, product_name, sku_name):
         return f"An error occurred: {str(e)}"
 
 
-def get_Columns(file_path):
+def get_Columns(df):
     try:
-        df = pd.read_excel(file_path, sheet_name=0,
-                           skiprows=1)
         columns = df.columns.tolist()
         response_dict = {}
         for i, j in enumerate(columns[1:]):
-            if "Content" in j:
+            if "UI" in j or "Unnamed" in j:
+                continue
+            if j == "Status":
                 continue
             response = filter_rows(df, columns[0], j)
             response_dict[j] = response
@@ -44,33 +44,34 @@ def get_Columns(file_path):
         return f"An error occurred: {str(e)}"
 
 
-def getRelated(filepath, value):
-    temp = {}
-    data = pd.read_excel(filepath, sheet_name=1)
-    df = data.set_index("Software Actual Name").to_dict()[
-        "Software Display Name"]
-    for i in value:
-        for key, value in df.items():
-            if i == value:
-                temp[key] = value
-    return temp
+def getRelated(df, value):
+    response_dist = {}
+    for software in value:
+        ui_name = df.loc[df['Software'] == software,
+                     'UI - Presentable Software Name'].values[0]
+        software = software.split()
+        if software:
+            software = software[0]
+        software = software.lower()
+        response_dist[software] = ui_name
+    return response_dist
 
 
 def push_to_database(filepath):
     if os.path.exists(filepath) == False:
         return f"The given filepath doesnot exist: {str(filepath)}"
-    data = get_Columns(filepath)
+    df = pd.read_excel(filepath, sheet_name=0,
+                       skiprows=1)
+    data = get_Columns(df)
     session = create_session()
     table_name = os.getenv('RELATED_PRODUCTS_TABLE_NAME')
     try:
         dynamodb = session.resource('dynamodb')
         table = dynamodb.Table(table_name)
-        test = {}
         for key, value in data.items():
-            response = getRelated(filepath, value)
-            test[key] = response
+            response = getRelated(df, value)
             item = {
-                "sku": key,
+                "bom": key,
                 "products": response
             }
             table.put_item(Item=item)

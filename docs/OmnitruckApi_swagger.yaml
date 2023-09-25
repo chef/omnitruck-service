@@ -420,9 +420,9 @@ paths:
       description: The `ACCEPT` HTTP header with a value of `application/json` must
         be provided in the request for a JSON response to be returned
       parameters:
-      - description: sku
+      - description: bom
         in: query
-        name: sku
+        name: bom
         required: true
         type: string
       - description: License ID

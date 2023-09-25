@@ -47,7 +47,7 @@ type RequestParams struct {
 	Architecture    string
 	Eol             string
 	LicenseId       string
-	SKU             string
+	BOM             string
 }
 
 type PackageListUpdater func(platform string, platformVersion string, arch string, meta PackageMetadata) PackageMetadata

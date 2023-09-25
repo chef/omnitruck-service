@@ -422,7 +422,7 @@ func TestGetRelatedProductsSuccess(t *testing.T) {
 				partitionValue: "Chef Inspec",
 			},
 			want: &models.RelatedProducts{
-				Sku: "Chef InSpec",
+				Bom: "Chef InSpec",
 				Products: map[string]string{
 					"inspec": "Chef InSpec",
 				},

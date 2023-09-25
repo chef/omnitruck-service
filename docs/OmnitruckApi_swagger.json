@@ -88,8 +88,8 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "sku",
-                        "name": "sku",
+                        "description": "bom",
+                        "name": "bom",
                         "in": "query",
                         "required": true
                     },
