@@ -1,4 +1,4 @@
 env:
-  VERSION: "0.0.35"
+  VERSION: "0.0.36"
 
 image_registry: artifactory-internal.ps.chef.co/chefes
