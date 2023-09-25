@@ -5,6 +5,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/utils/awsutils"
 	"github.com/stretchr/testify/assert"
 )
@@ -15,10 +16,10 @@ func TestGetDbConnection(t *testing.T) {
 	}))
 
 	dbc := NewDbConnectionService(&awsutils.MockAwsUtils{
-		GetNewSessionfunc: func() (*session.Session, error) {
+		GetNewSessionfunc: func(config config.AWSConfig) (*session.Session, error) {
 			return mockSession, nil
 		},
-	})
+	}, config.ServiceConfig{})
 
 	svc := dbc.GetDbConnection()
 

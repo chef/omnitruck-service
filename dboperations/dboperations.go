@@ -2,7 +2,6 @@ package dboperations
 
 import (
 	"errors"
-	"os"
 	"sort"
 
 	log "github.com/sirupsen/logrus"
@@ -11,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/constants"
 	dbconnection "github.com/chef/omnitruck-service/middleware/db"
 	"github.com/chef/omnitruck-service/models"
@@ -35,11 +35,11 @@ type DbOperationsService struct {
 	skuTableName     string
 }
 
-func NewDbOperationsService(dbConnection dbconnection.DbConnection) *DbOperationsService {
+func NewDbOperationsService(dbConnection dbconnection.DbConnection, config config.ServiceConfig) *DbOperationsService {
 	return &DbOperationsService{
 		db:               dbConnection.GetDbConnection(),
-		productTableName: os.Getenv("PRODUCT_TABLE_NAME"),
-		skuTableName:     os.Getenv("RELATED_PRODUCTS_TABLE_NAME"),
+		productTableName: config.MetadataDetailsTable,
+		skuTableName:     config.RelatedProductsTable,
 	}
 }
 

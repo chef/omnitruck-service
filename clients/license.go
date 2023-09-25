@@ -2,9 +2,8 @@ package clients
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 )
@@ -50,7 +49,7 @@ func (c *License) Get(url string) *Request {
 		return request.Failure(request.Code, "Error fetching omnitruck data")
 	}
 
-	request.Body, err = ioutil.ReadAll(resp.Body)
+	request.Body, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return request.Failure(900, "Error reading response body from omnitruck api")
 	}
@@ -64,9 +63,9 @@ func (c *License) Get(url string) *Request {
 	return request.Success()
 }
 
-func (c *License) Validate(id string, data *Response) *Request {
-	licenseApi := os.Getenv("LICENSE_API")
-	url := fmt.Sprintf("%s/License/v1/validate?licenseId=%s", licenseApi, id)
+func (c *License) Validate(id, licenseServiceUrl string, data *Response) *Request {
+	licenseApi := licenseServiceUrl
+	url := fmt.Sprintf("%s/v1/validate?licenseId=%s", licenseApi, id)
 	return c.Get(url).ParseData(&data)
 }
 

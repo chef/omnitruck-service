@@ -2,7 +2,7 @@ package omnitruck
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -125,7 +125,7 @@ func (ot *Omnitruck) Get(url string) *clients.Request {
 		return request.Failure(request.Code, "Error fetching omnitruck data")
 	}
 
-	request.Body, err = ioutil.ReadAll(resp.Body)
+	request.Body, err = io.ReadAll(resp.Body)
 	if err != nil {
 		ot.logRequestError("Error reading response body from omnitruck api", &request, err)
 		return request.Failure(900, "Error reading response body from omnitruck api")

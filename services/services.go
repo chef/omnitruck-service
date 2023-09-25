@@ -8,6 +8,7 @@ import (
 
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
+	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/dboperations"
 	dbconnection "github.com/chef/omnitruck-service/middleware/db"
 	"github.com/chef/omnitruck-service/middleware/license"
@@ -35,10 +36,11 @@ type ErrorResponse struct {
 } //@name ErrorResponse
 
 type Config struct {
-	Name   string
-	Listen string
-	Log    *log.Entry
-	Mode   ApiType
+	Name          string
+	Listen        string
+	Log           *log.Entry
+	Mode          ApiType
+	ServiceConfig config.ServiceConfig
 }
 
 type Service interface {
@@ -68,9 +70,8 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	server.Log = c.Log
 	server.Config = c
 	server.Validator = omnitruck.NewValidator()
-	server.DatabaseService = dboperations.NewDbOperationsService(dbconnection.NewDbConnectionService(awsutils.NewAwsUtils()))
 	server.Mode = c.Mode
-	server.DatabaseService = dboperations.NewDbOperationsService(dbconnection.NewDbConnectionService(awsutils.NewAwsUtils()))
+	server.DatabaseService = dboperations.NewDbOperationsService(dbconnection.NewDbConnectionService(awsutils.NewAwsUtils(), c.ServiceConfig), c.ServiceConfig)
 
 	engine := mustache.New("./views", ".html")
 
@@ -159,6 +160,7 @@ func (server *ApiService) StartService() {
 	server.App.Use(recover.New())
 
 	server.App.Use(license.New(license.Config{
+		URL:      server.Config.ServiceConfig.LicenseServiceUrl,
 		Required: server.Config.Mode == Commercial,
 		Next: func(c *fiber.Ctx) bool {
 			switch c.Path() {
