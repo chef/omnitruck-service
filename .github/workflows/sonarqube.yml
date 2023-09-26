@@ -20,6 +20,8 @@ jobs:
       with:
         # Disabling shallow clone is recommended for improving relevancy of reporting
         fetch-depth: 0
+    - name: Test and coverage
+      run: tools/go_coverage_report.sh
     - name: SonarQube Scan
       uses: sonarsource/sonarqube-scan-action@master
       env:
