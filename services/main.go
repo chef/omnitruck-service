@@ -10,6 +10,7 @@ import (
 	"github.com/chef/omnitruck-service/constants"
 	_ "github.com/chef/omnitruck-service/docs"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/gofiber/swagger"
 	"github.com/gomarkdown/markdown"
 )
@@ -33,17 +34,17 @@ func (server *ApiService) buildRouter() {
 		CacheDuration: 10 * time.Second,
 		MaxAge:        3600,
 	})
-	server.App.Get("/status", server.HealthCheck)
-	server.App.Get("/products", server.productsHandler)
-	server.App.Get("/platforms", server.platformsHandler)
-	server.App.Get("/architectures", server.architecturesHandler)
-	server.App.Get("/:channel/:product/versions/latest", server.latestVersionHandler)
-	server.App.Get("/:channel/:product/versions/all", server.productVersionsHandler)
-	server.App.Get("/:channel/:product/packages", server.productPackagesHandler)
-	server.App.Get("/:channel/:product/metadata", server.productMetadataHandler)
-	server.App.Get("/:channel/:product/download", server.productDownloadHandler)
-	server.App.Get("/relatedProducts", server.relatedProductsHandler)
-	server.App.Get("/:channel/:product/fileName", server.fileNameHandler)
+	server.App.Get("/status", requestid.New(), server.HealthCheck)
+	server.App.Get("/products", requestid.New(), server.productsHandler)
+	server.App.Get("/platforms", requestid.New(), server.platformsHandler)
+	server.App.Get("/architectures", requestid.New(), server.architecturesHandler)
+	server.App.Get("/:channel/:product/versions/latest", requestid.New(), server.latestVersionHandler)
+	server.App.Get("/:channel/:product/versions/all", requestid.New(), server.productVersionsHandler)
+	server.App.Get("/:channel/:product/packages", requestid.New(), server.productPackagesHandler)
+	server.App.Get("/:channel/:product/metadata", requestid.New(), server.productMetadataHandler)
+	server.App.Get("/:channel/:product/download", requestid.New(), server.productDownloadHandler)
+	server.App.Get("/relatedProducts", requestid.New(), server.relatedProductsHandler)
+	server.App.Get("/:channel/:product/fileName", requestid.New(), server.fileNameHandler)
 
 }
 
