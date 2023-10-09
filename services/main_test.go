@@ -6,12 +6,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
 	"time"
 
-	_ "github.com/chef/omnitruck-service/docs"
-
 	"github.com/chef/omnitruck-service/dboperations"
+	_ "github.com/chef/omnitruck-service/docs"
 	"github.com/chef/omnitruck-service/models"
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
@@ -37,18 +35,26 @@ func TestRelatedProductsHandler(t *testing.T) {
 			err:              nil,
 		},
 		{
-			name:             "Invalid SKU",
-			requestPath:      "/relatedProducts?bom=invalid-bom",
-			expectedStatus:   http.StatusInternalServerError,
-			expectedResponse: `{"code":500, "message":"Unable to retrieve related products for invalid-bom", "status_text":"Internal Server Error"}`,
+			name:             "Empty SKU",
+			requestPath:      "/relatedProducts?bom=",
+			expectedStatus:   http.StatusBadRequest,
+			expectedResponse: `{"code":400, "message":"BOM (bom) params cannot be empty", "status_text":"Bad Request"}`,
 			relatedProducts:  models.RelatedProducts{},
 			err:              errors.New("No Related products found for SKU "),
+		},
+		{
+			name:             "Db error while fetching related products",
+			requestPath:      "/relatedProducts?bom=Chef%20123",
+			expectedStatus:   http.StatusInternalServerError,
+			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product.", "status_text":"Internal Server Error"}`,
+			relatedProducts:  models.RelatedProducts{},
+			err:              errors.New("Db connection error"),
 		},
 		{
 			name:             "No related products",
 			requestPath:      "/relatedProducts?bom=Chef%20123",
 			expectedStatus:   http.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"No related products found for BOM", "status_text":"Bad Request"}`,
+			expectedResponse: `{"code":400, "message":"Product information not found. Please check the input parameters.", "status_text":"Bad Request"}`,
 			relatedProducts:  models.RelatedProducts{},
 			err:              nil,
 		},
@@ -83,7 +89,152 @@ func TestRelatedProductsHandler(t *testing.T) {
 	}
 }
 
-func TestApiService_productMetadataHandler(t *testing.T) {
+func TestLatestVersionsHandler(t *testing.T) {
+	tests := []struct {
+		name             string
+		requestPath      string
+		serverMode       ApiType
+		expectedStatus   int
+		expectedResponse string
+		version          string
+		version_err      error
+		versions         []string
+		versions_err     error
+	}{
+		{
+			name:             "success for opensource",
+			requestPath:      "/stable/habitat/versions/latest",
+			serverMode:       Opensource,
+			expectedStatus:   fiber.StatusOK,
+			expectedResponse: `"0.9.3"`,
+			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0", "1.0.0"},
+			versions_err:     nil,
+		},
+		{
+			name:             "success for trail",
+			requestPath:      "/stable/habitat/versions/latest",
+			serverMode:       Trial,
+			expectedStatus:   fiber.StatusOK,
+			expectedResponse: `"1.0.0"`,
+			version:          "1.0.0",
+			version_err:      nil,
+			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0", "1.0.0"},
+			versions_err:     nil,
+		},
+		{
+			name:             "failure validation",
+			requestPath:      "/stale/automate/versions/latest",
+			serverMode:       Trial,
+			expectedStatus:   fiber.StatusBadRequest,
+			expectedResponse: `{"code":400, "message":"Channel can only be stable or current", "status_text":"Bad Request"}`,
+			version:          "latest",
+			version_err:      nil,
+			versions:         []string{"latest"},
+			versions_err:     nil,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			app := fiber.New()
+			mockDbService := new(dboperations.MockIDbOperations)
+			mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
+				return test.versions, test.versions_err
+			}
+			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
+				return test.version, test.version_err
+			}
+
+			server := &ApiService{
+				App:             app,
+				DatabaseService: mockDbService,
+				Log:             logrus.NewEntry(logrus.New()),
+				Mode:            test.serverMode,
+			}
+			server.buildRouter()
+			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+
+			assert.Equal(t, test.expectedStatus, resp.StatusCode)
+
+			if test.expectedResponse != "" {
+				bodyBytes, err := io.ReadAll(resp.Body)
+				assert.NoError(t, err)
+				assert.JSONEq(t, test.expectedResponse, string(bodyBytes))
+			}
+		})
+	}
+}
+
+func TestProductVersionsHandler(t *testing.T) {
+	tests := []struct {
+		name             string
+		requestPath      string
+		serverMode       ApiType
+		expectedStatus   int
+		expectedResponse string
+		versions         []string
+		versions_err     error
+	}{
+		{
+			name:             "success for opensource",
+			requestPath:      "/stable/habitat/versions/all",
+			serverMode:       Opensource,
+			expectedStatus:   fiber.StatusOK,
+			expectedResponse: `["0.3.2", "0.7.11", "0.9.0", "0.9.3"]`,
+			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0", "1.0.0"},
+			versions_err:     nil,
+		},
+		{
+			name:             "success for trail",
+			requestPath:      "/stable/habitat/versions/all",
+			serverMode:       Trial,
+			expectedStatus:   fiber.StatusOK,
+			expectedResponse: `["1.0.0"]`,
+			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0", "1.0.0"},
+			versions_err:     nil,
+		},
+		{
+			name:             "failure validation",
+			requestPath:      "/stale/automate/versions/all",
+			serverMode:       Trial,
+			expectedStatus:   fiber.StatusBadRequest,
+			expectedResponse: `{"code":400, "message":"Channel can only be stable or current", "status_text":"Bad Request"}`,
+			versions:         []string{"latest"},
+			versions_err:     nil,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			app := fiber.New()
+			mockDbService := new(dboperations.MockIDbOperations)
+			mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
+				return test.versions, test.versions_err
+			}
+
+			server := &ApiService{
+				App:             app,
+				DatabaseService: mockDbService,
+				Log:             logrus.NewEntry(logrus.New()),
+				Mode:            test.serverMode,
+			}
+			server.buildRouter()
+			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+
+			assert.Equal(t, test.expectedStatus, resp.StatusCode)
+
+			if test.expectedResponse != "" {
+				bodyBytes, err := io.ReadAll(resp.Body)
+				assert.NoError(t, err)
+				assert.JSONEq(t, test.expectedResponse, string(bodyBytes))
+			}
+		})
+	}
+}
+
+func TestProductMetadataHandler(t *testing.T) {
 	tests := []struct {
 		name             string
 		requestPath      string
@@ -118,6 +269,19 @@ func TestApiService_productMetadataHandler(t *testing.T) {
 			versions_err: nil,
 		},
 		{
+			name:             "platform parameter missing",
+			serverMode:       Trial,
+			requestPath:      "/stable/automate/metadata?&m=amd64&eol=false&v=latest",
+			expectedStatus:   fiber.StatusBadRequest,
+			expectedResponse: `{"code":400, "message":"Platfrom (p) params cannot be empty", "status_text":"Bad Request"}`,
+			metadata:         models.MetaData{},
+			err:              nil,
+			version:          "latest",
+			version_err:      nil,
+			versions:         []string{},
+			versions_err:     nil,
+		},
+		{
 			name:             "automate parameter incorrect",
 			serverMode:       Trial,
 			requestPath:      "/stable/automate/metadata?p=linux&m=x86&eol=false",
@@ -125,6 +289,19 @@ func TestApiService_productMetadataHandler(t *testing.T) {
 			expectedResponse: `{"code":400, "message":"Product information not found. Please check the input parameters.", "status_text":"Bad Request"}`,
 			metadata:         models.MetaData{},
 			err:              nil,
+			versions:         []string{},
+			versions_err:     nil,
+		},
+		{
+			name:             "automate not latest version for trail server",
+			serverMode:       Trial,
+			requestPath:      "/stable/automate/metadata?p=linux&m=x86_64&v=1.2",
+			expectedStatus:   fiber.StatusBadRequest,
+			expectedResponse: `{"code":400, "message":"Version is not latest.", "status_text":"Bad Request"}`,
+			metadata:         models.MetaData{},
+			err:              errors.New("ResourceNotFoundException: Requested resource not found"),
+			version:          "latest",
+			version_err:      nil,
 			versions:         []string{},
 			versions_err:     nil,
 		},
@@ -209,7 +386,7 @@ func TestApiService_productMetadataHandler(t *testing.T) {
 	}
 }
 
-func TestApiService_productPackagesHandler(t *testing.T) {
+func TestProductPackagesHandler(t *testing.T) {
 	tests := []struct {
 		name             string
 		serverMode       ApiType
@@ -370,12 +547,14 @@ func TestFileNameHandler(t *testing.T) {
 
 	tests := []struct {
 		name             string
+		serverMode       ApiType
 		requestPath      string
 		expectedStatus   int
 		expectedResponse string
 		metadata         models.MetaData
 		version          string
-		err              error
+		metadata_err     error
+		version_err      error
 	}{
 		{
 			name:             "AUTOMATE_SUCCESS",
@@ -383,40 +562,60 @@ func TestFileNameHandler(t *testing.T) {
 			expectedStatus:   http.StatusOK,
 			expectedResponse: `{"fileName":"automate_4.7.52-1_amd64.deb"}`,
 			metadata:         models.MetaData{FileName: "automate_4.7.52-1_amd64.deb"},
-			err:              nil,
+			metadata_err:     nil,
+			version_err:      nil,
 		},
 		{
 			name:             "HABITAT_SUCCESS",
+			serverMode:       Opensource,
 			requestPath:      "/current/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=latest",
 			expectedStatus:   http.StatusOK,
 			expectedResponse: `{"fileName":"hab-x86_64-linux.tar.gz"}`,
 			metadata:         models.MetaData{FileName: "hab-x86_64-linux.tar.gz"},
-			err:              nil,
+			metadata_err:     nil,
+			version_err:      nil,
 			version:          "1.6.652",
 		},
 		{
 			name:             "AUTOMATE_FAIL",
 			requestPath:      "/current/automate/fileName?p=linux&pv=16.04&m=x86_64&v=latest",
 			expectedStatus:   http.StatusInternalServerError,
-			expectedResponse: `{"code":500, "message":"Unable to get latest version of automate", "status_text":"Internal Server Error"}`,
+			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product.", "status_text":"Internal Server Error"}`,
 			metadata:         models.MetaData{},
-			err:              errors.New("Unable to get latest version of automate"),
+			version_err:      errors.New("Unable to get latest version of automate"),
 		},
 		{
-			name:             "HABITAT_FAIL",
-			requestPath:      "/current/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=latest",
-			expectedStatus:   http.StatusInternalServerError,
-			expectedResponse: `{"code":500, "message":"Unable to get latest version of habitat", "status_text":"Internal Server Error"}`,
-			metadata:         models.MetaData{},
-			err:              errors.New("Unable to get latest version of habitat"),
-		},
-		{
-			name:             "HABITAT_FAIL_1",
+			name:             "failure db connection while fetching latest version",
+			serverMode:       Trial,
 			requestPath:      "/current/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=1.6.652",
 			expectedStatus:   http.StatusInternalServerError,
-			expectedResponse: `{"code":500, "message":"Error while getting the requested information.", "status_text":"Internal Server Error"}`,
+			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product.", "status_text":"Internal Server Error"}`,
 			metadata:         models.MetaData{},
-			err:              errors.New("Error while fetching file name"),
+			metadata_err:     nil,
+			version:          "",
+			version_err:      errors.New("Unable to get latest version of habitat"),
+		},
+		{
+			name:             "failure channel is not stable/current",
+			serverMode:       Trial,
+			requestPath:      "/curret/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=1.6.652",
+			expectedStatus:   http.StatusBadRequest,
+			expectedResponse: `{"code":400, "message":"Channel can only be stable or current", "status_text":"Bad Request"}`,
+			metadata:         models.MetaData{},
+			metadata_err:     errors.New("Error while fetching file name"),
+			version_err:      nil,
+			version:          "1.6.652",
+		},
+		{
+			name:             "failure db connection while fetching filename",
+			serverMode:       Trial,
+			requestPath:      "/current/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=1.6.652",
+			expectedStatus:   http.StatusInternalServerError,
+			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product.", "status_text":"Internal Server Error"}`,
+			metadata:         models.MetaData{},
+			metadata_err:     errors.New("Error while fetching file name"),
+			version_err:      nil,
+			version:          "1.6.652",
 		},
 	}
 
@@ -430,16 +629,17 @@ func TestFileNameHandler(t *testing.T) {
 				mockDbService := new(dboperations.MockIDbOperations)
 
 				mockDbService.GetMetaDatafunc = func(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (*models.MetaData, error) {
-					return &test.metadata, test.err
+					return &test.metadata, test.metadata_err
 				}
 				mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
-					return test.version, test.err
+					return test.version, test.version_err
 				}
 
 				server := &ApiService{
 					App:             app,
 					DatabaseService: mockDbService,
 					Log:             logrus.NewEntry(logrus.New()),
+					Mode:            test.serverMode,
 				}
 				server.buildRouter()
 				req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)

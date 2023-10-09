@@ -1,7 +1,6 @@
 package dboperations
 
 import (
-	"errors"
 	"sort"
 
 	log "github.com/sirupsen/logrus"
@@ -116,6 +115,7 @@ func (dbo *DbOperationsService) GetVersionLatest(partitionValue string) (string,
 }
 
 func (dbo *DbOperationsService) GetRelatedProducts(partitionValue string) (*models.RelatedProducts, error) {
+	var sku models.RelatedProducts
 	res, err := dbo.fetchDataValues(partitionValue, dbo.skuTableName, constants.SKU_PARTITION_KEY)
 	if err != nil {
 		log.Errorf("error in fetching the database values: %v", err)
@@ -124,10 +124,12 @@ func (dbo *DbOperationsService) GetRelatedProducts(partitionValue string) (*mode
 
 	length := len(res.Items)
 	if length == 0 {
-		return nil, errors.New("cannot find the specific sku inside the database")
+		//TODO fix all db operation logging
+		//need to add error msg logging
+		//errors.New("cannot find the specific sku inside the database")
+		return &models.RelatedProducts{}, nil
 	}
 
-	var sku models.RelatedProducts
 	skuErr := dynamodbattribute.Unmarshal(res.Items[0]["bom"], &sku.Bom)
 	if skuErr != nil {
 		log.Errorf("Error in unmarshalling the sku name: %v", skuErr)

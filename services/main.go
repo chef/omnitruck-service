@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"os"
 	"strings"
 	"time"
@@ -169,8 +170,9 @@ func (server *ApiService) fetchLatestVersion(params *omnitruck.RequestParams, c 
 		request := clients.Request{}
 		data, err := server.DynamoServices(server.DatabaseService, c).VersionLatest(params)
 		if err != nil {
-			server.Log.Error("Error while fetching the latest version for the "+params.Product, " Error:- ", err.Error())
-			request.Failure(fiber.StatusInternalServerError, "Error while fetching the latest version for the product.")
+			code, msg := getErrorCodeAndMsg(err)
+			server.logCtx(c).WithError(err).Error("Error while fetching the latest version for the " + params.Product)
+			request.Failure(code, msg)
 			return data, &request
 		} else {
 			request.Success()
@@ -191,8 +193,9 @@ func (server *ApiService) fetchLatestOSVersion(params *omnitruck.RequestParams, 
 		request := clients.Request{}
 		latestVersion, err := server.DynamoServices(server.DatabaseService, c).FetchLatestOsVersion(params)
 		if err != nil {
-			server.Log.Error("Error while fetching the latest version for the "+params.Product, " Error:- ", err.Error())
-			request.Failure(fiber.StatusInternalServerError, "Error while fetching the latest version for the product.")
+			code, msg := getErrorCodeAndMsg(err)
+			server.logCtx(c).WithError(err).Error("Error while fetching the latest opensource version for the " + params.Product)
+			request.Failure(code, msg)
 			return omnitruck.ProductVersion(latestVersion), &request
 		} else {
 			request.Success()
@@ -205,6 +208,9 @@ func (server *ApiService) fetchLatestOSVersion(params *omnitruck.RequestParams, 
 		data = omnitruck.FilterList(data, func(v omnitruck.ProductVersion) bool {
 			return !omnitruck.OsProductVersion(params.Product, v)
 		})
+	}
+	if len(data) == 0 {
+		data = append(data, "")
 	}
 
 	// Return the last opensource version
@@ -232,7 +238,8 @@ func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
 		data, err := server.DynamoServices(server.DatabaseService, c).VersionAll(params)
 		if err != nil {
-			return server.SendErrorResponse(c, fiber.StatusInternalServerError, "Error while fetching product versions")
+			code, msg := getErrorCodeAndMsg(err)
+			return server.SendErrorResponse(c, code, msg)
 		}
 
 		if params.Product == "habitat" && server.Mode == Opensource {
@@ -247,7 +254,6 @@ func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 		}
 
 		return server.SendResponse(c, &data)
-
 	}
 
 	var data []omnitruck.ProductVersion
@@ -294,6 +300,11 @@ func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
 	var data omnitruck.PackageList
+	err, ok := server.ValidateRequest(params, c)
+	if !ok {
+		return err
+	}
+
 	if server.Mode == Trial {
 		err := server.isLatestForTrail(params, c)
 		if !err.Ok {
@@ -302,23 +313,17 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 	} else if server.Mode == Opensource && isLatest(params.Version) {
 		v, err := server.fetchLatestOSVersion(params, c)
 		if !err.Ok {
-			err.Failure(fiber.StatusInternalServerError, "Error while fetching the information for the product.")
+			server.logCtx(c).Error("Error while fetching latest opensource version for the product ", params.Product, " error :- ", err.Message)
 			return server.SendError(c, err)
 		}
 		params.Version = string(v)
 	}
 
-	err, ok := server.ValidateRequest(params, c)
-	if !ok {
-		return err
-	}
-
 	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
 		data, err = server.DynamoServices(server.DatabaseService, c).ProductPackages(params)
 		if err != nil {
-			return server.SendErrorResponse(c, fiber.StatusInternalServerError, "Error while fetching the information for the product.")
-		} else if len(data) == 0 {
-			return server.SendErrorResponse(c, fiber.StatusBadRequest, "Product information not found. Please check the input parameters.")
+			code, msg := getErrorCodeAndMsg(err)
+			return server.SendErrorResponse(c, code, msg)
 		}
 
 		data.UpdatePackages(func(platform string, pv string, arch string, m omnitruck.PackageMetadata) omnitruck.PackageMetadata {
@@ -351,7 +356,6 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 	} else {
 		return server.SendError(c, request)
 	}
-
 }
 
 // @description Get details for a particular package.
@@ -371,6 +375,12 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
 	var data omnitruck.PackageMetadata
+	var request *clients.Request
+	err, ok := server.ValidateRequest(params, c)
+	if !ok {
+		return err
+	}
+
 	if server.Mode == Trial {
 		err := server.isLatestForTrail(params, c)
 		if !err.Ok {
@@ -379,31 +389,25 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 	} else if server.Mode == Opensource && isLatest(params.Version) {
 		v, err := server.fetchLatestOSVersion(params, c)
 		if !err.Ok {
-			err.Failure(fiber.StatusInternalServerError, "Error while fetching the information for the product.")
+			server.logCtx(c).Error("Error while fetching latest opensource version for the product ", params.Product, " error :- ", err.Message)
 			return server.SendError(c, err)
 		}
 		params.Version = string(v)
 	}
 
-	err, ok := server.ValidateRequest(params, c)
-	if !ok {
-		return err
-	}
-
 	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
-		data, err := server.DynamoServices(server.DatabaseService, c).ProductMetadata(params)
-
+		request = &clients.Request{}
+		data, err = server.DynamoServices(server.DatabaseService, c).ProductMetadata(params)
 		if err != nil {
-			return server.SendErrorResponse(c, fiber.StatusInternalServerError, "Error while fetching the information for the product.")
-		} else if data == (omnitruck.PackageMetadata{}) {
-			return server.SendErrorResponse(c, fiber.StatusBadRequest, "Product information not found. Please check the input parameters.")
+			code, msg := getErrorCodeAndMsg(err)
+			request.Failure(code, msg)
+		} else {
+			request.Success()
 		}
-		// Remap the package url to our download URL
-		url := getDownloadUrl(params, c)
-		data.Url = url
-		return server.SendResponse(c, &data)
+
+	} else {
+		request = server.Omnitruck(c).ProductMetadata(params).ParseData(&data)
 	}
-	request := server.Omnitruck(c).ProductMetadata(params).ParseData(&data)
 
 	// Remap the package url to our download URL
 	url := getDownloadUrl(params, c)
@@ -433,6 +437,11 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
 	flag := verifyRequestType(params)
+	err, ok := server.ValidateRequest(params, c)
+	if !ok {
+		return err
+	}
+
 	if server.Mode == Trial {
 		err := server.isLatestForTrail(params, c)
 		if !err.Ok {
@@ -441,23 +450,16 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 	} else if server.Mode == Opensource && isLatest(params.Version) {
 		v, err := server.fetchLatestOSVersion(params, c)
 		if !err.Ok {
-			err.Failure(fiber.StatusInternalServerError, "Error while fetching the information for the product.")
 			return server.SendError(c, err)
 		}
 		params.Version = string(v)
 	}
 
-	err, ok := server.ValidateRequest(params, c)
-	if !ok {
-		return err
-	}
-
 	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
 		url, err := server.DynamoServices(server.DatabaseService, c).ProductDownload(params)
 		if err != nil {
-			return server.SendErrorResponse(c, fiber.StatusInternalServerError, "Error while fetching the information for the product.")
-		} else if url == "" {
-			return server.SendErrorResponse(c, fiber.StatusBadRequest, "Product information not found. Please check the input parameters.")
+			code, msg := getErrorCodeAndMsg(err)
+			return server.SendErrorResponse(c, code, msg)
 		}
 		server.logCtx(c).Infof("Redirecting user to %s", url)
 		return c.Redirect(url, 302)
@@ -487,34 +489,27 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 func (server *ApiService) relatedProductsHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
 
-	server.Log.Info("Validating related products API for " + params.BOM)
+	server.logCtx(c).Info("Validating related products API for " + params.BOM)
 
 	err, ok := server.ValidateRequest(params, c)
 	if !ok {
-		server.Log.Error("Validation of related products API for "+params.BOM+"failed", err.Error())
+		server.logCtx(c).Error("Validation of related products API for "+params.BOM+"failed", err.Error())
 		return err
 	}
 
-	relatedProducts, err := server.DatabaseService.GetRelatedProducts(params.BOM)
+	relatedProducts, err := server.DynamoServices(server.DatabaseService, c).GetRelatedProducts(params)
 
 	if err != nil {
-		request := clients.Request{}
-		server.Log.Error("Error while fetching related products for "+params.BOM, err.Error())
-		return server.SendError(c, request.Failure(fiber.StatusInternalServerError, "Unable to retrieve related products for "+params.BOM))
-	}
-
-	if len(relatedProducts.Products) == 0 {
-		request := clients.Request{}
-		server.Log.Error("No related products found for " + params.BOM)
-		return server.SendError(c, request.Failure(fiber.StatusBadRequest, "No related products found for BOM"))
+		code, msg := getErrorCodeAndMsg(err)
+		server.logCtx(c).Error("Error while fetching related products for "+params.BOM, err.Error())
+		return server.SendErrorResponse(c, code, msg)
 	}
 
 	response := map[string]interface{}{
 		"relatedProducts": relatedProducts.Products,
 	}
-	server.Log.Info("Returning success response from related products API for " + params.BOM)
+	server.logCtx(c).Info("Returning success response from related products API for " + params.BOM)
 	return server.SendResponse(c, response)
-
 }
 
 // @description The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned
@@ -531,48 +526,32 @@ func (server *ApiService) relatedProductsHandler(c *fiber.Ctx) error {
 // @Router      /{channel}/{product}/fileName [get]
 func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
-	server.Log.Info("Validating download file name for " + params.Product + "in channel " + params.Channel)
+	err, ok := server.ValidateRequest(params, c)
+	if !ok {
+		server.logCtx(c).Error("Validation of file name API for " + params.Product + " failed")
+		return err
+	}
+	server.logCtx(c).Info("Validating download file name for " + params.Product + "in channel " + params.Channel)
 	if server.Mode == Trial {
 		err := server.isLatestForTrail(params, c)
 		if !err.Ok {
 			return server.SendError(c, err)
 		}
 	}
-	err, ok := server.ValidateRequest(params, c)
-	if !ok {
-		server.Log.Error("Validation of file name API for " + params.Product + " failed")
-		return err
-	}
 
 	//assuming that the metadata table will always have only the latest version record for automate, querying db without sortkey
 	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
-		version := params.Version
-		if params.Version == constants.LATEST || params.Version == "" {
-			latestVersion, err := server.DatabaseService.GetVersionLatest(params.Product)
-			if err != nil {
-				request := clients.Request{}
-				server.Log.Error("Error while getting latest version for fetching fileName for "+params.Product, err.Error())
-				return server.SendError(c, request.Failure(500, "Unable to get latest version of "+params.Product))
-			} else {
-				version = latestVersion
-			}
-		}
-		metadata, err := server.DatabaseService.GetMetaData(params.Product, version, params.Platform, params.PlatformVersion, params.Architecture)
-
+		fileName, err := server.DynamoServices(server.DatabaseService, c).GetFilename(params)
 		if err != nil {
-			request := clients.Request{}
-			server.Log.Error("Error while fetching fileName for "+params.Product, err.Error())
-			return server.SendError(c, request.Failure(500, "Error while fetching file name"))
+			code, msg := getErrorCodeAndMsg(err)
+			server.logCtx(c).Error("Error while fetching fileName for "+params.Product, err.Error())
+			return server.SendErrorResponse(c, code, msg)
 		}
-		if metadata == nil || metadata.FileName == "" {
-			request := clients.Request{}
-			server.Log.Error("Error while fetching fileName for " + params.Product + ":- unable to find the product information for given parameters")
-			return server.SendError(c, request.Failure(400, "Unable to find the product information for given parameters"))
-		}
+
 		response := map[string]interface{}{
-			"fileName": metadata.FileName,
+			"fileName": fileName,
 		}
-		server.Log.Info("Returning success response from fileName API for " + params.Product)
+		server.logCtx(c).Info("Returning success response from fileName API for " + params.Product)
 		return server.SendResponse(c, response)
 
 	} else {
@@ -585,7 +564,7 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 			response := map[string]interface{}{
 				"fileName": fileName,
 			}
-			server.Log.Info("Returning success response from fileName API for " + params.Product)
+			server.logCtx(c).Info("Returning success response from fileName API for " + params.Product)
 			return server.SendResponse(c, response)
 		} else {
 			return server.SendError(c, request)
@@ -600,15 +579,25 @@ func getFileNameFromURL(url string) string {
 }
 
 func (server *ApiService) isLatestForTrail(params *omnitruck.RequestParams, c *fiber.Ctx) *clients.Request {
-	latesVersion, request := server.fetchLatestVersion(params, c)
-	if params.Version == "latest" || params.Version == "" || params.Version == string(latesVersion) {
+	latestVersion, request := server.fetchLatestVersion(params, c)
+	if params.Version == "latest" || params.Version == "" || params.Version == string(latestVersion) {
 		request.Success()
 		return request
 	}
 	if !request.Ok {
-		request.Failure(fiber.StatusInternalServerError, "Error while getting the requested information.")
 		return request
 	}
 	request.Failure(fiber.StatusBadRequest, "Version is not latest.")
 	return request
+}
+
+func getErrorCodeAndMsg(err error) (code int, msg string) {
+	var fiberErr *fiber.Error
+
+	if errors.As(err, &fiberErr) {
+		code = fiberErr.Code
+		msg = fiberErr.Message
+		return code, msg
+	}
+	return fiber.StatusInternalServerError, ""
 }
