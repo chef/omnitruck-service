@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.37 -->
-## [0.0.37](https://github.com/chef/omnitruck-service/tree/0.0.37) (2023-09-26)
+<!-- latest_release 0.0.38 -->
+## [0.0.38](https://github.com/chef/omnitruck-service/tree/0.0.38) (2023-10-11)
 
 #### Merged Pull Requests
-- Corrections for code coverage [#45](https://github.com/chef/omnitruck-service/pull/45) ([sandhi18](https://github.com/sandhi18))
+- changes to log request-id [#46](https://github.com/chef/omnitruck-service/pull/46) ([vipin230](https://github.com/vipin230))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- changes to log request-id [#46](https://github.com/chef/omnitruck-service/pull/46) ([vipin230](https://github.com/vipin230)) <!-- 0.0.38 -->
 - Corrections for code coverage [#45](https://github.com/chef/omnitruck-service/pull/45) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.37 -->
 - changes for moving db config to secret manager [#43](https://github.com/chef/omnitruck-service/pull/43) ([vipin230](https://github.com/vipin230)) <!-- 0.0.36 -->
 - Changes for the Data Load Script [#41](https://github.com/chef/omnitruck-service/pull/41) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.35 -->
