@@ -137,14 +137,15 @@ func TestProductDownload(t *testing.T) {
 		p *RequestParams
 	}
 	tests := []struct {
-		name        string
-		metadata    *models.MetaData
-		args        args
-		want        string
-		wantErr     bool
-		err         error
-		version     string
-		version_err error
+		name         string
+		metadata     *models.MetaData
+		args         args
+		want         string
+		wantErr      bool
+		errMsg       string
+		metadata_err error
+		version      string
+		version_err  error
 	}{
 		{
 			name: "success",
@@ -168,11 +169,34 @@ func TestProductDownload(t *testing.T) {
 					LicenseId:       "",
 				},
 			},
-			want:        "https://packages.chef.io/files/current/latest/chef-automate-cli/automate-cli.zip",
-			wantErr:     false,
-			err:         nil,
-			version:     "latest",
-			version_err: nil,
+			want:         "https://packages.chef.io/files/current/latest/chef-automate-cli/automate-cli.zip",
+			wantErr:      false,
+			errMsg:       "",
+			metadata_err: nil,
+			version:      "latest",
+			version_err:  nil,
+		},
+		{
+			name:     "failure validation",
+			metadata: &models.MetaData{},
+			args: args{
+				p: &RequestParams{
+					Channel:         "stble",
+					Product:         "automate",
+					Version:         "1.2",
+					Platform:        "linux",
+					PlatformVersion: "",
+					Architecture:    "x86_64",
+					Eol:             "false",
+					LicenseId:       "",
+				},
+			},
+			want:         "",
+			wantErr:      true,
+			errMsg:       "Channel can only be stable or current",
+			metadata_err: nil,
+			version:      "latest",
+			version_err:  nil,
 		},
 		{
 			name:     "failure empty response",
@@ -189,11 +213,12 @@ func TestProductDownload(t *testing.T) {
 					LicenseId:       "",
 				},
 			},
-			want:        "",
-			wantErr:     false,
-			err:         nil,
-			version:     "latest",
-			version_err: nil,
+			want:         "",
+			wantErr:      true,
+			errMsg:       "Product information not found. Please check the input parameters.",
+			metadata_err: nil,
+			version:      "latest",
+			version_err:  nil,
 		},
 		{
 			name:     "failure db connection error",
@@ -210,11 +235,12 @@ func TestProductDownload(t *testing.T) {
 					LicenseId:       "",
 				},
 			},
-			want:        "",
-			version:     "latest",
-			version_err: nil,
-			wantErr:     true,
-			err:         errors.New("ResourceNotFoundException: Requested resource not found"),
+			want:         "",
+			version:      "latest",
+			version_err:  nil,
+			wantErr:      true,
+			errMsg:       "Error while fetching the information for the product.",
+			metadata_err: errors.New("ResourceNotFoundException: Requested resource not found"),
 		},
 		{
 			name: "success for habitat",
@@ -238,11 +264,12 @@ func TestProductDownload(t *testing.T) {
 					LicenseId:       "",
 				},
 			},
-			version:     "1.6.862",
-			version_err: nil,
-			want:        "https://packages.chef.io/files/stable/habitat/1.6.862/hab-x86_64-linux.tar.gz",
-			wantErr:     false,
-			err:         nil,
+			version:      "1.6.862",
+			version_err:  nil,
+			want:         "https://packages.chef.io/files/stable/habitat/1.6.862/hab-x86_64-linux.tar.gz",
+			wantErr:      false,
+			errMsg:       "",
+			metadata_err: nil,
 		},
 		{
 			name:     "failure for habitat",
@@ -259,18 +286,19 @@ func TestProductDownload(t *testing.T) {
 					LicenseId:       "",
 				},
 			},
-			version:     "",
-			version_err: errors.New("ResourceNotFoundException: Requested resource not found"),
-			want:        "",
-			wantErr:     true,
-			err:         nil,
+			version:      "",
+			version_err:  errors.New("ResourceNotFoundException: Requested resource not found"),
+			want:         "",
+			wantErr:      true,
+			errMsg:       "Error while fetching the information for the product.",
+			metadata_err: nil,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDbService := new(dboperations.MockIDbOperations)
 			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture string) (*models.MetaData, error) {
-				return tt.metadata, tt.err
+				return tt.metadata, tt.metadata_err
 			}
 			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
 				return tt.version, tt.version_err
@@ -281,8 +309,8 @@ func TestProductDownload(t *testing.T) {
 			}
 
 			got, err := svc.ProductDownload(tt.args.p)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("DynamoServices.ProductDownload() error = %v, wantErr %v", err, tt.wantErr)
+			if err != nil {
+				assert.Equal(t, tt.errMsg, err.Error())
 				return
 			}
 			if got != tt.want {
@@ -297,14 +325,15 @@ func TestProductMetadata(t *testing.T) {
 		p *RequestParams
 	}
 	tests := []struct {
-		name        string
-		metadata    *models.MetaData
-		args        args
-		want        PackageMetadata
-		wantErr     bool
-		err         error
-		version     string
-		version_err error
+		name         string
+		metadata     *models.MetaData
+		args         args
+		want         PackageMetadata
+		wantErr      bool
+		errMsg       string
+		metadata_err error
+		version      string
+		version_err  error
 	}{
 		{
 			name: "success",
@@ -336,7 +365,30 @@ func TestProductMetadata(t *testing.T) {
 				Url:     "",
 				Version: "latest",
 			},
-			wantErr: false,
+			wantErr:      false,
+			metadata_err: nil,
+		},
+		{
+			name:     "failure validation",
+			metadata: &models.MetaData{},
+			args: args{
+				p: &RequestParams{
+					Channel:         "stable",
+					Product:         "automate",
+					Version:         "1.2",
+					Platform:        "",
+					PlatformVersion: "1.2",
+					Architecture:    "x86_64",
+					Eol:             "",
+					LicenseId:       "",
+				},
+			},
+			version:      "latest",
+			version_err:  nil,
+			want:         PackageMetadata{},
+			wantErr:      true,
+			errMsg:       "Platfrom (p) params cannot be empty",
+			metadata_err: nil,
 		},
 		{
 			name:     "failure empty response",
@@ -353,11 +405,12 @@ func TestProductMetadata(t *testing.T) {
 					LicenseId:       "",
 				},
 			},
-			version:     "latest",
-			version_err: nil,
-			want:        PackageMetadata{},
-			wantErr:     false,
-			err:         nil,
+			version:      "latest",
+			version_err:  nil,
+			want:         PackageMetadata{},
+			wantErr:      true,
+			errMsg:       "Product information not found. Please check the input parameters.",
+			metadata_err: nil,
 		},
 		{
 			name:     "failure db connection error",
@@ -374,11 +427,12 @@ func TestProductMetadata(t *testing.T) {
 					LicenseId:       "",
 				},
 			},
-			version:     "latest",
-			version_err: nil,
-			want:        PackageMetadata{},
-			wantErr:     true,
-			err:         errors.New("ResourceNotFoundException: Requested resource not found"),
+			version:      "latest",
+			version_err:  nil,
+			want:         PackageMetadata{},
+			metadata_err: errors.New("ResourceNotFoundException: Requested resource not found"),
+			wantErr:      true,
+			errMsg:       "Error while fetching the information for the product.",
 		},
 		{
 			name: "success for habitat",
@@ -410,8 +464,8 @@ func TestProductMetadata(t *testing.T) {
 				Url:     "",
 				Version: "1.6.862",
 			},
-			wantErr: false,
-			err:     nil,
+			wantErr:      false,
+			metadata_err: nil,
 		},
 		{
 			name:     "failure for habitat",
@@ -428,18 +482,19 @@ func TestProductMetadata(t *testing.T) {
 					LicenseId:       "",
 				},
 			},
-			version:     "",
-			version_err: errors.New("ResourceNotFoundException: Requested resource not found"),
-			want:        PackageMetadata{},
-			wantErr:     true,
-			err:         nil,
+			version:      "",
+			version_err:  errors.New("ResourceNotFoundException: Requested resource not found"),
+			want:         PackageMetadata{},
+			wantErr:      true,
+			errMsg:       "Error while fetching the information for the product.",
+			metadata_err: nil,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDbService := new(dboperations.MockIDbOperations)
 			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture string) (*models.MetaData, error) {
-				return tt.metadata, tt.err
+				return tt.metadata, tt.metadata_err
 			}
 			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
 				return tt.version, tt.version_err
@@ -449,8 +504,8 @@ func TestProductMetadata(t *testing.T) {
 				log: logrus.NewEntry(logrus.New()),
 			}
 			got, err := svc.ProductMetadata(tt.args.p)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("DynamoServices.ProductMetadata() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr {
+				assert.Equal(t, tt.errMsg, err.Error())
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
@@ -471,6 +526,7 @@ func TestProductPackages(t *testing.T) {
 		packages    models.ProductDetails
 		want        PackageList
 		wantErr     bool
+		errMsg      string
 		package_err error
 		version_err error
 	}{
@@ -519,6 +575,28 @@ func TestProductPackages(t *testing.T) {
 			version_err: nil,
 		},
 		{
+			name: "failure channel validation",
+			args: args{
+				params: &RequestParams{
+					Channel:         "",
+					Product:         "habitat",
+					Version:         "",
+					Platform:        "",
+					PlatformVersion: "",
+					Architecture:    "",
+					Eol:             "",
+					LicenseId:       "",
+				},
+			},
+			version:     "1.6.826",
+			packages:    models.ProductDetails{},
+			want:        map[string]PlatformVersionList{},
+			wantErr:     true,
+			errMsg:      "Channel can only be stable or current",
+			package_err: errors.New("ResourceNotFoundException: Requested resource not found"),
+			version_err: nil,
+		},
+		{
 			name: "failure not able to fetch latest version",
 			args: args{
 				params: &RequestParams{
@@ -536,6 +614,7 @@ func TestProductPackages(t *testing.T) {
 			packages:    models.ProductDetails{},
 			want:        map[string]PlatformVersionList{},
 			wantErr:     true,
+			errMsg:      "Error while fetching the information for the product.",
 			package_err: nil,
 			version_err: errors.New("ResourceNotFoundException: Requested resource not found"),
 		},
@@ -557,6 +636,7 @@ func TestProductPackages(t *testing.T) {
 			packages:    models.ProductDetails{},
 			want:        map[string]PlatformVersionList{},
 			wantErr:     true,
+			errMsg:      "Error while fetching the information for the product.",
 			package_err: errors.New("ResourceNotFoundException: Requested resource not found"),
 			version_err: nil,
 		},
@@ -577,7 +657,8 @@ func TestProductPackages(t *testing.T) {
 			version:     "1.6.826",
 			packages:    models.ProductDetails{},
 			want:        map[string]PlatformVersionList{},
-			wantErr:     false,
+			wantErr:     true,
+			errMsg:      "Product information not found. Please check the input parameters.",
 			package_err: nil,
 			version_err: nil,
 		},
@@ -596,8 +677,8 @@ func TestProductPackages(t *testing.T) {
 				log: logrus.NewEntry(logrus.New()),
 			}
 			got, err := svc.ProductPackages(tt.args.params)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("DynamoServices.ProductPackages() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr {
+				assert.Equal(t, tt.errMsg, err.Error())
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
@@ -612,12 +693,13 @@ func TestFetchLatestOsVersion(t *testing.T) {
 		params *RequestParams
 	}
 	tests := []struct {
-		name     string
-		args     args
-		versions []string
-		want     string
-		wantErr  bool
-		err      error
+		name         string
+		args         args
+		versions     []string
+		want         string
+		wantErr      bool
+		errMsg       string
+		versions_err error
 	}{
 		{
 			name: "success",
@@ -633,10 +715,30 @@ func TestFetchLatestOsVersion(t *testing.T) {
 					LicenseId:       "",
 				},
 			},
-			versions: []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0"},
-			want:     "0.9.3",
-			wantErr:  false,
-			err:      nil,
+			versions:     []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0"},
+			want:         "0.9.3",
+			wantErr:      false,
+			versions_err: nil,
+		},
+		{
+			name: "failure channel validation",
+			args: args{
+				params: &RequestParams{
+					Channel:         "",
+					Product:         "habitat",
+					Version:         "",
+					Platform:        "",
+					PlatformVersion: "",
+					Architecture:    "",
+					Eol:             "",
+					LicenseId:       "",
+				},
+			},
+			versions:     []string{},
+			want:         "",
+			wantErr:      true,
+			errMsg:       "Channel can only be stable or current",
+			versions_err: nil,
 		},
 		{
 			name: "failure",
@@ -652,26 +754,47 @@ func TestFetchLatestOsVersion(t *testing.T) {
 					LicenseId:       "",
 				},
 			},
-			versions: []string{},
-			want:     "",
-			wantErr:  true,
-			err:      errors.New("ResourceNotFoundException: Requested resource not found"),
+			versions:     []string{},
+			want:         "",
+			wantErr:      true,
+			errMsg:       "Error while fetching the information for the product.",
+			versions_err: errors.New("ResourceNotFoundException: Requested resource not found"),
+		},
+		{
+			name: "failure no version found",
+			args: args{
+				params: &RequestParams{
+					Channel:         "stable",
+					Product:         "habitat",
+					Version:         "",
+					Platform:        "",
+					PlatformVersion: "",
+					Architecture:    "",
+					Eol:             "",
+					LicenseId:       "",
+				},
+			},
+			versions:     []string{},
+			want:         "",
+			wantErr:      true,
+			errMsg:       "Product information not found. Please check the input parameters.",
+			versions_err: nil,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDbService := new(dboperations.MockIDbOperations)
 			mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
-				return tt.versions, tt.err
+				return tt.versions, tt.versions_err
 			}
 			svc := &DynamoServices{
 				db:  mockDbService,
 				log: logrus.NewEntry(logrus.New()),
 			}
 			got, err := svc.FetchLatestOsVersion(tt.args.params)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("DynamoServices.ProductPackages() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if tt.wantErr {
+				assert.Equal(t, tt.errMsg, err.Error())
+				//return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("DynamoServices.ProductPackages() = %v, want %v", got, tt.want)
@@ -680,19 +803,19 @@ func TestFetchLatestOsVersion(t *testing.T) {
 	}
 }
 
-func TestDynamoServices_VersionAll(t *testing.T) {
+func TestVersionAll(t *testing.T) {
 	type args struct {
 		p *RequestParams
 	}
 	tests := []struct {
-		name     string
-		versions []string
-		args     args
-		want     []ProductVersion
-		wantErr  bool
-		err      error
+		name         string
+		versions     []string
+		args         args
+		want         []ProductVersion
+		wantErr      bool
+		errMsg       string
+		versions_err error
 	}{
-		// TODO: Add test cases.
 		{
 			name:     "Success",
 			versions: []string{"0.70.0", "0.71.0", "0.72.0", "0.73.0"},
@@ -704,9 +827,25 @@ func TestDynamoServices_VersionAll(t *testing.T) {
 					LicenseId: "",
 				},
 			},
-			want:    []ProductVersion{ProductVersion("0.70.0"), ProductVersion("0.71.0"), ProductVersion("0.72.0"), ProductVersion("0.73.0")},
-			wantErr: false,
-			err:     nil,
+			want:         []ProductVersion{ProductVersion("0.70.0"), ProductVersion("0.71.0"), ProductVersion("0.72.0"), ProductVersion("0.73.0")},
+			wantErr:      false,
+			versions_err: nil,
+		},
+		{
+			name:     "Failure validation",
+			versions: []string{},
+			args: args{
+				p: &RequestParams{
+					Channel:   "",
+					Product:   "habitat",
+					Eol:       "",
+					LicenseId: "",
+				},
+			},
+			want:         []ProductVersion{},
+			wantErr:      true,
+			errMsg:       "Channel can only be stable or current",
+			versions_err: nil,
 		},
 		{
 			name:     "Fail",
@@ -719,24 +858,41 @@ func TestDynamoServices_VersionAll(t *testing.T) {
 					LicenseId: "",
 				},
 			},
-			want:    []ProductVersion{},
-			wantErr: true,
-			err:     errors.New("ResourceNotFoundException: Requested resource not found"),
+			want:         []ProductVersion{},
+			wantErr:      true,
+			errMsg:       "Error while fetching product versions",
+			versions_err: errors.New("ResourceNotFoundException: Requested resource not found"),
+		},
+		{
+			name:     "Fail",
+			versions: []string{},
+			args: args{
+				p: &RequestParams{
+					Channel:   "stable",
+					Product:   "habitat",
+					Eol:       "",
+					LicenseId: "",
+				},
+			},
+			want:         []ProductVersion{},
+			wantErr:      true,
+			errMsg:       "Product information not found. Please check the input parameters.",
+			versions_err: nil,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDbService := new(dboperations.MockIDbOperations)
 			mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
-				return tt.versions, tt.err
+				return tt.versions, tt.versions_err
 			}
 			svc := &DynamoServices{
 				db:  mockDbService,
 				log: logrus.NewEntry(logrus.New()),
 			}
 			got, err := svc.VersionAll(tt.args.p)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("DynamoServices.VersionAll() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr {
+				assert.Equal(t, tt.errMsg, err.Error())
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
@@ -746,17 +902,18 @@ func TestDynamoServices_VersionAll(t *testing.T) {
 	}
 }
 
-func TestDynamoServices_VersionLatest(t *testing.T) {
+func TestVersionLatest(t *testing.T) {
 	type args struct {
 		p *RequestParams
 	}
 	tests := []struct {
-		name    string
-		version string
-		args    args
-		want    ProductVersion
-		wantErr bool
-		err     error
+		name        string
+		version     string
+		args        args
+		want        ProductVersion
+		wantErr     bool
+		errMsg      string
+		version_err error
 	}{
 		{
 			name:    "Success",
@@ -769,9 +926,25 @@ func TestDynamoServices_VersionLatest(t *testing.T) {
 					LicenseId: "",
 				},
 			},
-			want:    ProductVersion("0.70.0"),
-			wantErr: false,
-			err:     nil,
+			want:        ProductVersion("0.70.0"),
+			wantErr:     false,
+			version_err: nil,
+		},
+		{
+			name:    "Failure validation",
+			version: "",
+			args: args{
+				p: &RequestParams{
+					Channel:   "",
+					Product:   "habitat",
+					Eol:       "",
+					LicenseId: "",
+				},
+			},
+			want:        "",
+			wantErr:     true,
+			errMsg:      "Channel can only be stable or current",
+			version_err: nil,
 		},
 		{
 			name:    "Fail",
@@ -784,28 +957,335 @@ func TestDynamoServices_VersionLatest(t *testing.T) {
 					LicenseId: "",
 				},
 			},
-			want:    "",
-			wantErr: true,
-			err:     errors.New("ResourceNotFoundException: Requested resource not found"),
+			want:        "",
+			wantErr:     true,
+			errMsg:      "Error while fetching the information for the product.",
+			version_err: errors.New("ResourceNotFoundException: Requested resource not found"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDbService := new(dboperations.MockIDbOperations)
 			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
-				return tt.version, tt.err
+				return tt.version, tt.version_err
 			}
 			svc := &DynamoServices{
 				db:  mockDbService,
 				log: logrus.NewEntry(logrus.New()),
 			}
 			got, err := svc.VersionLatest(tt.args.p)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("DynamoServices.VersionLatest() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr {
+				assert.Equal(t, tt.errMsg, err.Error())
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("DynamoServices.VersionLatest() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetRelatedProducts(t *testing.T) {
+	type args struct {
+		params *RequestParams
+	}
+	tests := []struct {
+		name                   string
+		args                   args
+		want                   *models.RelatedProducts
+		wantErr                bool
+		errMsg                 string
+		getRelatedProducts     *models.RelatedProducts
+		getRelatedProducts_err error
+	}{
+		{
+			name: "success",
+			args: args{
+				params: &RequestParams{
+					Channel:         "stable",
+					Product:         "",
+					Version:         "",
+					Platform:        "",
+					PlatformVersion: "",
+					Architecture:    "",
+					Eol:             "",
+					LicenseId:       "",
+					BOM:             "Chef Automate",
+				},
+			},
+			want: &models.RelatedProducts{
+				Bom:      "Chef Automate",
+				Products: map[string]string{"Chef Automate": "automate"},
+			},
+			wantErr: false,
+			errMsg:  "",
+			getRelatedProducts: &models.RelatedProducts{
+				Bom:      "Chef Automate",
+				Products: map[string]string{"Chef Automate": "automate"},
+			},
+			getRelatedProducts_err: nil,
+		},
+		{
+			name: "failure validation",
+			args: args{
+				params: &RequestParams{
+					Channel:         "stable",
+					Product:         "",
+					Version:         "",
+					Platform:        "",
+					PlatformVersion: "",
+					Architecture:    "",
+					Eol:             "",
+					LicenseId:       "",
+					BOM:             "",
+				},
+			},
+			want:    &models.RelatedProducts{},
+			wantErr: true,
+			errMsg:  "BOM (bom) params cannot be empty",
+			getRelatedProducts: &models.RelatedProducts{
+				Bom:      "Chef Automate",
+				Products: map[string]string{"Chef Automate": "automate"},
+			},
+			getRelatedProducts_err: nil,
+		},
+		{
+			name: "failure db connection err",
+			args: args{
+				params: &RequestParams{
+					Channel:         "stable",
+					Product:         "",
+					Version:         "",
+					Platform:        "",
+					PlatformVersion: "",
+					Architecture:    "",
+					Eol:             "",
+					LicenseId:       "",
+					BOM:             "Chef Automate",
+				},
+			},
+			want:                   &models.RelatedProducts{},
+			wantErr:                true,
+			errMsg:                 "Error while fetching the information for the product.",
+			getRelatedProducts:     &models.RelatedProducts{},
+			getRelatedProducts_err: errors.New("ResourceNotFoundException: Requested resource not found"),
+		},
+		{
+			name: "failure no related products found",
+			args: args{
+				params: &RequestParams{
+					Channel:         "stable",
+					Product:         "",
+					Version:         "",
+					Platform:        "",
+					PlatformVersion: "",
+					Architecture:    "",
+					Eol:             "",
+					LicenseId:       "",
+					BOM:             "Chef Automate",
+				},
+			},
+			want:                   &models.RelatedProducts{},
+			wantErr:                true,
+			errMsg:                 "Product information not found. Please check the input parameters.",
+			getRelatedProducts:     &models.RelatedProducts{},
+			getRelatedProducts_err: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDbService := new(dboperations.MockIDbOperations)
+			mockDbService.GetRelatedProductsfunc = func(partitionValue string) (*models.RelatedProducts, error) {
+				return tt.getRelatedProducts, tt.getRelatedProducts_err
+			}
+			svc := &DynamoServices{
+				db:  mockDbService,
+				log: logrus.NewEntry(logrus.New()),
+			}
+			got, err := svc.GetRelatedProducts(tt.args.params)
+			if tt.wantErr {
+				assert.Equal(t, tt.errMsg, err.Error())
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("DynamoServices.GetRelatedProducts() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetFilename(t *testing.T) {
+	type args struct {
+		params *RequestParams
+	}
+	tests := []struct {
+		name         string
+		args         args
+		want         string
+		wantErr      bool
+		errMsg       string
+		metadata     *models.MetaData
+		metadata_err error
+		version      string
+		version_err  error
+	}{
+		{
+			name: "success",
+			args: args{
+				params: &RequestParams{
+					Channel:         "stable",
+					Product:         "automate",
+					Version:         "",
+					Platform:        "linux",
+					PlatformVersion: "pv",
+					Architecture:    "amd64",
+					Eol:             "",
+					LicenseId:       "",
+					BOM:             "",
+				},
+			},
+			want:    "automate_cli.zip",
+			wantErr: false,
+			errMsg:  "",
+			metadata: &models.MetaData{
+				Architecture:     "amd64",
+				FileName:         "automate_cli.zip",
+				Platform:         "linux",
+				Platform_Version: "",
+				SHA1:             "abcd",
+				SHA256:           "",
+			},
+			metadata_err: nil,
+			version:      "latest",
+			version_err:  nil,
+		},
+		{
+			name: "failure validation",
+			args: args{
+				params: &RequestParams{
+					Channel:         "stable",
+					Product:         "automate",
+					Version:         "",
+					Platform:        "linux",
+					PlatformVersion: "pv",
+					Architecture:    "",
+					Eol:             "",
+					LicenseId:       "",
+					BOM:             "",
+				},
+			},
+			want:    "automate_cli.zip",
+			wantErr: true,
+			errMsg:  "Architecture (m) params cannot be empty",
+			metadata: &models.MetaData{
+				Architecture:     "amd64",
+				FileName:         "automate_cli.zip",
+				Platform:         "linux",
+				Platform_Version: "",
+				SHA1:             "abcd",
+				SHA256:           "",
+			},
+			metadata_err: nil,
+			version:      "",
+			version_err:  nil,
+		},
+		{
+			name: "failure db connection err for latest version fetch",
+			args: args{
+				params: &RequestParams{
+					Channel:         "stable",
+					Product:         "automate",
+					Version:         "",
+					Platform:        "linux",
+					PlatformVersion: "pv",
+					Architecture:    "amd64",
+					Eol:             "",
+					LicenseId:       "",
+					BOM:             "",
+				},
+			},
+			want:    "",
+			wantErr: true,
+			errMsg:  "Error while fetching the information for the product.",
+			metadata: &models.MetaData{
+				Architecture:     "amd64",
+				FileName:         "automate_cli.zip",
+				Platform:         "linux",
+				Platform_Version: "",
+				SHA1:             "abcd",
+				SHA256:           "",
+			},
+			metadata_err: nil,
+			version:      "",
+			version_err:  errors.New("ResourceNotFoundException: Requested resource not found"),
+		},
+		{
+			name: "failure db connection err for metadata fetch",
+			args: args{
+				params: &RequestParams{
+					Channel:         "stable",
+					Product:         "automate",
+					Version:         "",
+					Platform:        "linux",
+					PlatformVersion: "pv",
+					Architecture:    "amd64",
+					Eol:             "",
+					LicenseId:       "",
+					BOM:             "",
+				},
+			},
+			want:         "",
+			wantErr:      true,
+			errMsg:       "Error while fetching the information for the product.",
+			metadata:     &models.MetaData{},
+			metadata_err: errors.New("ResourceNotFoundException: Requested resource not found"),
+			version:      "",
+			version_err:  nil,
+		},
+		{
+			name: "failure metadata not found",
+			args: args{
+				params: &RequestParams{
+					Channel:         "stable",
+					Product:         "automate",
+					Version:         "",
+					Platform:        "linux",
+					PlatformVersion: "pv",
+					Architecture:    "amd64",
+					Eol:             "",
+					LicenseId:       "",
+					BOM:             "",
+				},
+			},
+			want:         "",
+			wantErr:      true,
+			errMsg:       "Product information not found. Please check the input parameters.",
+			metadata:     &models.MetaData{},
+			metadata_err: nil,
+			version:      "",
+			version_err:  nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDbService := new(dboperations.MockIDbOperations)
+			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture string) (*models.MetaData, error) {
+				return tt.metadata, tt.metadata_err
+			}
+			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
+				return tt.version, tt.version_err
+			}
+			svc := &DynamoServices{
+				db:  mockDbService,
+				log: logrus.NewEntry(logrus.New()),
+			}
+			got, err := svc.GetFilename(tt.args.params)
+			if tt.wantErr {
+				assert.Equal(t, tt.errMsg, err.Error())
+				return
+			}
+			if got != tt.want {
+				t.Errorf("DynamoServices.GetFilename() = %v, want %v", got, tt.want)
 			}
 		})
 	}

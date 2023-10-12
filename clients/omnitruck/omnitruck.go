@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/chef/omnitruck-service/clients"
+	"github.com/chef/omnitruck-service/utils"
+	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
@@ -48,6 +50,18 @@ type RequestParams struct {
 	Eol             string
 	LicenseId       string
 	BOM             string
+}
+
+type RequestParamsFlags struct {
+	Channel         bool
+	Product         bool
+	Version         bool
+	Platform        bool
+	PlatformVersion bool
+	Architecture    bool
+	Eol             bool
+	LicenseId       bool
+	BOM             bool
 }
 
 type PackageListUpdater func(platform string, platformVersion string, arch string, meta PackageMetadata) PackageMetadata
@@ -112,7 +126,7 @@ func (ot *Omnitruck) Get(url string) *clients.Request {
 
 	if err != nil {
 		ot.logRequestError("Error creating request", &request, err)
-		return request.Failure(900, "Error creating request")
+		return request.Failure(fiber.StatusBadRequest, utils.OmnitruckReqError)
 	}
 
 	ot.log.Infof("Fetching data from %s", url)
@@ -122,13 +136,20 @@ func (ot *Omnitruck) Get(url string) *clients.Request {
 
 	if err != nil {
 		ot.logRequestError("Error fetching omnitruck data", &request, err)
-		return request.Failure(request.Code, "Error fetching omnitruck data")
+		return request.Failure(request.Code, utils.OmnitruckApiError)
 	}
 
 	request.Body, err = io.ReadAll(resp.Body)
 	if err != nil {
 		ot.logRequestError("Error reading response body from omnitruck api", &request, err)
-		return request.Failure(900, "Error reading response body from omnitruck api")
+		return request.Failure(fiber.StatusBadRequest, utils.OmnitruckApiError)
+	}
+
+	if request.Code == 404 {
+		ot.logRequestError(fmt.Sprintf("Omnitruck returned failure response %d", request.Code), &request, nil)
+		// Set our response message to what the server responsed with
+		// so we pass on the omnitruck error message to the user
+		return request.Failure(fiber.StatusBadRequest, utils.OmnitruckDataNotFoundError)
 	}
 
 	if request.Code >= 400 {
@@ -160,24 +181,60 @@ func (ot *Omnitruck) Architectures() *clients.Request {
 }
 
 func (ot *Omnitruck) LatestVersion(p *RequestParams) *clients.Request {
+	flags := RequestParamsFlags{
+		Channel: true,
+	}
+
+	err := ValidateRequest(p, flags)
+	if !err.Ok {
+		return err
+	}
 	url := fmt.Sprintf("%s/%s/%s/versions/latest", omnitruckApi, p.Channel, p.Product)
 
 	return ot.Get(url)
 }
 
 func (ot *Omnitruck) ProductVersions(p *RequestParams) *clients.Request {
+	flags := RequestParamsFlags{
+		Channel: true,
+	}
+
+	err := ValidateRequest(p, flags)
+	if !err.Ok {
+		return err
+	}
 	url := fmt.Sprintf("%s/%s/%s/versions/all", omnitruckApi, p.Channel, p.Product)
+	fmt.Println(url)
 
 	return ot.Get(url)
 }
 
 func (ot *Omnitruck) ProductPackages(p *RequestParams) *clients.Request {
+	flags := RequestParamsFlags{
+		Channel: true,
+	}
+
+	err := ValidateRequest(p, flags)
+	if !err.Ok {
+		return err
+	}
 	url := fmt.Sprintf("%s/%s/%s/packages?v=%s", omnitruckApi, p.Channel, p.Product, p.Version)
 
 	return ot.Get(url)
 }
 
 func (ot *Omnitruck) ProductMetadata(p *RequestParams) *clients.Request {
+	flags := RequestParamsFlags{
+		Channel:         true,
+		Platform:        true,
+		PlatformVersion: true,
+		Architecture:    true,
+	}
+
+	err := ValidateRequest(p, flags)
+	if !err.Ok {
+		return err
+	}
 	url := fmt.Sprintf("%s/%s/%s/metadata?v=%s&p=%s&pv=%s&m=%s", omnitruckApi,
 		p.Channel,
 		p.Product,
@@ -195,4 +252,42 @@ func (ot *Omnitruck) ProductMetadata(p *RequestParams) *clients.Request {
 // ourselves.
 func (ot *Omnitruck) ProductDownload(p *RequestParams) *clients.Request {
 	return ot.ProductMetadata(p)
+}
+
+func ValidateRequest(p *RequestParams, flags RequestParamsFlags) *clients.Request {
+	request := clients.Request{}
+
+	if flags.Channel {
+		if !(p.Channel == "stable" || p.Channel == "current") {
+			request.Failure(fiber.StatusBadRequest, utils.ChannelParamsError)
+			return &request
+		}
+	}
+	if flags.Architecture {
+		if p.Architecture == "" {
+			request.Failure(fiber.StatusBadRequest, utils.ArchitectureParamsError)
+			return &request
+		}
+	}
+	if flags.BOM {
+		if p.BOM == "" {
+			request.Failure(fiber.StatusBadRequest, utils.BOMParamsError)
+			return &request
+		}
+	}
+	if flags.Platform {
+		if p.Platform == "" {
+			request.Failure(fiber.StatusBadRequest, utils.PlatformParamsError)
+			return &request
+		}
+	}
+	if flags.PlatformVersion {
+		if p.PlatformVersion == "" {
+			request.Failure(fiber.StatusBadRequest, utils.PlatformVersionParamsError)
+			return &request
+		}
+	}
+
+	request.Success()
+	return &request
 }

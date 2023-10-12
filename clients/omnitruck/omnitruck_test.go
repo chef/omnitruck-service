@@ -1,6 +1,11 @@
 package omnitruck
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+
+	"github.com/chef/omnitruck-service/clients"
+)
 
 func TestPackageList_UpdatePackages(t *testing.T) {
 	tests := []struct {
@@ -54,6 +59,170 @@ func TestPackageList_UpdatePackages(t *testing.T) {
 						}
 					}
 				}
+			}
+		})
+	}
+}
+
+func TestValidateRequest(t *testing.T) {
+	type args struct {
+		p     *RequestParams
+		flags RequestParamsFlags
+	}
+	tests := []struct {
+		name string
+		args args
+		want *clients.Request
+	}{
+		{
+			name: "platform version params missing",
+			args: args{
+				p: &RequestParams{
+					Channel:         "",
+					Product:         "",
+					Version:         "",
+					Platform:        "",
+					PlatformVersion: "",
+					Architecture:    "",
+					Eol:             "",
+					LicenseId:       "",
+					BOM:             "",
+				},
+				flags: RequestParamsFlags{
+					PlatformVersion: true,
+				},
+			},
+			want: &clients.Request{
+				Code:    400,
+				Message: "Platform Version (pv) params cannot be empty",
+				Ok:      false,
+			},
+		},
+		{
+			name: "channel params missing",
+			args: args{
+				p: &RequestParams{
+					Channel:         "",
+					Product:         "",
+					Version:         "",
+					Platform:        "",
+					PlatformVersion: "",
+					Architecture:    "",
+					Eol:             "",
+					LicenseId:       "",
+					BOM:             "",
+				},
+				flags: RequestParamsFlags{
+					Channel: true,
+				},
+			},
+			want: &clients.Request{
+				Code:    400,
+				Message: "Channel can only be stable or current",
+				Ok:      false,
+			},
+		},
+		{
+			name: "channel params incorrect",
+			args: args{
+				p: &RequestParams{
+					Channel:         "st",
+					Product:         "",
+					Version:         "",
+					Platform:        "",
+					PlatformVersion: "",
+					Architecture:    "",
+					Eol:             "",
+					LicenseId:       "",
+					BOM:             "",
+				},
+				flags: RequestParamsFlags{
+					Channel: true,
+				},
+			},
+			want: &clients.Request{
+				Code:    400,
+				Message: "Channel can only be stable or current",
+				Ok:      false,
+			},
+		},
+		{
+			name: "platform  params missing",
+			args: args{
+				p: &RequestParams{
+					Channel:         "",
+					Product:         "",
+					Version:         "",
+					Platform:        "",
+					PlatformVersion: "",
+					Architecture:    "",
+					Eol:             "",
+					LicenseId:       "",
+					BOM:             "",
+				},
+				flags: RequestParamsFlags{
+					Platform: true,
+				},
+			},
+			want: &clients.Request{
+				Code:    400,
+				Message: "Platfrom (p) params cannot be empty",
+				Ok:      false,
+			},
+		},
+		{
+			name: "bom  params missing",
+			args: args{
+				p: &RequestParams{
+					Channel:         "",
+					Product:         "",
+					Version:         "",
+					Platform:        "",
+					PlatformVersion: "",
+					Architecture:    "",
+					Eol:             "",
+					LicenseId:       "",
+					BOM:             "",
+				},
+				flags: RequestParamsFlags{
+					BOM: true,
+				},
+			},
+			want: &clients.Request{
+				Code:    400,
+				Message: "BOM (bom) params cannot be empty",
+				Ok:      false,
+			},
+		},
+		{
+			name: "architecture  params missing",
+			args: args{
+				p: &RequestParams{
+					Channel:         "",
+					Product:         "",
+					Version:         "",
+					Platform:        "",
+					PlatformVersion: "",
+					Architecture:    "",
+					Eol:             "",
+					LicenseId:       "",
+					BOM:             "",
+				},
+				flags: RequestParamsFlags{
+					Architecture: true,
+				},
+			},
+			want: &clients.Request{
+				Code:    400,
+				Message: "Architecture (m) params cannot be empty",
+				Ok:      false,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ValidateRequest(tt.args.p, tt.args.flags); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ValidateRequest() = %v, want %v", got, tt.want)
 			}
 		})
 	}

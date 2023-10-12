@@ -2,6 +2,8 @@ package clients
 
 import (
 	"encoding/json"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 type Request struct {
@@ -28,9 +30,20 @@ func (r *Request) Success() *Request {
 }
 
 func (r *Request) ParseData(data RequestDataInterface) *Request {
+	if r.Ok {
+		err := json.Unmarshal(r.Body, &data)
+		if err != nil {
+			return r.Failure(fiber.StatusBadRequest, string(r.Body))
+		}
+	}
+
+	return r
+}
+
+func (r *Request) ParseLicenseResp(data RequestDataInterface) *Request {
 	err := json.Unmarshal(r.Body, &data)
 	if err != nil {
-		return r.Failure(900, string(r.Body))
+		return r.Failure(fiber.StatusBadRequest, string(r.Body))
 	}
 
 	return r

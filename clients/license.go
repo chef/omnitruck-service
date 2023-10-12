@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/chef/omnitruck-service/utils"
+	"github.com/gofiber/fiber/v2"
 )
 
 type License struct {
@@ -38,7 +41,7 @@ func (c *License) Get(url string) *Request {
 	req, err := http.NewRequest("GET", request.Url, nil)
 
 	if err != nil {
-		return request.Failure(900, "Error creating request")
+		return request.Failure(fiber.StatusBadRequest, utils.LicenseReqError)
 	}
 
 	req.Header.Add("Accept", "application/json")
@@ -46,15 +49,15 @@ func (c *License) Get(url string) *Request {
 	request.Code = resp.StatusCode
 
 	if err != nil {
-		return request.Failure(request.Code, "Error fetching omnitruck data")
+		return request.Failure(request.Code, utils.LicenseApiError)
 	}
 
 	request.Body, err = io.ReadAll(resp.Body)
 	if err != nil {
-		return request.Failure(900, "Error reading response body from omnitruck api")
+		return request.Failure(fiber.StatusBadRequest, utils.LicenseApiError)
 	}
 
-	if request.Code >= 400 {
+	if request.Code != 200 {
 		// Set our response message to what the server responsed with
 		// so we pass on the omnitruck error message to the user
 		return request.Failure(request.Code, string(request.Body))
@@ -66,7 +69,7 @@ func (c *License) Get(url string) *Request {
 func (c *License) Validate(id, licenseServiceUrl string, data *Response) *Request {
 	licenseApi := licenseServiceUrl
 	url := fmt.Sprintf("%s/v1/validate?licenseId=%s", licenseApi, id)
-	return c.Get(url).ParseData(&data)
+	return c.Get(url).ParseLicenseResp(&data)
 }
 
 func (c *License) IsTrial(l string) bool {
