@@ -270,6 +270,9 @@ func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 			data = omnitruck.FilterProductList(data, params.Product, omnitruck.EolProductVersion)
 		}
 
+		if len(data) == 0 {
+			data = append(data, "")
+		}
 		data = []omnitruck.ProductVersion{
 			data[len(data)-1],
 		}
