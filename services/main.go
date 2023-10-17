@@ -611,16 +611,17 @@ func (server *ApiService) isOsVersion(params *omnitruck.RequestParams, c *fiber.
 	allversions := []omnitruck.ProductVersion{}
 
 	errMsg := fmt.Sprintf(`Version %s not support on this persona.`, version)
+	errLog := fmt.Sprintf(`Error while fetching all versions for the product %s. error :- `, params.Product)
 	if params.Product == constants.HABITAT_PRODUCT || params.Product == constants.AUTOMATE_PRODUCT {
 		allversions, err = server.DynamoServices(server.DatabaseService, c).VersionAll(params)
 		if err != nil {
-			server.logCtx(c).Error("Error while fetching all versions for the product ", params.Product, " error :- ", err.Error())
+			server.logCtx(c).Error(errLog, err.Error())
 			return fiber.NewError(fiber.StatusInternalServerError, utils.DBError)
 		}
 	} else {
 		request := server.Omnitruck(c).ProductVersions(params).ParseData(&allversions)
 		if !request.Ok {
-			server.logCtx(c).Error("Error while fetching all versions for the product ", params.Product, " error :- ", request.Message)
+			server.logCtx(c).Error(errLog, request.Message)
 			return fiber.NewError(request.Code, request.Message)
 		}
 	}
