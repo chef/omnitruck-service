@@ -204,7 +204,6 @@ func (ot *Omnitruck) ProductVersions(p *RequestParams) *clients.Request {
 		return err
 	}
 	url := fmt.Sprintf("%s/%s/%s/versions/all", omnitruckApi, p.Channel, p.Product)
-	fmt.Println(url)
 
 	return ot.Get(url)
 }

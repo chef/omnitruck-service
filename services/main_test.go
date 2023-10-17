@@ -46,7 +46,7 @@ func TestRelatedProductsHandler(t *testing.T) {
 			name:             "Db error while fetching related products",
 			requestPath:      "/relatedProducts?bom=Chef%20123",
 			expectedStatus:   http.StatusInternalServerError,
-			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product.", "status_text":"Internal Server Error"}`,
+			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
 			relatedProducts:  models.RelatedProducts{},
 			err:              errors.New("Db connection error"),
 		},
@@ -310,7 +310,7 @@ func TestProductMetadataHandler(t *testing.T) {
 			serverMode:       Trial,
 			requestPath:      "/stable/automate/metadata?p=linux&m=x86_64&eol=false",
 			expectedStatus:   fiber.StatusInternalServerError,
-			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product.", "status_text":"Internal Server Error"}`,
+			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
 			metadata:         models.MetaData{},
 			err:              errors.New("ResourceNotFoundException: Requested resource not found"),
 			versions:         []string{},
@@ -341,7 +341,7 @@ func TestProductMetadataHandler(t *testing.T) {
 			serverMode:       Opensource,
 			requestPath:      "/stable/habitat/metadata?p=linux&m=x86_64&eol=false",
 			expectedStatus:   fiber.StatusInternalServerError,
-			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product.", "status_text":"Internal Server Error"}`,
+			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
 			metadata:         models.MetaData{},
 			err:              nil,
 			version:          "",
@@ -444,7 +444,7 @@ func TestProductPackagesHandler(t *testing.T) {
 			serverMode:       Trial,
 			requestPath:      "/stable/automate/packages?eol=false",
 			expectedStatus:   fiber.StatusInternalServerError,
-			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product.", "status_text":"Internal Server Error"}`,
+			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
 			details:          models.ProductDetails{},
 			err:              nil,
 			version:          "",
@@ -481,7 +481,7 @@ func TestProductPackagesHandler(t *testing.T) {
 			serverMode:       Opensource,
 			requestPath:      "/stable/habitat/packages?eol=false",
 			expectedStatus:   fiber.StatusInternalServerError,
-			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product.", "status_text":"Internal Server Error"}`,
+			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
 			details:          models.ProductDetails{},
 			err:              nil,
 			version:          "",
@@ -504,6 +504,30 @@ func TestProductPackagesHandler(t *testing.T) {
 			version:      "1.6.826",
 			version_err:  nil,
 			versions:     []string{},
+			versions_err: nil,
+		},
+		{
+			name:             "opensource check success",
+			serverMode:       Opensource,
+			requestPath:      "/stable/habitat/packages?eol=false&v=0.3.2",
+			expectedStatus:   fiber.StatusOK,
+			expectedResponse: `{"linux": {"pv": {"x86_64": {"sha1":"", "sha256":"abcd", "url":"http://example.com/stable/habitat/download?eol=false&m=x86_64&p=linux&v=0.3.2", "version":"0.3.2"}}}}`,
+			details: models.ProductDetails{
+				Product: "habitat",
+				Version: "0.3.2",
+				MetaData: []models.MetaData{{
+					Architecture:     "x86_64",
+					FileName:         "",
+					Platform:         "linux",
+					Platform_Version: "",
+					SHA1:             "",
+					SHA256:           "abcd",
+				}},
+			},
+			err:          nil,
+			version:      "",
+			version_err:  nil,
+			versions:     []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0"},
 			versions_err: nil,
 		},
 	}
@@ -555,15 +579,20 @@ func TestFileNameHandler(t *testing.T) {
 		version          string
 		metadata_err     error
 		version_err      error
+		versions         []string
+		versions_err     error
 	}{
 		{
 			name:             "AUTOMATE_SUCCESS",
+			serverMode:       Trial,
 			requestPath:      "/current/automate/fileName?p=linux&pv=16.04&m=x86_64&v=latest",
 			expectedStatus:   http.StatusOK,
 			expectedResponse: `{"fileName":"automate_4.7.52-1_amd64.deb"}`,
 			metadata:         models.MetaData{FileName: "automate_4.7.52-1_amd64.deb"},
 			metadata_err:     nil,
 			version_err:      nil,
+			versions:         []string{},
+			versions_err:     nil,
 		},
 		{
 			name:             "HABITAT_SUCCESS",
@@ -574,13 +603,15 @@ func TestFileNameHandler(t *testing.T) {
 			metadata:         models.MetaData{FileName: "hab-x86_64-linux.tar.gz"},
 			metadata_err:     nil,
 			version_err:      nil,
-			version:          "1.6.652",
+			version:          "",
+			versions:         []string{"0.78.0"},
+			versions_err:     nil,
 		},
 		{
 			name:             "AUTOMATE_FAIL",
 			requestPath:      "/current/automate/fileName?p=linux&pv=16.04&m=x86_64&v=latest",
 			expectedStatus:   http.StatusInternalServerError,
-			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product.", "status_text":"Internal Server Error"}`,
+			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
 			metadata:         models.MetaData{},
 			version_err:      errors.New("Unable to get latest version of automate"),
 		},
@@ -589,7 +620,7 @@ func TestFileNameHandler(t *testing.T) {
 			serverMode:       Trial,
 			requestPath:      "/current/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=1.6.652",
 			expectedStatus:   http.StatusInternalServerError,
-			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product.", "status_text":"Internal Server Error"}`,
+			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
 			metadata:         models.MetaData{},
 			metadata_err:     nil,
 			version:          "",
@@ -611,11 +642,37 @@ func TestFileNameHandler(t *testing.T) {
 			serverMode:       Trial,
 			requestPath:      "/current/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=1.6.652",
 			expectedStatus:   http.StatusInternalServerError,
-			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product.", "status_text":"Internal Server Error"}`,
+			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
 			metadata:         models.MetaData{},
 			metadata_err:     errors.New("Error while fetching file name"),
 			version_err:      nil,
 			version:          "1.6.652",
+		},
+		{
+			name:             "haitat opensource verion not supported ",
+			serverMode:       Opensource,
+			requestPath:      "/current/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=0.79.0",
+			expectedStatus:   http.StatusBadRequest,
+			expectedResponse: `{"code":400, "message":"Version 0.79.0 not support on this persona.", "status_text":"Bad Request"}`,
+			metadata:         models.MetaData{},
+			metadata_err:     errors.New("Error while fetching file name"),
+			version_err:      nil,
+			version:          "",
+			versions:         []string{"0.79.0", "0.78.0"},
+			versions_err:     nil,
+		},
+		{
+			name:             "haitat opensource version fetching error",
+			serverMode:       Opensource,
+			requestPath:      "/current/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=0.79.0",
+			expectedStatus:   http.StatusInternalServerError,
+			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
+			metadata:         models.MetaData{},
+			metadata_err:     errors.New("Error while fetching file name"),
+			version_err:      nil,
+			version:          "",
+			versions:         []string{},
+			versions_err:     errors.New("Unable to get all versions of habitat"),
 		},
 	}
 
@@ -633,6 +690,9 @@ func TestFileNameHandler(t *testing.T) {
 				}
 				mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
 					return test.version, test.version_err
+				}
+				mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
+					return test.versions, test.versions_err
 				}
 
 				server := &ApiService{

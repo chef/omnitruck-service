@@ -1,7 +1,7 @@
 package utils
 
 const (
-	DBError                    = "Error while fetching the information for the product."
+	DBError                    = "Error while fetching the information for the product from DB."
 	FetchVersionsError         = "Error while fetching product versions"
 	FetchLatestOsVersionError  = "Error while fetching the latest opensource version for the product."
 	BadRequestError            = "Product information not found. Please check the input parameters."
