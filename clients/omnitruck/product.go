@@ -139,3 +139,10 @@ func ProductDisplayName(data ItemList) ItemList {
 	}
 	return data
 }
+
+func ProductsForFreeTrial(name string) bool {
+	if name == "supermarket" || name == "manage" || name == "chef-backend" {
+		return true
+	}
+	return false
+}

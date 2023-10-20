@@ -86,7 +86,9 @@ func (server *ApiService) productsHandler(c *fiber.Ctx) error {
 		server.logCtx(c).Info("filtering eol products")
 		data = omnitruck.FilterList(data, omnitruck.EolProductName)
 	}
+
 	if server.Mode == Trial {
+		data = omnitruck.FilterProductsForFreeTrial(data, omnitruck.ProductsForFreeTrial)
 		omnitruck.ProductDisplayName(data)
 	}
 

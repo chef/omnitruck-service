@@ -293,7 +293,7 @@ func (svc *DynamoServices) GetRelatedProducts(params *RequestParams) (*models.Re
 		return relatedProducts, fiber.NewError(fiber.StatusInternalServerError, utils.DBError)
 	}
 
-	if len(relatedProducts.Products) == 0 {
+	if relatedProducts.Products == nil {
 		svc.log.Error("No related products found for " + params.BOM)
 		//return &models.RelatedProducts{}, fiber.NewError(fiber.StatusBadRequest, "No related products found for BOM")
 		return relatedProducts, fiber.NewError(fiber.StatusBadRequest, utils.BadRequestError)
