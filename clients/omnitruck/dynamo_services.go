@@ -17,13 +17,13 @@ type DynamoServices struct {
 }
 
 const (
-	DOWNLOAD_URL                      = `https://packages.chef.io/files/%s/%s/%s/%s`
-	CHEF_AUTOMATE_CLI                 = "chef-automate-cli"
-	AUTOMATE_CLI_VERSION              = "latest"
-	AUTOMATE_CHANNEL                  = "current"
-	AUTOMATE_PRODUCT                  = "automate"
-	HABITAT_PRODUCT                   = "habitat"
-	Log_Error_while_validating_params = "Error while validating params:"
+	DOWNLOAD_URL         = `https://packages.chef.io/files/%s/%s/%s/%s`
+	CHEF_AUTOMATE_CLI    = "chef-automate-cli"
+	AUTOMATE_CLI_VERSION = "latest"
+	AUTOMATE_CHANNEL     = "current"
+	AUTOMATE_PRODUCT     = "automate"
+	HABITAT_PRODUCT      = "habitat"
+	validating_log       = "Error while validating params:"
 )
 
 func NewDynamoServices(db dboperations.IDbOperations, log *log.Entry) DynamoServices {
@@ -61,7 +61,7 @@ func (svc *DynamoServices) ProductDownload(params *RequestParams) (string, error
 
 	requestParams := ValidateRequest(params, flags)
 	if !requestParams.Ok {
-		svc.log.Error(Log_Error_while_validating_params, requestParams.Message)
+		svc.log.Error(validating_log, requestParams.Message)
 		return "", fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 	if params.Version == "" || params.Version == "latest" {
@@ -109,7 +109,7 @@ func (svc *DynamoServices) ProductMetadata(params *RequestParams) (PackageMetada
 
 	requestParams := ValidateRequest(params, flags)
 	if !requestParams.Ok {
-		svc.log.Error(Log_Error_while_validating_params, requestParams.Message)
+		svc.log.Error(validating_log, requestParams.Message)
 		return PackageMetadata{}, fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 
@@ -149,7 +149,7 @@ func (svc *DynamoServices) ProductPackages(params *RequestParams) (PackageList, 
 
 	requestParams := ValidateRequest(params, flags)
 	if !requestParams.Ok {
-		svc.log.Error(Log_Error_while_validating_params, requestParams.Message)
+		svc.log.Error(validating_log, requestParams.Message)
 		return PackageList{}, fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 
@@ -197,7 +197,7 @@ func (svc *DynamoServices) FetchLatestOsVersion(params *RequestParams) (string, 
 	}
 	requestParams := ValidateRequest(params, flags)
 	if !requestParams.Ok {
-		svc.log.Error(Log_Error_while_validating_params, requestParams.Message)
+		svc.log.Error(validating_log, requestParams.Message)
 		return "", fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 
@@ -233,7 +233,7 @@ func (svc *DynamoServices) VersionAll(params *RequestParams) ([]ProductVersion, 
 	}
 	requestParams := ValidateRequest(params, flags)
 	if !requestParams.Ok {
-		svc.log.Error(Log_Error_while_validating_params, requestParams.Message)
+		svc.log.Error(validating_log, requestParams.Message)
 		return productVersions, fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 
@@ -262,7 +262,7 @@ func (svc *DynamoServices) VersionLatest(params *RequestParams) (ProductVersion,
 	}
 	requestParams := ValidateRequest(params, flags)
 	if !requestParams.Ok {
-		svc.log.Error(Log_Error_while_validating_params, requestParams.Message)
+		svc.log.Error(validating_log, requestParams.Message)
 		return "", fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 
@@ -282,7 +282,7 @@ func (svc *DynamoServices) GetRelatedProducts(params *RequestParams) (*models.Re
 	}
 	requestParams := ValidateRequest(params, flags)
 	if !requestParams.Ok {
-		svc.log.Error(Log_Error_while_validating_params, requestParams.Message)
+		svc.log.Error(validating_log, requestParams.Message)
 		return relatedProducts, fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 
@@ -315,7 +315,7 @@ func (svc *DynamoServices) GetFilename(params *RequestParams) (string, error) {
 
 	requestParams := ValidateRequest(params, flags)
 	if !requestParams.Ok {
-		svc.log.Error(Log_Error_while_validating_params, requestParams.Message)
+		svc.log.Error(validating_log, requestParams.Message)
 		return "", fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 

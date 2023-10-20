@@ -7,6 +7,7 @@ import (
 
 	"github.com/chef/omnitruck-service/dboperations"
 	"github.com/chef/omnitruck-service/models"
+	"github.com/chef/omnitruck-service/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -239,7 +240,7 @@ func TestProductDownload(t *testing.T) {
 			version:      "latest",
 			version_err:  nil,
 			wantErr:      true,
-			errMsg:       "Error while fetching the information for the product from DB.",
+			errMsg:       utils.DBError,
 			metadata_err: errors.New("ResourceNotFoundException: Requested resource not found"),
 		},
 		{
@@ -290,7 +291,7 @@ func TestProductDownload(t *testing.T) {
 			version_err:  errors.New("ResourceNotFoundException: Requested resource not found"),
 			want:         "",
 			wantErr:      true,
-			errMsg:       "Error while fetching the information for the product from DB.",
+			errMsg:       utils.DBError,
 			metadata_err: nil,
 		},
 	}
@@ -432,7 +433,7 @@ func TestProductMetadata(t *testing.T) {
 			want:         PackageMetadata{},
 			metadata_err: errors.New("ResourceNotFoundException: Requested resource not found"),
 			wantErr:      true,
-			errMsg:       "Error while fetching the information for the product from DB.",
+			errMsg:       utils.DBError,
 		},
 		{
 			name: "success for habitat",
@@ -486,7 +487,7 @@ func TestProductMetadata(t *testing.T) {
 			version_err:  errors.New("ResourceNotFoundException: Requested resource not found"),
 			want:         PackageMetadata{},
 			wantErr:      true,
-			errMsg:       "Error while fetching the information for the product from DB.",
+			errMsg:       utils.DBError,
 			metadata_err: nil,
 		},
 	}
@@ -614,7 +615,7 @@ func TestProductPackages(t *testing.T) {
 			packages:    models.ProductDetails{},
 			want:        map[string]PlatformVersionList{},
 			wantErr:     true,
-			errMsg:      "Error while fetching the information for the product from DB.",
+			errMsg:      utils.DBError,
 			package_err: nil,
 			version_err: errors.New("ResourceNotFoundException: Requested resource not found"),
 		},
@@ -636,7 +637,7 @@ func TestProductPackages(t *testing.T) {
 			packages:    models.ProductDetails{},
 			want:        map[string]PlatformVersionList{},
 			wantErr:     true,
-			errMsg:      "Error while fetching the information for the product from DB.",
+			errMsg:      utils.DBError,
 			package_err: errors.New("ResourceNotFoundException: Requested resource not found"),
 			version_err: nil,
 		},
@@ -757,7 +758,7 @@ func TestFetchLatestOsVersion(t *testing.T) {
 			versions:     []string{},
 			want:         "",
 			wantErr:      true,
-			errMsg:       "Error while fetching the information for the product from DB.",
+			errMsg:       utils.DBError,
 			versions_err: errors.New("ResourceNotFoundException: Requested resource not found"),
 		},
 		{
@@ -959,7 +960,7 @@ func TestVersionLatest(t *testing.T) {
 			},
 			want:        "",
 			wantErr:     true,
-			errMsg:      "Error while fetching the information for the product from DB.",
+			errMsg:      utils.DBError,
 			version_err: errors.New("ResourceNotFoundException: Requested resource not found"),
 		},
 	}
@@ -1066,7 +1067,7 @@ func TestGetRelatedProducts(t *testing.T) {
 			},
 			want:                   &models.RelatedProducts{},
 			wantErr:                true,
-			errMsg:                 "Error while fetching the information for the product from DB.",
+			errMsg:                 utils.DBError,
 			getRelatedProducts:     &models.RelatedProducts{},
 			getRelatedProducts_err: errors.New("ResourceNotFoundException: Requested resource not found"),
 		},
@@ -1206,7 +1207,7 @@ func TestGetFilename(t *testing.T) {
 			},
 			want:    "",
 			wantErr: true,
-			errMsg:  "Error while fetching the information for the product from DB.",
+			errMsg:  utils.DBError,
 			metadata: &models.MetaData{
 				Architecture:     "amd64",
 				FileName:         "automate_cli.zip",
@@ -1236,7 +1237,7 @@ func TestGetFilename(t *testing.T) {
 			},
 			want:         "",
 			wantErr:      true,
-			errMsg:       "Error while fetching the information for the product from DB.",
+			errMsg:       utils.DBError,
 			metadata:     &models.MetaData{},
 			metadata_err: errors.New("ResourceNotFoundException: Requested resource not found"),
 			version:      "",
