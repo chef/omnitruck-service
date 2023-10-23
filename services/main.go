@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/chef/omnitruck-service/clients/omnitruck"
 	"github.com/chef/omnitruck-service/constants"
 	_ "github.com/chef/omnitruck-service/docs"
+	"github.com/chef/omnitruck-service/utils"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/gofiber/swagger"
@@ -309,18 +311,10 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	if server.Mode == Trial {
-		err := server.isLatestForTrail(params, c)
-		if !err.Ok {
-			return server.SendError(c, err)
-		}
-	} else if server.Mode == Opensource && isLatest(params.Version) {
-		v, err := server.fetchLatestOSVersion(params, c)
-		if !err.Ok {
-			server.logCtx(c).Error("Error while fetching latest opensource version for the product ", params.Product, " error :- ", err.Message)
-			return server.SendError(c, err)
-		}
-		params.Version = string(v)
+	err = server.versionCheckForTrailAndOsServer(params, c)
+	if err != nil {
+		code, msg := getErrorCodeAndMsg(err)
+		return server.SendErrorResponse(c, code, msg)
 	}
 
 	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
@@ -385,18 +379,10 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	if server.Mode == Trial {
-		err := server.isLatestForTrail(params, c)
-		if !err.Ok {
-			return server.SendError(c, err)
-		}
-	} else if server.Mode == Opensource && isLatest(params.Version) {
-		v, err := server.fetchLatestOSVersion(params, c)
-		if !err.Ok {
-			server.logCtx(c).Error("Error while fetching latest opensource version for the product ", params.Product, " error :- ", err.Message)
-			return server.SendError(c, err)
-		}
-		params.Version = string(v)
+	err = server.versionCheckForTrailAndOsServer(params, c)
+	if err != nil {
+		code, msg := getErrorCodeAndMsg(err)
+		return server.SendErrorResponse(c, code, msg)
 	}
 
 	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
@@ -446,17 +432,10 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	if server.Mode == Trial {
-		err := server.isLatestForTrail(params, c)
-		if !err.Ok {
-			return server.SendError(c, err)
-		}
-	} else if server.Mode == Opensource && isLatest(params.Version) {
-		v, err := server.fetchLatestOSVersion(params, c)
-		if !err.Ok {
-			return server.SendError(c, err)
-		}
-		params.Version = string(v)
+	err = server.versionCheckForTrailAndOsServer(params, c)
+	if err != nil {
+		code, msg := getErrorCodeAndMsg(err)
+		return server.SendErrorResponse(c, code, msg)
 	}
 
 	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
@@ -535,12 +514,11 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 		server.logCtx(c).Error("Validation of file name API for " + params.Product + " failed")
 		return err
 	}
-	server.logCtx(c).Info("Validating download file name for " + params.Product + "in channel " + params.Channel)
-	if server.Mode == Trial {
-		err := server.isLatestForTrail(params, c)
-		if !err.Ok {
-			return server.SendError(c, err)
-		}
+	server.logCtx(c).Info("Validating download file name for " + params.Product + " in channel " + params.Channel)
+	err = server.versionCheckForTrailAndOsServer(params, c)
+	if err != nil {
+		code, msg := getErrorCodeAndMsg(err)
+		return server.SendErrorResponse(c, code, msg)
 	}
 
 	//assuming that the metadata table will always have only the latest version record for automate, querying db without sortkey
@@ -604,4 +582,67 @@ func getErrorCodeAndMsg(err error) (code int, msg string) {
 		return code, msg
 	}
 	return fiber.StatusInternalServerError, ""
+}
+
+func (server *ApiService) versionCheckForTrailAndOsServer(params *omnitruck.RequestParams, c *fiber.Ctx) error {
+	if server.Mode == Trial {
+		err := server.isLatestForTrail(params, c)
+		if !err.Ok {
+			return fiber.NewError(err.Code, err.Message)
+		}
+	} else if server.Mode == Opensource {
+		if isLatest(params.Version) {
+			v, err := server.fetchLatestOSVersion(params, c)
+			if !err.Ok {
+				server.logCtx(c).Error("Error while fetching latest opensource version for the product ", params.Product, " error :- ", err.Message)
+				return fiber.NewError(err.Code, err.Message)
+			}
+			params.Version = string(v)
+		} else {
+			err := server.isOsVersion(params, c)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (server *ApiService) isOsVersion(params *omnitruck.RequestParams, c *fiber.Ctx) error {
+	var err error
+	version := params.Version
+	allversions := []omnitruck.ProductVersion{}
+
+	errMsg := fmt.Sprintf(`Version %s not support on this persona.`, version)
+	errLog := fmt.Sprintf(`Error while fetching all versions for the product %s. error :- `, params.Product)
+	if params.Product == constants.HABITAT_PRODUCT || params.Product == constants.AUTOMATE_PRODUCT {
+		allversions, err = server.DynamoServices(server.DatabaseService, c).VersionAll(params)
+		if err != nil {
+			server.logCtx(c).Error(errLog, err.Error())
+			return fiber.NewError(fiber.StatusInternalServerError, utils.DBError)
+		}
+	} else {
+		request := server.Omnitruck(c).ProductVersions(params).ParseData(&allversions)
+		if !request.Ok {
+			server.logCtx(c).Error(errLog, request.Message)
+			return fiber.NewError(request.Code, request.Message)
+		}
+	}
+
+	if params.Product == constants.AUTOMATE_PRODUCT {
+		if version == string(allversions[0]) {
+			return nil
+		}
+		return fiber.NewError(fiber.StatusBadRequest, errMsg)
+	}
+	allversions = omnitruck.FilterList(allversions, func(v omnitruck.ProductVersion) bool {
+		return !omnitruck.OsProductVersion(params.Product, v)
+	})
+
+	for _, val := range allversions {
+		if val == omnitruck.ProductVersion(version) {
+			return nil
+		}
+	}
+	return fiber.NewError(fiber.StatusBadRequest, errMsg)
 }
