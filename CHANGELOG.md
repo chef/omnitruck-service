@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.40 -->
-## [0.0.40](https://github.com/chef/omnitruck-service/tree/0.0.40) (2023-10-12)
+<!-- latest_release 0.0.41 -->
+## [0.0.41](https://github.com/chef/omnitruck-service/tree/0.0.41) (2023-10-23)
 
 #### Merged Pull Requests
-- fix for version/all [#49](https://github.com/chef/omnitruck-service/pull/49) ([vipin230](https://github.com/vipin230))
+- changes for version for community server [#50](https://github.com/chef/omnitruck-service/pull/50) ([vipin230](https://github.com/vipin230))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- changes for version for community server [#50](https://github.com/chef/omnitruck-service/pull/50) ([vipin230](https://github.com/vipin230)) <!-- 0.0.41 -->
 - fix for version/all [#49](https://github.com/chef/omnitruck-service/pull/49) ([vipin230](https://github.com/vipin230)) <!-- 0.0.40 -->
 - Changes for wrong error status code and msgs [#47](https://github.com/chef/omnitruck-service/pull/47) ([vipin230](https://github.com/vipin230)) <!-- 0.0.39 -->
 - changes to log request-id [#46](https://github.com/chef/omnitruck-service/pull/46) ([vipin230](https://github.com/vipin230)) <!-- 0.0.38 -->
