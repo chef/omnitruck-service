@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.42 -->
-## [0.0.42](https://github.com/chef/omnitruck-service/tree/0.0.42) (2023-10-23)
+<!-- latest_release 0.0.43 -->
+## [0.0.43](https://github.com/chef/omnitruck-service/tree/0.0.43) (2023-12-28)
 
 #### Merged Pull Requests
-- Changes requested by UI [#51](https://github.com/chef/omnitruck-service/pull/51) ([sandhi18](https://github.com/sandhi18))
+- Added the DependaBot Fixes [#52](https://github.com/chef/omnitruck-service/pull/52) ([vviveksharma](https://github.com/vviveksharma))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Added the DependaBot Fixes [#52](https://github.com/chef/omnitruck-service/pull/52) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.43 -->
 - Changes requested by UI [#51](https://github.com/chef/omnitruck-service/pull/51) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.42 -->
 - changes for version for community server [#50](https://github.com/chef/omnitruck-service/pull/50) ([vipin230](https://github.com/vipin230)) <!-- 0.0.41 -->
 - fix for version/all [#49](https://github.com/chef/omnitruck-service/pull/49) ([vipin230](https://github.com/vipin230)) <!-- 0.0.40 -->
