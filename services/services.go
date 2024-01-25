@@ -1,6 +1,8 @@
 package services
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
@@ -233,8 +235,18 @@ func (server *ApiService) ValidateRequest(params *omnitruck.RequestParams, c *fi
 	return nil, true
 }
 
-func (server *ApiService) SendResponse(c *fiber.Ctx, data clients.RequestDataInterface) error {
-	return c.JSON(data)
+func (server *ApiService) JSON(c *fiber.Ctx, data interface{}) error {
+	var resultBytes bytes.Buffer
+	enc := json.NewEncoder(&resultBytes)
+	enc.SetEscapeHTML(false)
+	err := enc.Encode(data)
+	c.Context().Response.SetBodyRaw(resultBytes.Bytes())
+	c.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSONCharsetUTF8)
+	return err
+}
+
+func (server *ApiService) SendResponse(c *fiber.Ctx, data interface{}) error {
+	return server.JSON(c, data)
 }
 
 func (server *ApiService) SendError(c *fiber.Ctx, request *clients.Request) error {
