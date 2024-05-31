@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/chef/omnitruck-service/constants"
 	"github.com/chef/omnitruck-service/dboperations"
 	"github.com/chef/omnitruck-service/models"
 	"github.com/chef/omnitruck-service/utils"
@@ -34,7 +35,7 @@ func NewDynamoServices(db dboperations.IDbOperations, log *log.Entry) DynamoServ
 }
 
 func (svc *DynamoServices) Products(products []string, eol string) []string {
-	products = append(products, "habitat")
+	products = append(products, "habitat", constants.PLATFORM_SERVICE)
 	if eol == "true" {
 		products = append(products, "automate-1")
 	}
@@ -113,6 +114,15 @@ func (svc *DynamoServices) ProductMetadata(params *RequestParams) (PackageMetada
 		return PackageMetadata{}, fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 
+	if params.Product == constants.PLATFORM_SERVICE {
+		return PackageMetadata{
+			Url:     "",
+			Sha1:    "",
+			Sha256:  "",
+			Version: params.Version,
+		}, nil
+	}
+
 	if params.Version == "" || params.Version == "latest" {
 		version, err = svc.db.GetVersionLatest(params.Product)
 		if err != nil {
@@ -143,10 +153,22 @@ func (svc *DynamoServices) ProductMetadata(params *RequestParams) (PackageMetada
 
 func (svc *DynamoServices) ProductPackages(params *RequestParams) (PackageList, error) {
 	var err error
+	packageList := PackageList{}
 	flags := RequestParamsFlags{
 		Channel: true,
 	}
-
+	if params.Product == constants.PLATFORM_SERVICE {
+		svc.log.Info("inside the platform block")
+		packageList["linux"] = PlatformVersionList{}
+		packageList["linux"][params.Version] = ArchList{}
+		packageList["linux"][params.Version]["amd64"] = PackageMetadata{
+			Sha1:    "",
+			Sha256:  "",
+			Url:     "",
+			Version: params.Version,
+		}
+		return packageList, nil
+	}
 	requestParams := ValidateRequest(params, flags)
 	if !requestParams.Ok {
 		svc.log.Error(validating_log, requestParams.Message)
@@ -169,8 +191,6 @@ func (svc *DynamoServices) ProductPackages(params *RequestParams) (PackageList, 
 	if len(details.MetaData) == 0 {
 		return PackageList{}, fiber.NewError(fiber.StatusBadRequest, utils.BadRequestError)
 	}
-
-	packageList := PackageList{}
 	for _, v := range details.MetaData {
 		v.Platform_Version = "pv"
 		if _, ok := packageList[v.Platform]; !ok {
@@ -306,6 +326,11 @@ func (svc *DynamoServices) GetRelatedProducts(params *RequestParams) (*models.Re
 func (svc *DynamoServices) GetFilename(params *RequestParams) (string, error) {
 	var err error
 	version := params.Version
+
+	if params.Product == constants.PLATFORM_SERVICE {
+		svc.log.Info("product = platfrom-360")
+		return constants.PLATFORM_SERVICE + ".zip", nil
+	}
 
 	flags := RequestParamsFlags{
 		Channel:      true,

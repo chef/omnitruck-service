@@ -75,6 +75,11 @@ var supportedProducts = map[string]Product{
 		SupportedVersion:  NewConstraint(">= 0"),
 		OpensourceVersion: NewConstraint("<= 14.15.6"),
 	},
+	"platform-360": {
+		Name:              "Platform-360",
+		ProductName:       "Platform Services",
+		SupportedVersion:  NewConstraint(">= 0"),
+	},
 }
 
 func SupportedVersion(product string) string {

@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/chef/omnitruck-service/constants"
 	"github.com/chef/omnitruck-service/dboperations"
 	"github.com/chef/omnitruck-service/models"
 	"github.com/chef/omnitruck-service/utils"
@@ -65,7 +66,7 @@ func TestProducts(t *testing.T) {
 				p:   []string{"new"},
 				eol: "false",
 			},
-			want: []string{"habitat", "new"},
+			want: []string{"habitat", "new", "platform-360"},
 		},
 		{
 			name: "eol true",
@@ -77,7 +78,7 @@ func TestProducts(t *testing.T) {
 				p:   []string{"new"},
 				eol: "true",
 			},
-			want: []string{"automate-1", "habitat", "new"},
+			want: []string{"automate-1", "habitat", "new", "platform-360"},
 		},
 	}
 	for _, tt := range tests {
@@ -370,6 +371,39 @@ func TestProductMetadata(t *testing.T) {
 			metadata_err: nil,
 		},
 		{
+			name: "sucess when platfrom-360 product was given",
+			metadata: &models.MetaData{
+				Architecture:     "amd64",
+				FileName:         constants.PLATFORM_SERVICE + ".zip",
+				Platform:         "linux",
+				Platform_Version: "",
+				SHA1:             "",
+				SHA256:           "",
+			},
+			args: args{
+				p: &RequestParams{
+					Channel:         "stable",
+					Product:         "platform-360",
+					Version:         "latest",
+					Platform:        "linux",
+					PlatformVersion: "pv",
+					Architecture:    "amd64",
+					Eol:             "",
+					LicenseId:       "",
+				},
+			},
+			version:     "latest",
+			version_err: nil,
+			want: PackageMetadata{
+				Sha1:    "",
+				Sha256:  "",
+				Url:     "",
+				Version: "latest",
+			},
+			wantErr:      false,
+			metadata_err: nil,
+		},
+		{
 			name:     "failure validation",
 			metadata: &models.MetaData{},
 			args: args{
@@ -566,6 +600,50 @@ func TestProductPackages(t *testing.T) {
 						"aarch64": PackageMetadata{
 							Sha1:    "abcde",
 							Sha256:  "079e5",
+							Version: "1.6.826",
+						},
+					},
+				},
+			},
+			wantErr:     false,
+			package_err: nil,
+			version_err: nil,
+		},
+		{
+			name: "platform-360 as a product is given",
+			args: args{
+				params: &RequestParams{
+					Channel:         "stable",
+					Product:         "platform-360",
+					Version:         "1.6.826",
+					Platform:        "",
+					PlatformVersion: "",
+					Architecture:    "",
+					Eol:             "",
+					LicenseId:       "",
+				},
+			},
+			version: "1.6.826",
+			packages: models.ProductDetails{
+				Product: "habitat",
+				Version: "1.6.826",
+				MetaData: []models.MetaData{
+					{
+						Architecture:     "amd64",
+						FileName:         constants.PLATFORM_SERVICE+".zip",
+						Platform:         "linux",
+						Platform_Version: "",
+						SHA1:             "",
+						SHA256:           "",
+					},
+				},
+			},
+			want: map[string]PlatformVersionList{
+				"linux": {
+					"1.6.826": ArchList{
+						"amd64": PackageMetadata{
+							Sha1:    "",
+							Sha256:  "",
 							Version: "1.6.826",
 						},
 					},
@@ -1154,6 +1232,36 @@ func TestGetFilename(t *testing.T) {
 				Platform:         "linux",
 				Platform_Version: "",
 				SHA1:             "abcd",
+				SHA256:           "",
+			},
+			metadata_err: nil,
+			version:      "latest",
+			version_err:  nil,
+		},
+		{
+			name: "success when product name is platform chef-360",
+			args: args{
+				params: &RequestParams{
+					Channel:         "stable",
+					Product:         constants.PLATFORM_SERVICE,
+					Version:         "",
+					Platform:        "linux",
+					PlatformVersion: "pv",
+					Architecture:    "amd64",
+					Eol:             "",
+					LicenseId:       "",
+					BOM:             "",
+				},
+			},
+			want:    "platform-360.zip",
+			wantErr: false,
+			errMsg:  "",
+			metadata: &models.MetaData{
+				Architecture:     "amd64",
+				FileName:         "platform-360.zip",
+				Platform:         "linux",
+				Platform_Version: "",
+				SHA1:             "",
 				SHA256:           "",
 			},
 			metadata_err: nil,
