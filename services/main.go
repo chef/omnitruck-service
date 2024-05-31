@@ -320,7 +320,7 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 		return server.SendErrorResponse(c, code, msg)
 	}
 
-	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
+	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT || params.Product == constants.PLATFORM_SERVICE {
 		data, err = server.DynamoServices(server.DatabaseService, c).ProductPackages(params)
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
@@ -388,7 +388,7 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 		return server.SendErrorResponse(c, code, msg)
 	}
 
-	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
+	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT || params.Product == constants.PLATFORM_SERVICE {
 		request = &clients.Request{}
 		data, err = server.DynamoServices(server.DatabaseService, c).ProductMetadata(params)
 		if err != nil {
@@ -525,7 +525,7 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 	}
 
 	//assuming that the metadata table will always have only the latest version record for automate, querying db without sortkey
-	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
+	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT || params.Product == constants.PLATFORM_SERVICE {
 		fileName, err := server.DynamoServices(server.DatabaseService, c).GetFilename(params)
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
