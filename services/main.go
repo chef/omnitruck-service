@@ -79,7 +79,7 @@ func (server *ApiService) productsHandler(c *fiber.Ctx) error {
 	var data omnitruck.ItemList
 	request := server.Omnitruck(c).Products(params, &data)
 
-	data = server.DynamoServices(server.DatabaseService, c).Products(data, params.Eol)
+	data = server.DynamoServices(server.DatabaseService, c).Products(data, params.Eol, int(server.Mode))
 
 	if server.Mode == Opensource {
 		server.logCtx(c).Info("filtering opensource products")
@@ -92,6 +92,10 @@ func (server *ApiService) productsHandler(c *fiber.Ctx) error {
 	if server.Mode == Trial {
 		data = omnitruck.FilterProductsForFreeTrial(data, omnitruck.ProductsForFreeTrial)
 		omnitruck.ProductDisplayName(data)
+	}
+
+	if server.Mode == Commercial {
+		data = append(data, constants.PLATFORM_SERVICE)
 	}
 
 	if request.Ok {
@@ -173,7 +177,7 @@ func (server *ApiService) fetchLatestVersion(params *omnitruck.RequestParams, c 
 	var data omnitruck.ProductVersion
 	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
 		request := clients.Request{}
-		data, err := server.DynamoServices(server.DatabaseService, c).VersionLatest(params)
+		data, err := server.DynamoServices(server.DatabaseService, c).VersionLatest(params, int(server.Mode))
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
 			server.logCtx(c).WithError(err).Error("Error while fetching the latest version for the " + params.Product)
@@ -240,8 +244,8 @@ func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
-		data, err := server.DynamoServices(server.DatabaseService, c).VersionAll(params)
+	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT || params.Product == constants.PLATFORM_SERVICE {
+		data, err := server.DynamoServices(server.DatabaseService, c).VersionAll(params, int(server.Mode))
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
 			return server.SendErrorResponse(c, code, msg)
@@ -320,7 +324,7 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 	}
 
 	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT || params.Product == constants.PLATFORM_SERVICE {
-		data, err = server.DynamoServices(server.DatabaseService, c).ProductPackages(params)
+		data, err = server.DynamoServices(server.DatabaseService, c).ProductPackages(params, int(server.Mode))
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
 			return server.SendErrorResponse(c, code, msg)
@@ -389,7 +393,7 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 
 	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT || params.Product == constants.PLATFORM_SERVICE {
 		request = &clients.Request{}
-		data, err = server.DynamoServices(server.DatabaseService, c).ProductMetadata(params)
+		data, err = server.DynamoServices(server.DatabaseService, c).ProductMetadata(params, int(server.Mode))
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
 			request.Failure(code, msg)
@@ -525,7 +529,7 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 
 	//assuming that the metadata table will always have only the latest version record for automate, querying db without sortkey
 	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT || params.Product == constants.PLATFORM_SERVICE {
-		fileName, err := server.DynamoServices(server.DatabaseService, c).GetFilename(params)
+		fileName, err := server.DynamoServices(server.DatabaseService, c).GetFilename(params, int(server.Mode))
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
 			server.logCtx(c).Error("Error while fetching fileName for "+params.Product, err.Error())
@@ -618,7 +622,7 @@ func (server *ApiService) isOsVersion(params *omnitruck.RequestParams, c *fiber.
 	errMsg := fmt.Sprintf(`Version %s not support on this persona.`, version)
 	errLog := fmt.Sprintf(`Error while fetching all versions for the product %s. error :- `, params.Product)
 	if params.Product == constants.HABITAT_PRODUCT || params.Product == constants.AUTOMATE_PRODUCT {
-		allversions, err = server.DynamoServices(server.DatabaseService, c).VersionAll(params)
+		allversions, err = server.DynamoServices(server.DatabaseService, c).VersionAll(params, int(server.Mode))
 		if err != nil {
 			server.logCtx(c).Error(errLog, err.Error())
 			return fiber.NewError(fiber.StatusInternalServerError, utils.DBError)

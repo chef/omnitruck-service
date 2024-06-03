@@ -34,10 +34,13 @@ func NewDynamoServices(db dboperations.IDbOperations, log *log.Entry) DynamoServ
 	}
 }
 
-func (svc *DynamoServices) Products(products []string, eol string) []string {
-	products = append(products, "habitat", constants.PLATFORM_SERVICE)
+func (svc *DynamoServices) Products(products []string, eol string, serverMode int) []string {
+	products = append(products, "habitat")
 	if eol == "true" {
 		products = append(products, "automate-1")
+	}
+	if serverMode == 2 {
+		products = append(products, constants.PLATFORM_SERVICE)
 	}
 	sort.Strings(products)
 	return products
@@ -98,7 +101,7 @@ func (svc *DynamoServices) ProductDownload(params *RequestParams) (string, error
 	return url, nil
 }
 
-func (svc *DynamoServices) ProductMetadata(params *RequestParams) (PackageMetadata, error) {
+func (svc *DynamoServices) ProductMetadata(params *RequestParams, serverMode int) (PackageMetadata, error) {
 	var err error
 	version := params.Version
 
@@ -114,7 +117,7 @@ func (svc *DynamoServices) ProductMetadata(params *RequestParams) (PackageMetada
 		return PackageMetadata{}, fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 
-	if params.Product == constants.PLATFORM_SERVICE {
+	if params.Product == constants.PLATFORM_SERVICE && serverMode == 2{
 		return PackageMetadata{
 			Url:     "",
 			Sha1:    "",
@@ -151,14 +154,13 @@ func (svc *DynamoServices) ProductMetadata(params *RequestParams) (PackageMetada
 	return metadata, nil
 }
 
-func (svc *DynamoServices) ProductPackages(params *RequestParams) (PackageList, error) {
+func (svc *DynamoServices) ProductPackages(params *RequestParams, serverMode int) (PackageList, error) {
 	var err error
 	packageList := PackageList{}
 	flags := RequestParamsFlags{
 		Channel: true,
 	}
-	if params.Product == constants.PLATFORM_SERVICE {
-		svc.log.Info("inside the platform block")
+	if params.Product == constants.PLATFORM_SERVICE && serverMode == 2 {
 		packageList["linux"] = PlatformVersionList{}
 		packageList["linux"][params.Version] = ArchList{}
 		packageList["linux"][params.Version]["amd64"] = PackageMetadata{
@@ -246,7 +248,7 @@ func (svc *DynamoServices) FetchLatestOsVersion(params *RequestParams) (string, 
 	return version, nil
 }
 
-func (svc *DynamoServices) VersionAll(params *RequestParams) ([]ProductVersion, error) {
+func (svc *DynamoServices) VersionAll(params *RequestParams, serverMode int) ([]ProductVersion, error) {
 	productVersions := []ProductVersion{}
 	flags := RequestParamsFlags{
 		Channel: true,
@@ -255,6 +257,10 @@ func (svc *DynamoServices) VersionAll(params *RequestParams) ([]ProductVersion, 
 	if !requestParams.Ok {
 		svc.log.Error(validating_log, requestParams.Message)
 		return productVersions, fiber.NewError(requestParams.Code, requestParams.Message)
+	}
+
+	if params.Product == constants.PLATFORM_SERVICE && serverMode == 2 {
+		return []ProductVersion{"latest"}, nil
 	}
 
 	versions, err := svc.db.GetVersionAll(params.Product)
@@ -276,7 +282,7 @@ func (svc *DynamoServices) VersionAll(params *RequestParams) ([]ProductVersion, 
 	return productVersions, nil
 }
 
-func (svc *DynamoServices) VersionLatest(params *RequestParams) (ProductVersion, error) {
+func (svc *DynamoServices) VersionLatest(params *RequestParams, serverMode int) (ProductVersion, error) {
 	flags := RequestParamsFlags{
 		Channel: true,
 	}
@@ -285,7 +291,9 @@ func (svc *DynamoServices) VersionLatest(params *RequestParams) (ProductVersion,
 		svc.log.Error(validating_log, requestParams.Message)
 		return "", fiber.NewError(requestParams.Code, requestParams.Message)
 	}
-
+	if params.Product == constants.PLATFORM_SERVICE && serverMode == 2 {
+		return "latest", nil
+	}
 	version, err := svc.db.GetVersionLatest(params.Product)
 	if err != nil {
 		svc.log.WithError(err).Error("Error while fetching the latest version for the product.")
@@ -323,12 +331,11 @@ func (svc *DynamoServices) GetRelatedProducts(params *RequestParams) (*models.Re
 	return relatedProducts, err
 }
 
-func (svc *DynamoServices) GetFilename(params *RequestParams) (string, error) {
+func (svc *DynamoServices) GetFilename(params *RequestParams, serverMode int) (string, error) {
 	var err error
 	version := params.Version
 
-	if params.Product == constants.PLATFORM_SERVICE {
-		svc.log.Info("product = platfrom-360")
+	if params.Product == constants.PLATFORM_SERVICE && serverMode == 2 {
 		return constants.PLATFORM_SERVICE + ".zip", nil
 	}
 
