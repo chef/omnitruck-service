@@ -176,7 +176,7 @@ func (server *ApiService) latestVersionHandler(c *fiber.Ctx) error {
 
 func (server *ApiService) fetchLatestVersion(params *omnitruck.RequestParams, c *fiber.Ctx) (omnitruck.ProductVersion, *clients.Request) {
 	var data omnitruck.ProductVersion
-	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
+	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT || params.Product == constants.PLATFORM_SERVICE{
 		request := clients.Request{}
 		data, err := server.DynamoServices(server.DatabaseService, c).VersionLatest(params, int(server.Mode))
 		if err != nil {
