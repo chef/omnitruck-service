@@ -8,3 +8,7 @@ const (
 	HABITAT_PRODUCT       = "habitat"
 	LATEST                = "latest"
 )
+
+const (
+	UNMARSHAL_ERR_MSG = "error on unmarshal.\n[ERROR] -"
+)
