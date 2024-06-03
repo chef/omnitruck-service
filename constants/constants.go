@@ -15,3 +15,7 @@ const (
 const (
 	UNMARSHAL_ERR_MSG = "error on unmarshal.\n[ERROR] -"
 )
+
+const (
+	UNMARSHAL_ERR_MSG = "error on unmarshal.\n[ERROR] -"
+)
