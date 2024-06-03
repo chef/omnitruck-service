@@ -7,7 +7,7 @@ const (
 	AUTOMATE_PRODUCT      = "automate"
 	HABITAT_PRODUCT       = "habitat"
 	LATEST                = "latest"
-	PLATFORM_SERVICE      = "platform-360"
+	PLATFORM_SERVICE      = "chef-360"
 )
 
 const (
