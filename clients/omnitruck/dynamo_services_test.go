@@ -49,7 +49,6 @@ func TestProducts(t *testing.T) {
 	type args struct {
 		p          []string
 		eol        string
-		serverMode int
 	}
 	tests := []struct {
 		name   string
@@ -66,7 +65,6 @@ func TestProducts(t *testing.T) {
 			args: args{
 				p:          []string{"new"},
 				eol:        "false",
-				serverMode: 1,
 			},
 			want: []string{"habitat", "new"},
 		},
@@ -79,22 +77,8 @@ func TestProducts(t *testing.T) {
 			args: args{
 				p:          []string{"new"},
 				eol:        "true",
-				serverMode: 1,
 			},
 			want: []string{"automate-1", "habitat", "new"},
-		},
-		{
-			name: "If the server is type of commercial",
-			fields: fields{
-				db:  mockDbService,
-				log: logrus.NewEntry(logrus.New()),
-			},
-			args: args{
-				p:          []string{"new"},
-				eol:        "false",
-				serverMode: 2,
-			},
-			want: []string{"chef-360","habitat", "new"},
 		},
 	}
 	for _, tt := range tests {
@@ -103,7 +87,7 @@ func TestProducts(t *testing.T) {
 				db:  tt.fields.db,
 				log: tt.fields.log,
 			}
-			if got := svc.Products(tt.args.p, tt.args.eol, tt.args.serverMode); !reflect.DeepEqual(got, tt.want) {
+			if got := svc.Products(tt.args.p, tt.args.eol); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("DynamoServices.Products() = %v, want %v", got, tt.want)
 			}
 		})
@@ -341,7 +325,6 @@ func TestProductDownload(t *testing.T) {
 func TestProductMetadata(t *testing.T) {
 	type args struct {
 		p          *RequestParams
-		serverMode int
 	}
 	tests := []struct {
 		name         string
@@ -375,47 +358,12 @@ func TestProductMetadata(t *testing.T) {
 					Eol:             "",
 					LicenseId:       "",
 				},
-				serverMode: 1,
 			},
 			version:     "latest",
 			version_err: nil,
 			want: PackageMetadata{
 				Sha1:    "",
 				Sha256:  "1234",
-				Url:     "",
-				Version: "latest",
-			},
-			wantErr:      false,
-			metadata_err: nil,
-		},
-		{
-			name: "sucess when platfrom-360 product was given",
-			metadata: &models.MetaData{
-				Architecture:     "amd64",
-				FileName:         constants.PLATFORM_SERVICE + ".zip",
-				Platform:         "linux",
-				Platform_Version: "",
-				SHA1:             "",
-				SHA256:           "",
-			},
-			args: args{
-				p: &RequestParams{
-					Channel:         "stable",
-					Product:         "chef-360",
-					Version:         "latest",
-					Platform:        "linux",
-					PlatformVersion: "pv",
-					Architecture:    "amd64",
-					Eol:             "",
-					LicenseId:       "",
-				},
-				serverMode: 2,
-			},
-			version:     "latest",
-			version_err: nil,
-			want: PackageMetadata{
-				Sha1:    "",
-				Sha256:  "",
 				Url:     "",
 				Version: "latest",
 			},
@@ -436,7 +384,6 @@ func TestProductMetadata(t *testing.T) {
 					Eol:             "",
 					LicenseId:       "",
 				},
-				serverMode: 1,
 			},
 			version:      "latest",
 			version_err:  nil,
@@ -459,7 +406,6 @@ func TestProductMetadata(t *testing.T) {
 					Eol:             "",
 					LicenseId:       "",
 				},
-				serverMode: 1,
 			},
 			version:      "latest",
 			version_err:  nil,
@@ -482,7 +428,6 @@ func TestProductMetadata(t *testing.T) {
 					Eol:             "",
 					LicenseId:       "",
 				},
-				serverMode: 1,
 			},
 			version:      "latest",
 			version_err:  nil,
@@ -512,7 +457,6 @@ func TestProductMetadata(t *testing.T) {
 					Eol:             "",
 					LicenseId:       "",
 				},
-				serverMode: 1,
 			},
 			version:     "1.6.862",
 			version_err: nil,
@@ -539,7 +483,6 @@ func TestProductMetadata(t *testing.T) {
 					Eol:             "",
 					LicenseId:       "",
 				},
-				serverMode: 1,
 			},
 			version:      "",
 			version_err:  errors.New("ResourceNotFoundException: Requested resource not found"),
@@ -562,7 +505,7 @@ func TestProductMetadata(t *testing.T) {
 				db:  mockDbService,
 				log: logrus.NewEntry(logrus.New()),
 			}
-			got, err := svc.ProductMetadata(tt.args.p, tt.args.serverMode)
+			got, err := svc.ProductMetadata(tt.args.p)
 			if tt.wantErr {
 				assert.Equal(t, tt.errMsg, err.Error())
 				return
@@ -577,7 +520,6 @@ func TestProductMetadata(t *testing.T) {
 func TestProductPackages(t *testing.T) {
 	type args struct {
 		params     *RequestParams
-		serverMode int
 	}
 	tests := []struct {
 		name        string
@@ -603,7 +545,6 @@ func TestProductPackages(t *testing.T) {
 					Eol:             "",
 					LicenseId:       "",
 				},
-				serverMode: 1,
 			},
 			version: "1.6.826",
 			packages: models.ProductDetails{
@@ -636,51 +577,6 @@ func TestProductPackages(t *testing.T) {
 			version_err: nil,
 		},
 		{
-			name: "chef-360 as a product is given",
-			args: args{
-				params: &RequestParams{
-					Channel:         "stable",
-					Product:         "chef-360",
-					Version:         "1.6.826",
-					Platform:        "",
-					PlatformVersion: "",
-					Architecture:    "",
-					Eol:             "",
-					LicenseId:       "",
-				},
-				serverMode: 2,
-			},
-			version: "1.6.826",
-			packages: models.ProductDetails{
-				Product: "habitat",
-				Version: "1.6.826",
-				MetaData: []models.MetaData{
-					{
-						Architecture:     "amd64",
-						FileName:         constants.PLATFORM_SERVICE + ".zip",
-						Platform:         "linux",
-						Platform_Version: "",
-						SHA1:             "",
-						SHA256:           "",
-					},
-				},
-			},
-			want: map[string]PlatformVersionList{
-				"linux": {
-					"1.6.826": ArchList{
-						"amd64": PackageMetadata{
-							Sha1:    "",
-							Sha256:  "",
-							Version: "1.6.826",
-						},
-					},
-				},
-			},
-			wantErr:     false,
-			package_err: nil,
-			version_err: nil,
-		},
-		{
 			name: "failure channel validation",
 			args: args{
 				params: &RequestParams{
@@ -693,7 +589,6 @@ func TestProductPackages(t *testing.T) {
 					Eol:             "",
 					LicenseId:       "",
 				},
-				serverMode: 1,
 			},
 			version:     "1.6.826",
 			packages:    models.ProductDetails{},
@@ -716,7 +611,6 @@ func TestProductPackages(t *testing.T) {
 					Eol:             "",
 					LicenseId:       "",
 				},
-				serverMode: 1,
 			},
 			version:     "",
 			packages:    models.ProductDetails{},
@@ -739,7 +633,6 @@ func TestProductPackages(t *testing.T) {
 					Eol:             "",
 					LicenseId:       "",
 				},
-				serverMode: 1,
 			},
 			version:     "1.6.826",
 			packages:    models.ProductDetails{},
@@ -762,7 +655,6 @@ func TestProductPackages(t *testing.T) {
 					Eol:             "",
 					LicenseId:       "",
 				},
-				serverMode: 1,
 			},
 			version:     "1.6.826",
 			packages:    models.ProductDetails{},
@@ -786,7 +678,7 @@ func TestProductPackages(t *testing.T) {
 				db:  mockDbService,
 				log: logrus.NewEntry(logrus.New()),
 			}
-			got, err := svc.ProductPackages(tt.args.params, tt.args.serverMode)
+			got, err := svc.ProductPackages(tt.args.params)
 			if tt.wantErr {
 				assert.Equal(t, tt.errMsg, err.Error())
 				return
@@ -915,8 +807,7 @@ func TestFetchLatestOsVersion(t *testing.T) {
 
 func TestVersionAll(t *testing.T) {
 	type args struct {
-		p          *RequestParams
-		serverMode int
+		p          *RequestParams		
 	}
 	tests := []struct {
 		name         string
@@ -937,25 +828,8 @@ func TestVersionAll(t *testing.T) {
 					Eol:       "",
 					LicenseId: "",
 				},
-				serverMode: 1,
 			},
 			want:         []ProductVersion{ProductVersion("0.70.0"), ProductVersion("0.71.0"), ProductVersion("0.72.0"), ProductVersion("0.73.0")},
-			wantErr:      false,
-			versions_err: nil,
-		},
-		{
-			name: "success while fetching the chef-360's version",
-			versions: []string{"latest"},
-			args: args{
-				p: &RequestParams{
-					Channel:   "stable",
-					Product:   "chef-360",
-					Eol:       "",
-					LicenseId: "",
-				},
-				serverMode: 2,
-			},
-			want:         []ProductVersion{ProductVersion("latest")},
 			wantErr:      false,
 			versions_err: nil,
 		},
@@ -969,7 +843,6 @@ func TestVersionAll(t *testing.T) {
 					Eol:       "",
 					LicenseId: "",
 				},
-				serverMode: 1,
 			},
 			want:         []ProductVersion{},
 			wantErr:      true,
@@ -986,7 +859,6 @@ func TestVersionAll(t *testing.T) {
 					Eol:       "",
 					LicenseId: "",
 				},
-				serverMode: 1,
 			},
 			want:         []ProductVersion{},
 			wantErr:      true,
@@ -1003,7 +875,6 @@ func TestVersionAll(t *testing.T) {
 					Eol:       "",
 					LicenseId: "",
 				},
-				serverMode: 1,
 			},
 			want:         []ProductVersion{},
 			wantErr:      true,
@@ -1021,7 +892,7 @@ func TestVersionAll(t *testing.T) {
 				db:  mockDbService,
 				log: logrus.NewEntry(logrus.New()),
 			}
-			got, err := svc.VersionAll(tt.args.p, tt.args.serverMode)
+			got, err := svc.VersionAll(tt.args.p)
 			if tt.wantErr {
 				assert.Equal(t, tt.errMsg, err.Error())
 				return
@@ -1036,7 +907,6 @@ func TestVersionAll(t *testing.T) {
 func TestVersionLatest(t *testing.T) {
 	type args struct {
 		p          *RequestParams
-		serverMode int
 	}
 	tests := []struct {
 		name        string
@@ -1057,25 +927,8 @@ func TestVersionLatest(t *testing.T) {
 					Eol:       "",
 					LicenseId: "",
 				},
-				serverMode: 1,
 			},
 			want:        ProductVersion("0.70.0"),
-			wantErr:     false,
-			version_err: nil,
-		},
-		{
-			name: "successfully fetched the latest version for chef-360",
-			version: "latest",
-			args: args{
-				p: &RequestParams{
-					Channel:   "stable",
-					Product:   "chef-360",
-					Eol:       "",
-					LicenseId: "",
-				},
-				serverMode: 2,
-			},
-			want:        ProductVersion("latest"),
 			wantErr:     false,
 			version_err: nil,
 		},
@@ -1089,7 +942,6 @@ func TestVersionLatest(t *testing.T) {
 					Eol:       "",
 					LicenseId: "",
 				},
-				serverMode: 1,
 			},
 			want:        "",
 			wantErr:     true,
@@ -1106,7 +958,6 @@ func TestVersionLatest(t *testing.T) {
 					Eol:       "",
 					LicenseId: "",
 				},
-				serverMode: 1,
 			},
 			want:        "",
 			wantErr:     true,
@@ -1124,7 +975,7 @@ func TestVersionLatest(t *testing.T) {
 				db:  mockDbService,
 				log: logrus.NewEntry(logrus.New()),
 			}
-			got, err := svc.VersionLatest(tt.args.p, tt.args.serverMode)
+			got, err := svc.VersionLatest(tt.args.p)
 			if tt.wantErr {
 				assert.Equal(t, tt.errMsg, err.Error())
 				return
@@ -1268,7 +1119,6 @@ func TestGetRelatedProducts(t *testing.T) {
 func TestGetFilename(t *testing.T) {
 	type args struct {
 		params     *RequestParams
-		serverMode int
 	}
 	tests := []struct {
 		name         string
@@ -1295,7 +1145,7 @@ func TestGetFilename(t *testing.T) {
 					LicenseId:       "",
 					BOM:             "",
 				},
-				serverMode: 1,
+				
 			},
 			want:    "automate_cli.zip",
 			wantErr: false,
@@ -1326,7 +1176,6 @@ func TestGetFilename(t *testing.T) {
 					LicenseId:       "",
 					BOM:             "",
 				},
-				serverMode: 2,
 			},
 			want:    "chef-360.zip",
 			wantErr: false,
@@ -1357,7 +1206,6 @@ func TestGetFilename(t *testing.T) {
 					LicenseId:       "",
 					BOM:             "",
 				},
-				serverMode: 1,
 			},
 			want:    "automate_cli.zip",
 			wantErr: true,
@@ -1388,7 +1236,6 @@ func TestGetFilename(t *testing.T) {
 					LicenseId:       "",
 					BOM:             "",
 				},
-				serverMode: 1,
 			},
 			want:    "",
 			wantErr: true,
@@ -1419,7 +1266,6 @@ func TestGetFilename(t *testing.T) {
 					LicenseId:       "",
 					BOM:             "",
 				},
-				serverMode: 1,
 			},
 			want:         "",
 			wantErr:      true,
@@ -1443,7 +1289,6 @@ func TestGetFilename(t *testing.T) {
 					LicenseId:       "",
 					BOM:             "",
 				},
-				serverMode: 1,
 			},
 			want:         "",
 			wantErr:      true,
@@ -1467,7 +1312,7 @@ func TestGetFilename(t *testing.T) {
 				db:  mockDbService,
 				log: logrus.NewEntry(logrus.New()),
 			}
-			got, err := svc.GetFilename(tt.args.params, tt.args.serverMode)
+			got, err := svc.GetFilename(tt.args.params)
 			if tt.wantErr {
 				assert.Equal(t, tt.errMsg, err.Error())
 				return
