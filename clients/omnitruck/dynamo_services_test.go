@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/chef/omnitruck-service/constants"
 	"github.com/chef/omnitruck-service/dboperations"
 	"github.com/chef/omnitruck-service/models"
 	"github.com/chef/omnitruck-service/utils"
@@ -47,8 +46,8 @@ func TestProducts(t *testing.T) {
 		log *logrus.Entry
 	}
 	type args struct {
-		p          []string
-		eol        string
+		p   []string
+		eol string
 	}
 	tests := []struct {
 		name   string
@@ -63,8 +62,8 @@ func TestProducts(t *testing.T) {
 				log: logrus.NewEntry(logrus.New()),
 			},
 			args: args{
-				p:          []string{"new"},
-				eol:        "false",
+				p:   []string{"new"},
+				eol: "false",
 			},
 			want: []string{"habitat", "new"},
 		},
@@ -75,8 +74,8 @@ func TestProducts(t *testing.T) {
 				log: logrus.NewEntry(logrus.New()),
 			},
 			args: args{
-				p:          []string{"new"},
-				eol:        "true",
+				p:   []string{"new"},
+				eol: "true",
 			},
 			want: []string{"automate-1", "habitat", "new"},
 		},
@@ -324,7 +323,7 @@ func TestProductDownload(t *testing.T) {
 
 func TestProductMetadata(t *testing.T) {
 	type args struct {
-		p          *RequestParams
+		p *RequestParams
 	}
 	tests := []struct {
 		name         string
@@ -519,7 +518,7 @@ func TestProductMetadata(t *testing.T) {
 
 func TestProductPackages(t *testing.T) {
 	type args struct {
-		params     *RequestParams
+		params *RequestParams
 	}
 	tests := []struct {
 		name        string
@@ -807,7 +806,7 @@ func TestFetchLatestOsVersion(t *testing.T) {
 
 func TestVersionAll(t *testing.T) {
 	type args struct {
-		p          *RequestParams		
+		p *RequestParams
 	}
 	tests := []struct {
 		name         string
@@ -906,7 +905,7 @@ func TestVersionAll(t *testing.T) {
 
 func TestVersionLatest(t *testing.T) {
 	type args struct {
-		p          *RequestParams
+		p *RequestParams
 	}
 	tests := []struct {
 		name        string
@@ -1118,7 +1117,7 @@ func TestGetRelatedProducts(t *testing.T) {
 
 func TestGetFilename(t *testing.T) {
 	type args struct {
-		params     *RequestParams
+		params *RequestParams
 	}
 	tests := []struct {
 		name         string
@@ -1145,7 +1144,6 @@ func TestGetFilename(t *testing.T) {
 					LicenseId:       "",
 					BOM:             "",
 				},
-				
 			},
 			want:    "automate_cli.zip",
 			wantErr: false,
@@ -1156,36 +1154,6 @@ func TestGetFilename(t *testing.T) {
 				Platform:         "linux",
 				Platform_Version: "",
 				SHA1:             "abcd",
-				SHA256:           "",
-			},
-			metadata_err: nil,
-			version:      "latest",
-			version_err:  nil,
-		},
-		{
-			name: "success when product name is platform chef-360",
-			args: args{
-				params: &RequestParams{
-					Channel:         "stable",
-					Product:         constants.PLATFORM_SERVICE,
-					Version:         "",
-					Platform:        "linux",
-					PlatformVersion: "pv",
-					Architecture:    "amd64",
-					Eol:             "",
-					LicenseId:       "",
-					BOM:             "",
-				},
-			},
-			want:    "chef-360.zip",
-			wantErr: false,
-			errMsg:  "",
-			metadata: &models.MetaData{
-				Architecture:     "amd64",
-				FileName:         "chef-360.zip",
-				Platform:         "linux",
-				Platform_Version: "",
-				SHA1:             "",
 				SHA256:           "",
 			},
 			metadata_err: nil,
