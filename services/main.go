@@ -80,7 +80,7 @@ func (server *ApiService) productsHandler(c *fiber.Ctx) error {
 	var data omnitruck.ItemList
 	request := server.Omnitruck(c).Products(params, &data)
 
-	data = server.DynamoServices(server.DatabaseService, c).Products(data, params.Eol, int(server.Mode))
+	data = server.DynamoServices(server.DatabaseService, c).Products(data, params.Eol)
 
 	if server.Mode == Opensource {
 		server.logCtx(c).Info("filtering opensource products")
@@ -176,9 +176,21 @@ func (server *ApiService) latestVersionHandler(c *fiber.Ctx) error {
 
 func (server *ApiService) fetchLatestVersion(params *omnitruck.RequestParams, c *fiber.Ctx) (omnitruck.ProductVersion, *clients.Request) {
 	var data omnitruck.ProductVersion
-	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT || params.Product == constants.PLATFORM_SERVICE{
+	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
 		request := clients.Request{}
-		data, err := server.DynamoServices(server.DatabaseService, c).VersionLatest(params, int(server.Mode))
+		data, err := server.DynamoServices(server.DatabaseService, c).VersionLatest(params)
+		if err != nil {
+			code, msg := getErrorCodeAndMsg(err)
+			server.logCtx(c).WithError(err).Error("Error while fetching the latest version for the " + params.Product)
+			request.Failure(code, msg)
+			return data, &request
+		} else {
+			request.Success()
+			return data, &request
+		}
+	} else if params.Product == constants.PLATFORM_SERVICE {
+		request := clients.Request{}
+		data, err := server.ReplicatedService(server.Config.ServiceConfig.ReplicatedConfig, server.logCtx(c)).PlatformVersionLatest(params, int(server.Mode))
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
 			server.logCtx(c).WithError(err).Error("Error while fetching the latest version for the " + params.Product)
@@ -198,6 +210,19 @@ func (server *ApiService) fetchLatestVersion(params *omnitruck.RequestParams, c 
 // Then we can return the latest OS version
 func (server *ApiService) fetchLatestOSVersion(params *omnitruck.RequestParams, c *fiber.Ctx) (omnitruck.ProductVersion, *clients.Request) {
 	var data []omnitruck.ProductVersion
+	if params.Product == constants.PLATFORM_SERVICE {
+		request := clients.Request{}
+		data, err := server.ReplicatedService(server.Config.ServiceConfig.ReplicatedConfig, server.logCtx(c)).PlatformVersionLatest(params, int(server.Mode))
+		if err != nil {
+			code, msg := getErrorCodeAndMsg(err)
+			server.logCtx(c).WithError(err).Error("Error while fetching the latest version for the " + params.Product)
+			request.Failure(code, msg)
+			return data, &request
+		} else {
+			request.Success()
+			return data, &request
+		}
+	}
 	// Need to fetch all versions and filter out to only show the OS versions
 	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
 		request := clients.Request{}
@@ -239,14 +264,15 @@ func (server *ApiService) fetchLatestOSVersion(params *omnitruck.RequestParams, 
 // @Router      /{channel}/{product}/versions/all [get]
 func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
+	var data []omnitruck.ProductVersion
 
 	err, ok := server.ValidateRequest(params, c)
 	if !ok {
 		return err
 	}
 
-	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT || params.Product == constants.PLATFORM_SERVICE {
-		data, err := server.DynamoServices(server.DatabaseService, c).VersionAll(params, int(server.Mode))
+	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
+		data, err := server.DynamoServices(server.DatabaseService, c).VersionAll(params)
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
 			return server.SendErrorResponse(c, code, msg)
@@ -264,9 +290,15 @@ func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 		}
 
 		return server.SendResponse(c, &data)
+	} else if params.Product == constants.PLATFORM_SERVICE {
+		versions, err := server.ReplicatedService(server.Config.ServiceConfig.ReplicatedConfig, server.logCtx(c)).PlatformVersionsAll(params, int(server.Mode))
+		if err != nil {
+			code, msg := getErrorCodeAndMsg(err)
+			return server.SendErrorResponse(c, code, msg)
+		}
+		return server.SendResponse(c, &versions)
 	}
 
-	var data []omnitruck.ProductVersion
 	request := server.Omnitruck(c).ProductVersions(params).ParseData(&data)
 
 	switch server.Mode {
@@ -318,14 +350,33 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 		return err
 	}
 
+	if params.Product == constants.PLATFORM_SERVICE {
+		data, err = server.ReplicatedService(server.Config.ServiceConfig.ReplicatedConfig, server.logCtx(c)).PlatformPackages(params, int(server.Mode))
+		if err != nil {
+			code, msg := getErrorCodeAndMsg(err)
+			return server.SendErrorResponse(c, code, msg)
+		}
+
+		data.UpdatePackages(func(platform string, pv string, arch string, m omnitruck.PackageMetadata) omnitruck.PackageMetadata {
+			params.Version = m.Version
+			params.Platform = platform
+			params.Architecture = arch
+
+			m.Url = getDownloadUrl(params, c)
+
+			return m
+		})
+		return server.SendResponse(c, &data)
+	}
+
 	err = server.versionCheckForTrailAndOsServer(params, c)
 	if err != nil {
 		code, msg := getErrorCodeAndMsg(err)
 		return server.SendErrorResponse(c, code, msg)
 	}
 
-	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT || params.Product == constants.PLATFORM_SERVICE {
-		data, err = server.DynamoServices(server.DatabaseService, c).ProductPackages(params, int(server.Mode))
+	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
+		data, err = server.DynamoServices(server.DatabaseService, c).ProductPackages(params)
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
 			return server.SendErrorResponse(c, code, msg)
@@ -386,15 +437,28 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 		return err
 	}
 
+	if params.Product == constants.PLATFORM_SERVICE {
+		request = &clients.Request{}
+		data, err = server.ReplicatedService(server.Config.ServiceConfig.ReplicatedConfig, server.logCtx(c)).PlatformMetadata(params, int(server.Mode))
+		if err != nil {
+			code, msg := getErrorCodeAndMsg(err)
+			return server.SendErrorResponse(c, code, msg)
+		} else {
+			url := getDownloadUrl(params, c)
+			data.Url = url
+			return server.SendResponse(c, &data)
+		}
+	}
+
 	err = server.versionCheckForTrailAndOsServer(params, c)
 	if err != nil {
 		code, msg := getErrorCodeAndMsg(err)
 		return server.SendErrorResponse(c, code, msg)
 	}
 
-	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT || params.Product == constants.PLATFORM_SERVICE {
+	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
 		request = &clients.Request{}
-		data, err = server.DynamoServices(server.DatabaseService, c).ProductMetadata(params, int(server.Mode))
+		data, err = server.DynamoServices(server.DatabaseService, c).ProductMetadata(params)
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
 			request.Failure(code, msg)
@@ -521,6 +585,21 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 		server.logCtx(c).Error("Validation of file name API for " + params.Product + " failed")
 		return err
 	}
+
+	if params.Product == constants.PLATFORM_SERVICE {
+		fileName, err := server.ReplicatedService(server.Config.ServiceConfig.ReplicatedConfig, server.logCtx(c)).PlatformFilename(params, int(server.Mode))
+		if err != nil {
+			code, msg := getErrorCodeAndMsg(err)
+			server.logCtx(c).Error("Error while fetching fileName for "+params.Product, err.Error())
+			return server.SendErrorResponse(c, code, msg)
+		}
+		response := map[string]interface{}{
+			"fileName": fileName,
+		}
+		server.logCtx(c).Info("Returning success response from fileName API for " + params.Product)
+		return server.SendResponse(c, response)
+	}
+
 	server.logCtx(c).Info("Validating download file name for " + params.Product + " in channel " + params.Channel)
 	err = server.versionCheckForTrailAndOsServer(params, c)
 	if err != nil {
@@ -529,8 +608,8 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 	}
 
 	//assuming that the metadata table will always have only the latest version record for automate, querying db without sortkey
-	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT || params.Product == constants.PLATFORM_SERVICE {
-		fileName, err := server.DynamoServices(server.DatabaseService, c).GetFilename(params, int(server.Mode))
+	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
+		fileName, err := server.DynamoServices(server.DatabaseService, c).GetFilename(params)
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
 			server.logCtx(c).Error("Error while fetching fileName for "+params.Product, err.Error())
@@ -623,7 +702,7 @@ func (server *ApiService) isOsVersion(params *omnitruck.RequestParams, c *fiber.
 	errMsg := fmt.Sprintf(`Version %s not support on this persona.`, version)
 	errLog := fmt.Sprintf(`Error while fetching all versions for the product %s. error :- `, params.Product)
 	if params.Product == constants.HABITAT_PRODUCT || params.Product == constants.AUTOMATE_PRODUCT {
-		allversions, err = server.DynamoServices(server.DatabaseService, c).VersionAll(params, int(server.Mode))
+		allversions, err = server.DynamoServices(server.DatabaseService, c).VersionAll(params)
 		if err != nil {
 			server.logCtx(c).Error(errLog, err.Error())
 			return fiber.NewError(fiber.StatusInternalServerError, utils.DBError)

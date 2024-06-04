@@ -8,6 +8,7 @@ const (
 	HABITAT_PRODUCT       = "habitat"
 	LATEST                = "latest"
 	PLATFORM_SERVICE      = "chef-360"
+	PLATFORM_ERROR        = "chef-360 not available for the trial and opensource "
 )
 
 const (

@@ -10,8 +10,10 @@ import (
 
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
+	"github.com/chef/omnitruck-service/clients/omnitruck/replicated"
 	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/dboperations"
+	logrus "github.com/chef/omnitruck-service/logger"
 	dbconnection "github.com/chef/omnitruck-service/middleware/db"
 	"github.com/chef/omnitruck-service/middleware/license"
 	"github.com/chef/omnitruck-service/utils/awsutils"
@@ -206,6 +208,11 @@ func (server *ApiService) DynamoServices(db dboperations.IDbOperations, c *fiber
 	service := omnitruck.NewDynamoServices(db, server.logCtx(c))
 
 	return &service
+}
+
+func (server *ApiService) ReplicatedService(config config.ReplicatedConfig, log logrus.Logger) replicated.IReplicated {
+	service := replicated.NewReplicatedImpl(config, log)
+	return service
 }
 
 func (server *ApiService) logCtx(c *fiber.Ctx) *log.Entry {
