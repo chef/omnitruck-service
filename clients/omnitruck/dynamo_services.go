@@ -143,10 +143,10 @@ func (svc *DynamoServices) ProductMetadata(params *RequestParams) (PackageMetada
 
 func (svc *DynamoServices) ProductPackages(params *RequestParams) (PackageList, error) {
 	var err error
+	packageList := PackageList{}
 	flags := RequestParamsFlags{
 		Channel: true,
 	}
-
 	requestParams := ValidateRequest(params, flags)
 	if !requestParams.Ok {
 		svc.log.Error(validating_log, requestParams.Message)
@@ -169,8 +169,6 @@ func (svc *DynamoServices) ProductPackages(params *RequestParams) (PackageList, 
 	if len(details.MetaData) == 0 {
 		return PackageList{}, fiber.NewError(fiber.StatusBadRequest, utils.BadRequestError)
 	}
-
-	packageList := PackageList{}
 	for _, v := range details.MetaData {
 		v.Platform_Version = "pv"
 		if _, ok := packageList[v.Platform]; !ok {
@@ -265,7 +263,6 @@ func (svc *DynamoServices) VersionLatest(params *RequestParams) (ProductVersion,
 		svc.log.Error(validating_log, requestParams.Message)
 		return "", fiber.NewError(requestParams.Code, requestParams.Message)
 	}
-
 	version, err := svc.db.GetVersionLatest(params.Product)
 	if err != nil {
 		svc.log.WithError(err).Error("Error while fetching the latest version for the product.")
