@@ -50,6 +50,7 @@ type RequestParams struct {
 	Eol             string
 	LicenseId       string
 	BOM             string
+	OsType          string
 }
 
 type RequestParamsFlags struct {
