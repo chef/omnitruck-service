@@ -8,9 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/chef/omnitruck-service/clients/omnitruck"
 	"github.com/chef/omnitruck-service/dboperations"
 	_ "github.com/chef/omnitruck-service/docs"
 	"github.com/chef/omnitruck-service/models"
+	"github.com/chef/omnitruck-service/utils/fileutils"
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -720,6 +722,85 @@ func TestFileNameHandler(t *testing.T) {
 			case <-time.After(timeout):
 				t.Errorf("Test took too long to complete (timeout: %s)", timeout)
 			}
+		})
+	}
+}
+
+func TestDownloadScriptHandler(t *testing.T) {
+	tests := []struct {
+		name             string
+		serverMode       ApiType
+		filePath         string
+		mockfileutils    func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error)
+		requestPath      string
+		expectedStatus   int
+		expectedResponse string
+	}{
+		{
+			name:       "success",
+			serverMode: 2,
+			mockfileutils: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
+				return "", nil
+			},
+			requestPath:      `/stable/chef/downloadScript?license_id=afd2c0a2-111f-4caf-1fa2-1211fe1212d1&os_type=linux`,
+			expectedStatus:   200,
+			expectedResponse: "",
+		},
+		{
+			name:       "os_type query parameter is empty",
+			serverMode: 2,
+			mockfileutils: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
+				return "", nil
+			},
+			requestPath:      `/stable/chef/downloadScript?license_id=afd2c0a2-111f-4caf-1fa2-1211fe1212d1&os_type=`,
+			expectedStatus:   400,
+			expectedResponse: "",
+		},
+		{
+			name:       "if os_type is inavalid",
+			serverMode: 2,
+			mockfileutils: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
+				return "", nil
+			},
+			requestPath:      `/stable/chef/downloadScript?license_id=afd2c0a2-111f-4caf-1fa2-1211fe1212d1&os_type=macos`,
+			expectedStatus:   400,
+			expectedResponse: "",
+		},
+		{
+			name:       "when the os_type is windows",
+			serverMode: 1,
+			mockfileutils: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
+				return "", nil
+			},
+			requestPath:    `/stable/chef/downloadScript?license_id=afd2c0a2-111f-4caf-1fa2-1211fe1212d1&os_type=windows`,
+			expectedStatus: 200,
+		},
+		{
+			name:       "error while parsing the script",
+			serverMode: 1,
+			mockfileutils: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
+				return "", errors.New("error while parsing file: /install.sh.tmpl not found")
+			},
+			requestPath:    `/stable/chef/downloadScript?license_id=afd2c0a2-111f-4caf-1fa2-1211fe1212d1&os_type=windows`,
+			expectedStatus: 500,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			app := fiber.New()
+			mockFileutils := new(fileutils.MockFileUtils)
+			mockFileutils.GetScriptfunc = test.mockfileutils
+			server := &ApiService{
+				App:       app,
+				FileUtils: mockFileutils,
+				Log:       logrus.NewEntry(logrus.New()),
+				Mode:      test.serverMode,
+			}
+			server.buildRouter()
+			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			assert.Equal(t, test.expectedStatus, resp.StatusCode)
 		})
 	}
 }

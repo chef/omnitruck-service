@@ -15,6 +15,7 @@ import (
 	dbconnection "github.com/chef/omnitruck-service/middleware/db"
 	"github.com/chef/omnitruck-service/middleware/license"
 	"github.com/chef/omnitruck-service/utils/awsutils"
+	"github.com/chef/omnitruck-service/utils/fileutils"
 	fiber "github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -59,6 +60,7 @@ type ApiService struct {
 	Validator       omnitruck.RequestValidator
 	Mode            ApiType
 	DatabaseService dboperations.IDbOperations
+	FileUtils       fileutils.FileUtils
 }
 
 func New(c Config) *ApiService {
@@ -74,6 +76,7 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	server.Validator = omnitruck.NewValidator()
 	server.Mode = c.Mode
 	server.DatabaseService = dboperations.NewDbOperationsService(dbconnection.NewDbConnectionService(awsutils.NewAwsUtils(), c.ServiceConfig), c.ServiceConfig)
+	server.FileUtils = fileutils.NewFileUtils()
 
 	engine := html.New("./views", ".html")
 
@@ -247,6 +250,10 @@ func (server *ApiService) JSON(c *fiber.Ctx, data interface{}) error {
 
 func (server *ApiService) SendResponse(c *fiber.Ctx, data interface{}) error {
 	return server.JSON(c, data)
+}
+
+func (server *ApiService) SendXshResponse(c *fiber.Ctx, data string) error {
+	return c.SendString(data)
 }
 
 func (server *ApiService) SendError(c *fiber.Ctx, request *clients.Request) error {
