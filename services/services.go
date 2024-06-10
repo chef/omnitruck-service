@@ -10,8 +10,10 @@ import (
 
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
+	"github.com/chef/omnitruck-service/clients/omnitruck/replicated"
 	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/dboperations"
+	l "github.com/chef/omnitruck-service/logger"
 	dbconnection "github.com/chef/omnitruck-service/middleware/db"
 	"github.com/chef/omnitruck-service/middleware/license"
 	"github.com/chef/omnitruck-service/utils/awsutils"
@@ -61,6 +63,8 @@ type ApiService struct {
 	Mode             ApiType
 	DatabaseService  dboperations.IDbOperations
 	TemplateRenderer template.TemplateRender
+	Replicated       replicated.IReplicated
+	LicenseClient    *clients.License
 }
 
 func New(c Config) *ApiService {
@@ -79,6 +83,8 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	server.TemplateRenderer = template.NewTemplateRender()
 
 	engine := html.New("./views", ".html")
+	server.Replicated = replicated.NewReplicatedImpl(c.ServiceConfig.ReplicatedConfig, l.NewLogrusStandardLogger())
+	server.LicenseClient = clients.NewLicenseClient()
 
 	server.App = fiber.New(fiber.Config{
 		DisableStartupMessage: false,

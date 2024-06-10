@@ -1,8 +1,11 @@
 package services
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -442,13 +445,14 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 	}
 
 	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
-		url, err := server.DynamoServices(server.DatabaseService, c).ProductDownload(params)
-		if err != nil {
-			code, msg := getErrorCodeAndMsg(err)
-			return server.SendErrorResponse(c, code, msg)
+		return server.downloadAutomateOrHabitat(params, c)
+	}
+
+	if params.Product == constants.PLATFORM_SERVICE {
+		if server.Mode == Commercial {
+			return server.downloadChefPlatform(params, c)
 		}
-		server.logCtx(c).Infof("Redirecting user to %s", url)
-		return c.Redirect(url, 302)
+		return server.SendErrorResponse(c, http.StatusBadRequest, constants.PLATFORM_ERROR)
 	}
 
 	var data omnitruck.PackageMetadata
@@ -463,6 +467,80 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 	} else {
 		return server.SendError(c, request)
 	}
+}
+
+func (server *ApiService) downloadChefPlatform(params *omnitruck.RequestParams, c *fiber.Ctx) error {
+	//1. Get the replicated customer email associated to licenseId
+	resp := clients.Response{}
+	request := server.LicenseClient.GetReplicatedCustomerEmail(params.LicenseId, server.Config.ServiceConfig.LicenseServiceUrl, &resp)
+
+	if !request.Ok {
+		server.logCtx(c).Errorf("Recieved error response from getReplicatedCustomer")
+		return server.SendErrorResponse(c, request.Code, request.Message)
+	}
+
+	var replicatedEmailResp clients.GetReplicatedCustomerResponse
+	err := json.Unmarshal(request.Body, &replicatedEmailResp)
+
+	if err != nil {
+		server.logCtx(c).Errorf("Error while unmarshalling getReplicatedCustomer response : %s", err.Error())
+		return server.SendError(c, request)
+	}
+
+	//2. Run a search customer on replicated with email
+	requestId := fmt.Sprint(c.Locals("requestid"))
+	customers, err := server.Replicated.SearchCustomersByEmail(replicatedEmailResp.ReplicatedEmail, requestId)
+
+	if err != nil {
+		server.logCtx(c).Errorf("Error while fetching replicated customers with Email : %s", err.Error())
+		return server.SendError(c, request)
+	}
+
+	if len(customers) == 0 {
+		server.logCtx(c).Errorf("No replicated customers found with Email : %s", replicatedEmailResp.ReplicatedEmail)
+		return server.SendError(c, request)
+	}
+	customer := customers[0]
+
+	//3. Based on Airgap flag, formulate the download URL
+	url, err := server.Replicated.GetDowloadUrl(customer, requestId)
+	if err != nil {
+		code, msg := getErrorCodeAndMsg(err)
+		return server.SendErrorResponse(c, code, msg)
+	}
+
+	downloadResp, err := server.Replicated.DownloadFromReplicated(url, requestId, customer.InstallationId)
+	if err != nil {
+		server.logCtx(c).Errorf("Error while downloading from replicated : %s", err.Error())
+		return server.SendError(c, request)
+	}
+	defer downloadResp.Body.Close()
+
+	// Set response headers
+	for name, values := range downloadResp.Header {
+		for _, value := range values {
+			c.Set(name, value)
+		}
+	}
+
+	// Set status code
+	c.Status(downloadResp.StatusCode)
+
+	if _, err := io.Copy(c.Response().BodyWriter(), downloadResp.Body); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (server *ApiService) downloadAutomateOrHabitat(params *omnitruck.RequestParams, c *fiber.Ctx) error {
+	url, err := server.DynamoServices(server.DatabaseService, c).ProductDownload(params)
+	if err != nil {
+		code, msg := getErrorCodeAndMsg(err)
+		return server.SendErrorResponse(c, code, msg)
+	}
+	server.logCtx(c).Infof("Redirecting user to %s", url)
+	return c.Redirect(url, 302)
 }
 
 // @description The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned
