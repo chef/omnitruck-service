@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -448,6 +449,70 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 		}
 		server.logCtx(c).Infof("Redirecting user to %s", url)
 		return c.Redirect(url, 302)
+	}
+
+	if params.Product == constants.PLATFORM_SERVICE && server.Mode == Commercial {
+		//1. Get the replicated customer email associated to licenseId
+		resp := clients.Response{}
+		request := server.LicenseClient.GetReplicatedCustomerEmail(params.LicenseId, "http://localhost:8000", &resp)
+
+		if !request.Ok {
+			server.logCtx(c).Errorf("Recieved error response from getReplicatedCustomer")
+			return server.SendErrorResponse(c, request.Code, request.Message)
+		}
+
+		var replicatedEmailResp clients.GetReplicatedCustomerResponse
+		err := json.Unmarshal(request.Body, &replicatedEmailResp)
+
+		if err != nil {
+			server.logCtx(c).Errorf("Error while unmarshalling getReplicatedCustomer response : %s", err.Error())
+			return server.SendError(c, request)
+		}
+
+		//2. Run a search customer on replicated with email
+		requestId := fmt.Sprint(c.Locals("requestid"))
+		customers, err := server.replicated.SearchCustomersByEmail(replicatedEmailResp.ReplicatedEmail, requestId)
+
+		if err != nil {
+			server.logCtx(c).Errorf("Error while fetching replicated customers with Email : %s", err.Error())
+			return server.SendError(c, request)
+		}
+
+		if len(customers) == 0 {
+			server.logCtx(c).Errorf("No replicated customers found with Email : %s", replicatedEmailResp.ReplicatedEmail)
+			return server.SendError(c, request)
+		}
+		customer := customers[0]
+
+		//3. Based on Airgap flag, formulate the download URL
+		url, err := server.replicated.GetDowloadUrl(customer, requestId)
+		if err != nil {
+			code, msg := getErrorCodeAndMsg(err)
+			return server.SendErrorResponse(c, code, msg)
+		}
+
+		downloadResp, body, err := server.replicated.DownloadFromReplicated(url, requestId, customer.InstallationId)
+
+		if err != nil {
+			server.logCtx(c).Errorf("Error while downloading from replicated : %s", err.Error())
+			return server.SendError(c, request)
+		}
+
+		// Set response headers
+		for name, values := range downloadResp.Header {
+			for _, value := range values {
+				c.Set(name, value)
+			}
+		}
+
+		// Set status code
+		c.Status(downloadResp.StatusCode)
+
+		if _, err := c.Write(body); err != nil {
+			return err
+		}
+
+		return nil
 	}
 
 	var data omnitruck.PackageMetadata

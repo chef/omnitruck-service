@@ -10,8 +10,10 @@ import (
 
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
+	"github.com/chef/omnitruck-service/clients/omnitruck/replicated"
 	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/dboperations"
+	l "github.com/chef/omnitruck-service/logger"
 	dbconnection "github.com/chef/omnitruck-service/middleware/db"
 	"github.com/chef/omnitruck-service/middleware/license"
 	"github.com/chef/omnitruck-service/utils/awsutils"
@@ -59,6 +61,8 @@ type ApiService struct {
 	Validator       omnitruck.RequestValidator
 	Mode            ApiType
 	DatabaseService dboperations.IDbOperations
+	replicated      replicated.IReplicated
+	LicenseClient   *clients.License
 }
 
 func New(c Config) *ApiService {
@@ -74,7 +78,8 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	server.Validator = omnitruck.NewValidator()
 	server.Mode = c.Mode
 	server.DatabaseService = dboperations.NewDbOperationsService(dbconnection.NewDbConnectionService(awsutils.NewAwsUtils(), c.ServiceConfig), c.ServiceConfig)
-
+	server.replicated = replicated.NewReplicatedImpl(c.ServiceConfig.ReplicatedConfig, l.NewLogrusStandardLogger())
+	server.LicenseClient = clients.NewLicenseClient()
 	engine := mustache.New("./views", ".html")
 
 	server.App = fiber.New(fiber.Config{
