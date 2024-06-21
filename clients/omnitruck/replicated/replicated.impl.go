@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strings"
 
@@ -59,6 +60,28 @@ func (r ReplicatedImpl) makeRequest(url, method, requestId string, payload io.Re
 	return res.StatusCode, body, nil
 }
 
+func (r ReplicatedImpl) DownloadFromReplicated(url, requestid, authorization string) (res *http.Response, body []byte, err error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	req.Header.Add("Authorization", authorization)
+
+	// Perform the request
+	resp, err := r.Client.Do(req)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return resp, body, nil
+}
+
 func (r ReplicatedImpl) SearchCustomersByEmail(email string, requestId string) (customers []Customer, err error) {
 	log := utils.AddLogFields("SearchCustomersByEmail", requestId, r.Logger)
 
@@ -96,4 +119,25 @@ func (r ReplicatedImpl) SearchCustomersByEmail(email string, requestId string) (
 	}
 
 	return respObj.Customers, nil
+}
+
+func (r *ReplicatedImpl) GetDowloadUrl(customer Customer, requestId string) (url string, err error) {
+	log := utils.AddLogFields("SearchCustomersByEmail", requestId, r.Logger)
+	if len(customer.Channels) == 0 {
+		log.Error("No channel found for download ")
+		return "", fmt.Errorf("no channels found for customer %s", customer.ID)
+	}
+
+	channel := customer.Channels[0]
+
+	if channel.AppSlug == "" || channel.ChannelSlug == "" {
+		log.Error("Empty app or channel slug")
+		return "", fmt.Errorf("empty app or channel slugfound for customer %s", customer.ID)
+	}
+	url = constants.REPLICATED_DOWNLOAD_URL + "/" + channel.AppSlug + "/" + channel.ChannelSlug
+
+	if customer.Airgap {
+		url += "?airgap=true"
+	}
+	return url, nil
 }
