@@ -6,7 +6,7 @@ require (
 	github.com/aws/aws-sdk-go v1.54.7
 	github.com/gofiber/fiber/v2 v2.52.4
 	github.com/gofiber/swagger v1.0.0
-	github.com/gofiber/template v1.7.5
+	github.com/gofiber/template v1.8.3
 	github.com/gomarkdown/markdown v0.0.0-20240419095408-642f0ee99ae2
 	github.com/hashicorp/go-version v1.7.0
 	github.com/sirupsen/logrus v1.9.3
