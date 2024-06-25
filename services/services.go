@@ -19,7 +19,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/gofiber/template/mustache"
+	"github.com/gofiber/template/html/v2"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -75,7 +75,7 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	server.Mode = c.Mode
 	server.DatabaseService = dboperations.NewDbOperationsService(dbconnection.NewDbConnectionService(awsutils.NewAwsUtils(), c.ServiceConfig), c.ServiceConfig)
 
-	engine := mustache.New("./views", ".html")
+	engine := html.New("./views", ".html")
 
 	server.App = fiber.New(fiber.Config{
 		DisableStartupMessage: false,
