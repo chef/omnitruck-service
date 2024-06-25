@@ -32,8 +32,8 @@ const (
 )
 
 type ErrorResponse struct {
-	Code       int    `json:"code" example:200`
-	StatusText string `json:"status_text" example:OK`
+	Code       int    `json:"code"`
+	StatusText string `json:"status_text"`
 	Message    string `json:"message"`
 } //@name ErrorResponse
 

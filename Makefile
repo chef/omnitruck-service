@@ -8,7 +8,8 @@ build:
 	@echo "Building cli"
 	go build -o bin/
 
-test: $(TESTS)
+test: 
+	go test -race -vet=off ./...
 
 test_omnitruck_client:
 	cd clients/omnitruck; go test -v
