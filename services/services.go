@@ -19,7 +19,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/gofiber/template/mustache"
+	"github.com/gofiber/template/html/v2"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -32,8 +32,8 @@ const (
 )
 
 type ErrorResponse struct {
-	Code       int    `json:"code" example:200`
-	StatusText string `json:"status_text" example:OK`
+	Code       int    `json:"code"`
+	StatusText string `json:"status_text"`
 	Message    string `json:"message"`
 } //@name ErrorResponse
 
@@ -75,7 +75,7 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	server.Mode = c.Mode
 	server.DatabaseService = dboperations.NewDbOperationsService(dbconnection.NewDbConnectionService(awsutils.NewAwsUtils(), c.ServiceConfig), c.ServiceConfig)
 
-	engine := mustache.New("./views", ".html")
+	engine := html.New("./views", ".html")
 
 	server.App = fiber.New(fiber.Config{
 		DisableStartupMessage: false,

@@ -1,4 +1,4 @@
-FROM golang:1.19-alpine as stage1
+FROM golang:1.22.4-alpine AS stage1
 
 WORKDIR /app
 
@@ -15,7 +15,7 @@ EXPOSE 3000
 EXPOSE 3001
 EXPOSE 3002 
 
-FROM golang:1.19-alpine 
+FROM golang:1.22.4-alpine 
 
 COPY --from=stage1 /app/bin/omnitruck-service bin/omnitruck-service
 COPY --from=stage1 /app/omnitruck.yml omnitruck.yml
