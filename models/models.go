@@ -25,3 +25,8 @@ type RelatedProducts struct {
 	Bom      string            `json:"bom"`
 	Products map[string]string `json:"products"`
 }
+
+type Script struct {
+	BaseUrl   string `json:"base_url"`
+	LicenseId string `json:"licenseId"`
+}

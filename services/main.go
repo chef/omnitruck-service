@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -48,7 +49,7 @@ func (server *ApiService) buildRouter() {
 	server.App.Get("/:channel/:product/download", requestid.New(), server.productDownloadHandler)
 	server.App.Get("/relatedProducts", requestid.New(), server.relatedProductsHandler)
 	server.App.Get("/:channel/:product/fileName", requestid.New(), server.fileNameHandler)
-
+	server.App.Get("/:channel/:product/downloadScript", requestid.New(), server.downloadScriptHandler)
 }
 
 func (server *ApiService) docsHandler(baseUrl string) func(*fiber.Ctx) error {
@@ -647,4 +648,37 @@ func (server *ApiService) isOsVersion(params *omnitruck.RequestParams, c *fiber.
 		}
 	}
 	return fiber.NewError(fiber.StatusBadRequest, errMsg)
+}
+
+func (server *ApiService) downloadScriptHandler(c *fiber.Ctx) error {
+	params := getRequestParams(c)
+	c.Set("Content-Type", "application/x-sh")
+	err, ok := server.ValidateRequest(params, c)
+	if !ok {
+		server.logCtx(c).Error("Validation of download script API for " + params.Product + " failed")
+		return err
+	}
+	if params.OsType == "" {
+		return server.SendErrorResponse(c, http.StatusBadRequest, "query os_type can't be empty please use linux or windows depending on your operating system.")
+	}
+	if params.OsType != "linux" && params.OsType != "windows" {
+		return server.SendErrorResponse(c, http.StatusBadRequest, "query os_type can only be used as linux or windows depending on your operating system.")
+	}
+	server.logCtx(c).Info("Validating download script for " + params.Product + " in channel " + params.Channel)
+	if server.Mode == Opensource {
+		params.LicenseId = ""
+	}
+	
+	var filePath string
+	if params.OsType == "linux" {
+		filePath = "../templates/install.sh.tmpl"
+	} else if params.OsType == "windows" {
+		filePath = "../templates/install.ps1.tmpl"
+	}
+
+	resp, err := server.FileUtils.GetScript(c.Hostname(), params, filePath)
+	if err != nil {
+		return err
+	}
+	return server.SendXshResponse(c, resp)
 }
