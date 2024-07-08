@@ -16,6 +16,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/gofiber/swagger"
 	"github.com/gomarkdown/markdown"
+	"go.uber.org/zap"
 )
 
 // @title        Licensed Omnitruck API
@@ -177,7 +178,7 @@ func (server *ApiService) fetchLatestVersion(params *omnitruck.RequestParams, c 
 		data, err := server.DynamoServices(server.DatabaseService, c).VersionLatest(params)
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
-			server.logCtx(c).WithError(err).Error("Error while fetching the latest version for the " + params.Product)
+			server.logCtx(c).Error("Error while fetching the latest version for the " + params.Product, zap.Error(err))
 			request.Failure(code, msg)
 			return data, &request
 		} else {
@@ -200,7 +201,7 @@ func (server *ApiService) fetchLatestOSVersion(params *omnitruck.RequestParams, 
 		latestVersion, err := server.DynamoServices(server.DatabaseService, c).FetchLatestOsVersion(params)
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
-			server.logCtx(c).WithError(err).Error("Error while fetching the latest opensource version for the " + params.Product)
+			server.logCtx(c).Error("Error while fetching the latest opensource version for the " + params.Product, zap.Error(err))
 			request.Failure(code, msg)
 			return omnitruck.ProductVersion(latestVersion), &request
 		} else {
@@ -447,7 +448,7 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 			code, msg := getErrorCodeAndMsg(err)
 			return server.SendErrorResponse(c, code, msg)
 		}
-		server.logCtx(c).Infof("Redirecting user to %s", url)
+		server.logCtx(c).Sugar().Infof("Redirecting user to %s", url)
 		return c.Redirect(url, 302)
 	}
 
@@ -458,7 +459,7 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 		if flag {
 			data.Url = data.Url + substring
 		}
-		server.logCtx(c).Infof("Redirecting user to %s", data.Url)
+		server.logCtx(c).Sugar().Infof("Redirecting user to %s", data.Url)
 		return c.Redirect(data.Url, 302)
 	} else {
 		return server.SendError(c, request)
@@ -479,7 +480,7 @@ func (server *ApiService) relatedProductsHandler(c *fiber.Ctx) error {
 
 	err, ok := server.ValidateRequest(params, c)
 	if !ok {
-		server.logCtx(c).Error("Validation of related products API for "+params.BOM+"failed", err.Error())
+		server.logCtx(c).Error("Validation of related products API for "+params.BOM+"failed", zap.Error(err))
 		return err
 	}
 
@@ -487,7 +488,7 @@ func (server *ApiService) relatedProductsHandler(c *fiber.Ctx) error {
 
 	if err != nil {
 		code, msg := getErrorCodeAndMsg(err)
-		server.logCtx(c).Error("Error while fetching related products for "+params.BOM, err.Error())
+		server.logCtx(c).Error("Error while fetching related products for "+params.BOM, zap.Error(err))
 		return server.SendErrorResponse(c, code, msg)
 	}
 
@@ -529,7 +530,7 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 		fileName, err := server.DynamoServices(server.DatabaseService, c).GetFilename(params)
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
-			server.logCtx(c).Error("Error while fetching fileName for "+params.Product, err.Error())
+			server.logCtx(c).Error("Error while fetching fileName for "+params.Product, zap.Error(err))
 			return server.SendErrorResponse(c, code, msg)
 		}
 
@@ -597,7 +598,7 @@ func (server *ApiService) versionCheckForTrailAndOsServer(params *omnitruck.Requ
 		if isLatest(params.Version) {
 			v, err := server.fetchLatestOSVersion(params, c)
 			if !err.Ok {
-				server.logCtx(c).Error("Error while fetching latest opensource version for the product ", params.Product, " error :- ", err.Message)
+				server.logCtx(c).Error("Error while fetching latest opensource version for the product "+ params.Product, zap.String("error :- ", err.Message))
 				return fiber.NewError(err.Code, err.Message)
 			}
 			params.Version = string(v)
@@ -621,13 +622,13 @@ func (server *ApiService) isOsVersion(params *omnitruck.RequestParams, c *fiber.
 	if params.Product == constants.HABITAT_PRODUCT || params.Product == constants.AUTOMATE_PRODUCT {
 		allversions, err = server.DynamoServices(server.DatabaseService, c).VersionAll(params)
 		if err != nil {
-			server.logCtx(c).Error(errLog, err.Error())
+			server.logCtx(c).Error(errLog, zap.Error(err))
 			return fiber.NewError(fiber.StatusInternalServerError, utils.DBError)
 		}
 	} else {
 		request := server.Omnitruck(c).ProductVersions(params).ParseData(&allversions)
 		if !request.Ok {
-			server.logCtx(c).Error(errLog, request.Message)
+			server.logCtx(c).Error(errLog, zap.String("errors :- ", request.Message))
 			return fiber.NewError(request.Code, request.Message)
 		}
 	}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -21,7 +22,8 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/template/html/v2"
-	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type ApiType int
@@ -41,7 +43,7 @@ type ErrorResponse struct {
 type Config struct {
 	Name          string
 	Listen        string
-	Log           *log.Entry
+	Log           *zap.Logger
 	Mode          ApiType
 	ServiceConfig config.ServiceConfig
 }
@@ -55,7 +57,7 @@ type Service interface {
 type ApiService struct {
 	sync.Mutex
 	Config           Config
-	Log              *log.Entry
+	Log             *zap.Logger
 	App              *fiber.App
 	Validator        omnitruck.RequestValidator
 	Mode             ApiType
@@ -132,8 +134,7 @@ func (server *ApiService) StartService() {
 	// Setup io writer for the logger
 	// Needs to be in the method where we start the service
 	// So the io writer will be closed when the service ends
-	lw := server.Log.Writer()
-	defer lw.Close()
+	lw := zapcore.AddSync(os.Stdout)
 	server.App.Use(logger.New(logger.Config{
 		Format: "LicenseId :- ${locals:license_id} : Method :- ${method} : IP :- ${ip} : EndPoint :- ${path} : channel :- ${channel} : product :- ${product} : platform :- ${platform} : platform version :- ${platformVersion} : architecture :- ${architecture} : version :- ${version} : status :- ${status} : latency :- ${latency} : Time :- [${time}] : request-id :- ${locals:requestid} \n",
 		Output: lw,
@@ -184,14 +185,14 @@ func (server *ApiService) StartService() {
 	// Make sure we build the router last so the middleware has a chance to execute before hand
 	server.buildRouter()
 
-	server.Log.Infof("Starting %s server at: %s", server.Config.Name, server.Config.Listen)
+	server.Log.Sugar().Infof("Starting %s server at: %s", server.Config.Name, server.Config.Listen)
 
 	err := server.App.Listen(server.Config.Listen)
 	if err != nil {
 		if err == http.ErrServerClosed {
-			server.Log.WithError(err).Error("Unable to start service")
+			server.Log.Error("Unable to start service" ,zap.Error(err))
 		} else {
-			server.Log.WithError(err).Fatal("Service stopped")
+			server.Log.Error("Service stopped", zap.Error(err))
 		}
 	}
 }
@@ -208,8 +209,9 @@ func (server *ApiService) DynamoServices(db dboperations.IDbOperations, c *fiber
 	return &service
 }
 
-func (server *ApiService) logCtx(c *fiber.Ctx) *log.Entry {
-	return server.Log.WithField("license_id", c.Locals("license_id"))
+func (server *ApiService) logCtx(c *fiber.Ctx) *zap.Logger{
+	return server.Log.With(zap.Reflect("license_id", c.Locals("license_id")))
+
 }
 
 func (server *ApiService) validLicense(c *fiber.Ctx) bool {
@@ -218,7 +220,7 @@ func (server *ApiService) validLicense(c *fiber.Ctx) bool {
 }
 
 func (server *ApiService) ValidateRequest(params *omnitruck.RequestParams, c *fiber.Ctx) (error, bool) {
-	server.logCtx(c).Debugf("Validating request %+v", params)
+	server.logCtx(c).Sugar().Debugf("Validating request %+v", params)
 	context := omnitruck.Context{
 		License: server.validLicense(c),
 	}
@@ -227,7 +229,7 @@ func (server *ApiService) ValidateRequest(params *omnitruck.RequestParams, c *fi
 	if errors != nil {
 		msgs, code := server.Validator.ErrorMessages(errors)
 
-		server.logCtx(c).WithField("errors", msgs).Error("Error validating request")
+		server.logCtx(c).Error("Error validating request", zap.String("errors", msgs))
 		return c.Status(code).JSON(ErrorResponse{
 			Code:       code,
 			StatusText: http.StatusText(code),

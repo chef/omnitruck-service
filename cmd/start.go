@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -13,8 +14,8 @@ import (
 	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/services"
 	"github.com/chef/omnitruck-service/utils/awsutils"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
 
@@ -58,13 +59,13 @@ to quickly create a Cobra application.`,
 		secret := awsutils.GetSecret(os.Getenv("CONFIG"), os.Getenv("REGION"))
 		err := json.Unmarshal([]byte(secret), &serviceConfig)
 		if err != nil {
-			logger.Fatal(err)
+			logger.Fatal(err.Error())
 		}
 		if cliConfig.Opensource.Enabled {
 			os_api := services.New(services.Config{
 				Name:          cliConfig.Opensource.Name,
 				Listen:        cliConfig.Opensource.Listen,
-				Log:           logger.WithField("pkg", cliConfig.Opensource.Name),
+				Log:           logger.With(zap.String("pkg", cliConfig.Opensource.Name)),
 				Mode:          services.Opensource,
 				ServiceConfig: serviceConfig,
 			})
@@ -74,7 +75,7 @@ to quickly create a Cobra application.`,
 			trial_api := services.New(services.Config{
 				Name:          cliConfig.Trial.Name,
 				Listen:        cliConfig.Trial.Listen,
-				Log:           logger.WithField("pkg", cliConfig.Trial.Name),
+				Log:           logger.With(zap.String("pkg", cliConfig.Trial.Name)),
 				Mode:          services.Trial,
 				ServiceConfig: serviceConfig,
 			})
@@ -84,7 +85,7 @@ to quickly create a Cobra application.`,
 			commercial_api := services.New(services.Config{
 				Name:          cliConfig.Commercial.Name,
 				Listen:        cliConfig.Commercial.Listen,
-				Log:           logger.WithField("pkg", cliConfig.Commercial.Name),
+				Log:           logger.With(zap.String("pkg", cliConfig.Commercial.Name)),
 				Mode:          services.Commercial,
 				ServiceConfig: serviceConfig,
 			})
@@ -94,36 +95,50 @@ to quickly create a Cobra application.`,
 	},
 }
 
-func setupLogging() *log.Entry {
-	log.SetOutput(os.Stdout)
+func setupLogging() *zap.Logger {
+	var logger *zap.Logger
+	var err error
 	if strings.ToLower(cliConfig.Logging.Format) == "json" {
-		log.SetFormatter(&log.JSONFormatter{})
+		config := zap.NewProductionConfig()
+		config.EncoderConfig.TimeKey = ""
+		config.DisableStacktrace = true
+		config.DisableCaller = true
+		logger, err = config.Build()
+	} else {
+		config := zap.NewDevelopmentConfig()
+		config.EncoderConfig.TimeKey = ""
+		config.DisableStacktrace = true
+		config.DisableCaller = true
+		logger, err = config.Build()
 	}
-	log.SetLevel(log.InfoLevel)
-
-	return log.WithField("pkg", "cmd/start")
+	if err != nil {
+		panic(err)
+	}
+	logger = logger.With(zap.String("pkg", "cmd/start"))
+	return logger
 }
 
 func initConfig() {
+	var log *zap.Logger
 	files, err := os.ReadDir("./")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err.Error())
 	}
 
 	for _, f := range files {
-		log.Println(f.Name())
+		fmt.Println(f.Name())
 	}
 	if cfgFile != "" {
 		// Use config file from the flag
 		yamlFile, err := os.ReadFile(cfgFile)
 		if err != nil {
-			log.WithError(err).WithField("cfgFile", cfgFile).Error("Unable to read config file")
+			log.Error("Unable to read config file", zap.Error(err), zap.String("cfgFile", cfgFile))
 			return
 		}
 
 		err = yaml.Unmarshal(yamlFile, &cliConfig)
 		if err != nil {
-			log.WithError(err).WithField("cfgFile", cfgFile).Error("Error parsing config file")
+			log.Error("Error parsing config file", zap.Error(err), zap.String("cfgFile", cfgFile))
 			return
 		}
 	}

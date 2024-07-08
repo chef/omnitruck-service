@@ -8,15 +8,15 @@ import (
 	"github.com/chef/omnitruck-service/dboperations"
 	"github.com/chef/omnitruck-service/models"
 	"github.com/chef/omnitruck-service/utils"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 func TestNewDBServices(t *testing.T) {
 	mockDbService := new(dboperations.MockIDbOperations)
 	type args struct {
 		db  dboperations.IDbOperations
-		log *logrus.Entry
+		log *zap.Logger
 	}
 	tests := []struct {
 		name string
@@ -27,7 +27,7 @@ func TestNewDBServices(t *testing.T) {
 			name: "test",
 			args: args{
 				db:  mockDbService,
-				log: logrus.NewEntry(logrus.New()),
+				log: zap.NewNop(),
 			},
 		},
 	}
@@ -43,7 +43,7 @@ func TestProducts(t *testing.T) {
 	mockDbService := new(dboperations.MockIDbOperations)
 	type fields struct {
 		db  dboperations.IDbOperations
-		log *logrus.Entry
+		log *zap.Logger
 	}
 	type args struct {
 		p   []string
@@ -59,7 +59,7 @@ func TestProducts(t *testing.T) {
 			name: "eol false",
 			fields: fields{
 				db:  mockDbService,
-				log: logrus.NewEntry(logrus.New()),
+				log: zap.NewNop(),
 			},
 			args: args{
 				p:   []string{"new"},
@@ -71,7 +71,7 @@ func TestProducts(t *testing.T) {
 			name: "eol true",
 			fields: fields{
 				db:  mockDbService,
-				log: logrus.NewEntry(logrus.New()),
+				log: zap.NewNop(),
 			},
 			args: args{
 				p:   []string{"new"},
@@ -97,7 +97,7 @@ func TestPlatforms(t *testing.T) {
 	mockDbService := new(dboperations.MockIDbOperations)
 	type fields struct {
 		db  dboperations.IDbOperations
-		log *logrus.Entry
+		log *zap.Logger
 	}
 	type args struct {
 		pl PlatformList
@@ -112,7 +112,7 @@ func TestPlatforms(t *testing.T) {
 			name: "success",
 			fields: fields{
 				db:  mockDbService,
-				log: logrus.NewEntry(logrus.New()),
+				log: zap.NewNop(),
 			},
 			args: args{
 				pl: PlatformList{"new": "test"},
@@ -306,7 +306,7 @@ func TestProductDownload(t *testing.T) {
 			}
 			svc := &DynamoServices{
 				db:  mockDbService,
-				log: logrus.NewEntry(logrus.New()),
+				log: zap.NewNop(),
 			}
 
 			got, err := svc.ProductDownload(tt.args.p)
@@ -502,7 +502,7 @@ func TestProductMetadata(t *testing.T) {
 			}
 			svc := &DynamoServices{
 				db:  mockDbService,
-				log: logrus.NewEntry(logrus.New()),
+				log: zap.NewNop(),
 			}
 			got, err := svc.ProductMetadata(tt.args.p)
 			if tt.wantErr {
@@ -675,7 +675,7 @@ func TestProductPackages(t *testing.T) {
 			}
 			svc := &DynamoServices{
 				db:  mockDbService,
-				log: logrus.NewEntry(logrus.New()),
+				log: zap.NewNop(),
 			}
 			got, err := svc.ProductPackages(tt.args.params)
 			if tt.wantErr {
@@ -790,7 +790,7 @@ func TestFetchLatestOsVersion(t *testing.T) {
 			}
 			svc := &DynamoServices{
 				db:  mockDbService,
-				log: logrus.NewEntry(logrus.New()),
+				log: zap.NewNop(),
 			}
 			got, err := svc.FetchLatestOsVersion(tt.args.params)
 			if tt.wantErr {
@@ -889,7 +889,7 @@ func TestVersionAll(t *testing.T) {
 			}
 			svc := &DynamoServices{
 				db:  mockDbService,
-				log: logrus.NewEntry(logrus.New()),
+				log: zap.NewNop(),
 			}
 			got, err := svc.VersionAll(tt.args.p)
 			if tt.wantErr {
@@ -972,7 +972,7 @@ func TestVersionLatest(t *testing.T) {
 			}
 			svc := &DynamoServices{
 				db:  mockDbService,
-				log: logrus.NewEntry(logrus.New()),
+				log: zap.NewNop(),
 			}
 			got, err := svc.VersionLatest(tt.args.p)
 			if tt.wantErr {
@@ -1101,7 +1101,7 @@ func TestGetRelatedProducts(t *testing.T) {
 			}
 			svc := &DynamoServices{
 				db:  mockDbService,
-				log: logrus.NewEntry(logrus.New()),
+				log: zap.NewNop(),
 			}
 			got, err := svc.GetRelatedProducts(tt.args.params)
 			if tt.wantErr {
@@ -1278,7 +1278,7 @@ func TestGetFilename(t *testing.T) {
 			}
 			svc := &DynamoServices{
 				db:  mockDbService,
-				log: logrus.NewEntry(logrus.New()),
+				log: zap.NewNop(),
 			}
 			got, err := svc.GetFilename(tt.args.params)
 			if tt.wantErr {

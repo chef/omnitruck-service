@@ -14,8 +14,8 @@ import (
 	"github.com/chef/omnitruck-service/models"
 	"github.com/chef/omnitruck-service/utils/template"
 	"github.com/gofiber/fiber/v2"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 func TestRelatedProductsHandler(t *testing.T) {
@@ -73,7 +73,7 @@ func TestRelatedProductsHandler(t *testing.T) {
 			server := &ApiService{
 				App:             app,
 				DatabaseService: mockDbService,
-				Log:             logrus.NewEntry(logrus.New()),
+				Log:             zap.NewNop(),
 			}
 			server.buildRouter()
 			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
@@ -149,7 +149,7 @@ func TestLatestVersionsHandler(t *testing.T) {
 			server := &ApiService{
 				App:             app,
 				DatabaseService: mockDbService,
-				Log:             logrus.NewEntry(logrus.New()),
+				Log:             zap.NewNop(),
 				Mode:            test.serverMode,
 			}
 			server.buildRouter()
@@ -217,7 +217,7 @@ func TestProductVersionsHandler(t *testing.T) {
 			server := &ApiService{
 				App:             app,
 				DatabaseService: mockDbService,
-				Log:             logrus.NewEntry(logrus.New()),
+				Log:             zap.NewNop(),
 				Mode:            test.serverMode,
 			}
 			server.buildRouter()
@@ -369,7 +369,7 @@ func TestProductMetadataHandler(t *testing.T) {
 			server := &ApiService{
 				App:             app,
 				DatabaseService: mockDbService,
-				Log:             logrus.NewEntry(logrus.New()),
+				Log:             zap.NewNop(),
 				Mode:            test.serverMode,
 			}
 			server.buildRouter()
@@ -550,7 +550,7 @@ func TestProductPackagesHandler(t *testing.T) {
 			server := &ApiService{
 				App:             app,
 				DatabaseService: mockDbService,
-				Log:             logrus.NewEntry(logrus.New()),
+				Log:             zap.NewNop(),
 				Mode:            test.serverMode,
 			}
 			server.buildRouter()
@@ -700,7 +700,7 @@ func TestFileNameHandler(t *testing.T) {
 				server := &ApiService{
 					App:             app,
 					DatabaseService: mockDbService,
-					Log:             logrus.NewEntry(logrus.New()),
+					Log:             zap.NewNop(),
 					Mode:            test.serverMode,
 				}
 				server.buildRouter()
