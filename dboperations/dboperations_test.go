@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/chef/omnitruck-service/models"
+	"github.com/progress-platform-services/platform-common/plogger"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,6 +22,14 @@ func (mdb *MDB) GetItem(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, 
 
 func (mdb *MDB) Scan(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
 	return mdb.Scanfunc(input)
+}
+
+func getLogger() plogger.ILogger {
+	plog, _ := plogger.NewLogger(plogger.LoggerConfig{
+		LogToStdout: true,
+		LogLevel:    "DEBUG",
+	})
+	return plog
 }
 
 func TestGetPackagesSuccess(t *testing.T) {
@@ -60,6 +69,7 @@ func TestGetPackagesSuccess(t *testing.T) {
 						}, nil
 					},
 				},
+				log: getLogger(),
 			}
 			got, _ := ser.GetPackages(tt.args.partitionValue, tt.args.sortValue)
 			assert.Equal(t, got, tt.want)
@@ -98,6 +108,7 @@ func TestGetPackagesFailure(t *testing.T) {
 						}
 					},
 				},
+				log: getLogger(),
 			}
 			_, err := ser.GetPackages(tt.args.partitionValue, tt.args.sortValue)
 			assert.Equal(t, err.Error(), tt.wantErr.Error())
@@ -146,6 +157,7 @@ func TestGetVersionAllSuccess(t *testing.T) {
 						}, nil
 					},
 				},
+				log: getLogger(),
 			}
 			got, _ := ser.GetVersionAll(tt.args.partitionValue)
 			assert.Equal(t, got, tt.want)
@@ -184,6 +196,7 @@ func TestGetVersionAllFailure(t *testing.T) {
 						}
 					},
 				},
+				log: getLogger(),
 			}
 			got, err := ser.GetVersionAll(tt.args.partitionValue)
 			assert.Equal(t, got, tt.want)
@@ -259,6 +272,7 @@ func TestGetMetaDataSuccess(t *testing.T) {
 						}, nil
 					},
 				},
+				log: getLogger(),
 			}
 			got, _ := ser.GetMetaData(tt.args.partitionValue, tt.args.sortValue, tt.args.platform, tt.args.platformVersion, tt.args.architecture)
 			assert.Equal(t, tt.want, got)
@@ -305,6 +319,7 @@ func TestGetMetaDataFailure(t *testing.T) {
 						}
 					},
 				},
+				log: getLogger(),
 			}
 			got, err := ser.GetMetaData(tt.args.partitionValue, tt.args.sortValue, tt.args.platform, tt.args.platformVersion, tt.args.architecture)
 			assert.Equal(t, tt.want, got)
@@ -356,6 +371,7 @@ func TestGetVersionLatestSuccess(t *testing.T) {
 						}, nil
 					},
 				},
+				log: getLogger(),
 			}
 			got, _ := ser.GetVersionLatest(tt.args.partitionValue)
 			assert.Equal(t, tt.want, got)
@@ -398,6 +414,7 @@ func TestGetVersionLatestFailure(t *testing.T) {
 						}
 					},
 				},
+				log: getLogger(),
 			}
 			got, err := ser.GetVersionLatest(tt.args.partitionValue)
 			assert.Equal(t, tt.want, got)
@@ -446,6 +463,7 @@ func TestGetRelatedProductsSuccess(t *testing.T) {
 						}, nil
 					},
 				},
+				log: getLogger(),
 			}
 			got, _ := ser.GetRelatedProducts(tt.args.partitionValue)
 			assert.Equal(t, tt.want, got)
@@ -483,6 +501,7 @@ func TestGetRelatedProductsFailure(t *testing.T) {
 						}
 					},
 				},
+				log: getLogger(),
 			}
 			got, _ := ser.GetRelatedProducts(tt.args.partitionValue)
 			assert.Equal(t, tt.want, got)

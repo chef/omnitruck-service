@@ -10,14 +10,14 @@ import (
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/utils"
 	"github.com/gofiber/fiber/v2"
-	"go.uber.org/zap"
+	"github.com/progress-platform-services/platform-common/plogger"
 )
 
 const omnitruckApi = "https://omnitruck.chef.io"
 
 type Omnitruck struct {
 	client *http.Client
-	log    *zap.Logger
+	log    plogger.ILogger
 }
 
 type FiberContext interface {
@@ -100,17 +100,22 @@ func (rp *RequestParams) UrlParams() url.Values {
 	return v
 }
 
-func New(log *zap.Logger) Omnitruck {
+func New(log plogger.ILogger) Omnitruck {
 	return Omnitruck{
 		client: &http.Client{
 			Timeout: 10 * time.Second,
 		},
-		log: log.With(zap.String("pkg", "client/omnitruck")),
+		log: log.With(map[string]interface{}{
+			"pkg": "client/omnitruck",
+		}),
 	}
 }
 
 func (ot *Omnitruck) logRequestError(msg string, request *clients.Request, err error) {
-	ot.log.Error(msg, zap.Error(err), zap.Int("status", request.Code), zap.String("body", string(request.Body)))
+	ot.log.With(map[string]interface{}{
+		"status": request.Code,
+		"body":   request.Body,
+	}).Error("", err)
 }
 
 func (ot *Omnitruck) Get(url string) *clients.Request {
@@ -124,8 +129,8 @@ func (ot *Omnitruck) Get(url string) *clients.Request {
 		ot.logRequestError("Error creating request", &request, err)
 		return request.Failure(fiber.StatusBadRequest, utils.OmnitruckReqError)
 	}
-
-	ot.log.Sugar().Infof("Fetching data from %s", url)
+	infoString := fmt.Sprintf("Fetching data from %s", url)
+	ot.log.Info(infoString)
 	req.Header.Add("Accept", "application/json")
 	resp, err := ot.client.Do(req)
 	request.Code = resp.StatusCode

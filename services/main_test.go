@@ -14,9 +14,17 @@ import (
 	"github.com/chef/omnitruck-service/models"
 	"github.com/chef/omnitruck-service/utils/template"
 	"github.com/gofiber/fiber/v2"
+	"github.com/progress-platform-services/platform-common/plogger"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
+
+func getLogger() plogger.ILogger {
+	plog, _ := plogger.NewLogger(plogger.LoggerConfig{
+		LogToStdout: true,
+		LogLevel:    "DEBUG",
+	})
+	return plog
+}
 
 func TestRelatedProductsHandler(t *testing.T) {
 
@@ -73,7 +81,7 @@ func TestRelatedProductsHandler(t *testing.T) {
 			server := &ApiService{
 				App:             app,
 				DatabaseService: mockDbService,
-				Log:             zap.NewNop(),
+				Log:             getLogger(),
 			}
 			server.buildRouter()
 			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
@@ -149,7 +157,7 @@ func TestLatestVersionsHandler(t *testing.T) {
 			server := &ApiService{
 				App:             app,
 				DatabaseService: mockDbService,
-				Log:             zap.NewNop(),
+				Log:             getLogger(),
 				Mode:            test.serverMode,
 			}
 			server.buildRouter()
@@ -217,7 +225,7 @@ func TestProductVersionsHandler(t *testing.T) {
 			server := &ApiService{
 				App:             app,
 				DatabaseService: mockDbService,
-				Log:             zap.NewNop(),
+				Log:             getLogger(),
 				Mode:            test.serverMode,
 			}
 			server.buildRouter()
@@ -369,7 +377,7 @@ func TestProductMetadataHandler(t *testing.T) {
 			server := &ApiService{
 				App:             app,
 				DatabaseService: mockDbService,
-				Log:             zap.NewNop(),
+				Log:             getLogger(),
 				Mode:            test.serverMode,
 			}
 			server.buildRouter()
@@ -550,7 +558,7 @@ func TestProductPackagesHandler(t *testing.T) {
 			server := &ApiService{
 				App:             app,
 				DatabaseService: mockDbService,
-				Log:             zap.NewNop(),
+				Log:             getLogger(),
 				Mode:            test.serverMode,
 			}
 			server.buildRouter()
@@ -700,7 +708,7 @@ func TestFileNameHandler(t *testing.T) {
 				server := &ApiService{
 					App:             app,
 					DatabaseService: mockDbService,
-					Log:             zap.NewNop(),
+					Log:             getLogger(),
 					Mode:            test.serverMode,
 				}
 				server.buildRouter()
