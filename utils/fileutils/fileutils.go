@@ -20,7 +20,7 @@ func NewFileUtils() *FileUtilsImpl {
 	return &FileUtilsImpl{}
 }
 func (fu *FileUtilsImpl) GetScript(baseUrl string, params *omnitruck.RequestParams, filePath string) (string, error) {
-	scriptInput := models.Script{
+	scriptInput := models.ScriptParams{
 		BaseUrl:   baseUrl,
 		LicenseId: params.LicenseId,
 	}

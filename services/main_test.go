@@ -757,7 +757,7 @@ func TestDownloadScriptHandler(t *testing.T) {
 			expectedResponse: "",
 		},
 		{
-			name:       "if os_type is inavalid",
+			name:       "if os_type is invalid",
 			serverMode: 2,
 			mockfileutils: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
 				return "", nil

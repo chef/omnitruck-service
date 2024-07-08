@@ -26,7 +26,7 @@ type RelatedProducts struct {
 	Products map[string]string `json:"products"`
 }
 
-type Script struct {
+type ScriptParams struct {
 	BaseUrl   string `json:"base_url"`
 	LicenseId string `json:"licenseId"`
 }
