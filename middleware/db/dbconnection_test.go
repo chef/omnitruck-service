@@ -7,8 +7,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/utils/awsutils"
-	"github.com/progress-platform-services/platform-common/plogger"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 func TestGetDbConnection(t *testing.T) {
@@ -20,7 +20,7 @@ func TestGetDbConnection(t *testing.T) {
 		GetNewSessionfunc: func(config config.AWSConfig) (*session.Session, error) {
 			return mockSession, nil
 		},
-	}, config.ServiceConfig{}, &plogger.Logger{})
+	}, config.ServiceConfig{}, zap.NewNop())
 
 	svc := dbc.GetDbConnection()
 

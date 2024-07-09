@@ -6,14 +6,16 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"sync"
 
 	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/services"
 	"github.com/chef/omnitruck-service/utils/awsutils"
-	"github.com/progress-platform-services/platform-common/plogger"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"gopkg.in/yaml.v3"
 )
 
@@ -62,11 +64,9 @@ to quickly create a Cobra application.`,
 		if cliConfig.Opensource.Enabled {
 			openSource_logger := setupLogging()
 			os_api := services.New(services.Config{
-				Name:   cliConfig.Opensource.Name,
-				Listen: cliConfig.Opensource.Listen,
-				Log: openSource_logger.With(map[string]interface{}{
-					"pkg": cliConfig.Opensource.Name,
-				}),
+				Name:          cliConfig.Opensource.Name,
+				Listen:        cliConfig.Opensource.Listen,
+				Log:           openSource_logger.With(zap.String("pkg", cliConfig.Opensource.Name)),
 				Mode:          services.Opensource,
 				ServiceConfig: serviceConfig,
 			})
@@ -75,11 +75,9 @@ to quickly create a Cobra application.`,
 		if cliConfig.Trial.Enabled {
 			trial_logger := setupLogging()
 			trial_api := services.New(services.Config{
-				Name:   cliConfig.Trial.Name,
-				Listen: cliConfig.Trial.Listen,
-				Log: trial_logger.With(map[string]interface{}{
-					"pkg": cliConfig.Trial.Name,
-				}),
+				Name:          cliConfig.Trial.Name,
+				Listen:        cliConfig.Trial.Listen,
+				Log:           trial_logger.With(zap.String("pkg", cliConfig.Trial.Name)),
 				Mode:          services.Trial,
 				ServiceConfig: serviceConfig,
 			})
@@ -88,11 +86,9 @@ to quickly create a Cobra application.`,
 		if cliConfig.Commercial.Enabled {
 			commercial_logger := setupLogging()
 			commercial_api := services.New(services.Config{
-				Name:   cliConfig.Commercial.Name,
-				Listen: cliConfig.Commercial.Listen,
-				Log: commercial_logger.With(map[string]interface{}{
-					"pkg": cliConfig.Commercial.Name,
-				}),
+				Name:          cliConfig.Commercial.Name,
+				Listen:        cliConfig.Commercial.Listen,
+				Log:           commercial_logger.With(zap.String("pkg", cliConfig.Commercial.Name)),
 				Mode:          services.Commercial,
 				ServiceConfig: serviceConfig,
 			})
@@ -102,42 +98,58 @@ to quickly create a Cobra application.`,
 	},
 }
 
-func setupLogging() plogger.ILogger {
-	plog, _ := plogger.NewLogger(plogger.LoggerConfig{
-		LogToStdout: true,
-		LogLevel:    "INFO",
-	})
-	return plog
+func setupLogging() *zap.Logger {
+	var logger *zap.Logger
+	config := zap.Config{
+		Level:       zap.NewAtomicLevelAt(zap.InfoLevel),
+		Encoding:    cliConfig.Logging.Format,
+		OutputPaths: []string{"stdout"},
+		EncoderConfig: zapcore.EncoderConfig{
+			TimeKey:        zapcore.OmitKey,
+			LevelKey:       "level",
+			NameKey:        "logger",
+			CallerKey:      zapcore.OmitKey,
+			FunctionKey:    zapcore.OmitKey,
+			MessageKey:     "msg",
+			StacktraceKey:  zapcore.OmitKey,
+			LineEnding:     zapcore.DefaultLineEnding,
+			EncodeLevel:    zapcore.LowercaseLevelEncoder,
+			EncodeTime:     zapcore.RFC3339TimeEncoder,
+			EncodeDuration: zapcore.SecondsDurationEncoder,
+			EncodeCaller:   zapcore.ShortCallerEncoder,
+		},
+	}
+	logger, err := config.Build()
+	if err != nil {
+		logger.Error("error while creating a logger: " + err.Error())
+		return nil
+	}
+	logger = logger.With(zap.String("pkg", "cmd/start"))
+	return logger
 }
 
 func initConfig() {
-	log, _ := plogger.NewLogger(plogger.LoggerConfig{
-		LogToStdout: true,
-		LogLevel:    "INFO",
-	})
+	var log *zap.Logger
 	files, err := os.ReadDir("./")
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
 	for _, f := range files {
-		log.Info(f.Name())
+		// log.Info(f.Name())
+		fmt.Println(f.Name())
 	}
 	if cfgFile != "" {
 		// Use config file from the flag
 		yamlFile, err := os.ReadFile(cfgFile)
 		if err != nil {
-			log.Error("Unable to read config file", err , map[string]interface{}{
-				"cfgFile":cfgFile,
-			})
+			log.With(zap.String("cfgfile", cfgFile)).Error("error while reading the config file", zap.Error(err))
 			return
 		}
 
 		err = yaml.Unmarshal(yamlFile, &cliConfig)
 		if err != nil {
-			log.Error("Error parsing config file", err , map[string]interface{}{
-				"cfgFile":cfgFile,
-			})
+			log.With(zap.String("cfgfile", cfgFile)).Error("error while unmarshing the config file", zap.Error(err))
 			return
 		}
 	}

@@ -8,23 +8,19 @@ import (
 	"github.com/chef/omnitruck-service/dboperations"
 	"github.com/chef/omnitruck-service/models"
 	"github.com/chef/omnitruck-service/utils"
-	"github.com/progress-platform-services/platform-common/plogger"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
-func getLogger() plogger.ILogger {
-	plog, _ := plogger.NewLogger(plogger.LoggerConfig{
-		LogToStdout: true,
-		LogLevel:    "DEBUG",
-	})
-	return plog
+func getLogger() *zap.Logger {
+	return zap.NewNop()
 }
 
 func TestNewDBServices(t *testing.T) {
 	mockDbService := new(dboperations.MockIDbOperations)
 	type args struct {
 		db  dboperations.IDbOperations
-		log plogger.ILogger
+		log *zap.Logger
 	}
 	tests := []struct {
 		name string
@@ -51,7 +47,7 @@ func TestProducts(t *testing.T) {
 	mockDbService := new(dboperations.MockIDbOperations)
 	type fields struct {
 		db  dboperations.IDbOperations
-		log plogger.ILogger
+		log *zap.Logger
 	}
 	type args struct {
 		p   []string
@@ -105,7 +101,7 @@ func TestPlatforms(t *testing.T) {
 	mockDbService := new(dboperations.MockIDbOperations)
 	type fields struct {
 		db  dboperations.IDbOperations
-		log plogger.ILogger
+		log *zap.Logger
 	}
 	type args struct {
 		pl PlatformList

@@ -9,12 +9,12 @@ import (
 	"github.com/chef/omnitruck-service/models"
 	"github.com/chef/omnitruck-service/utils"
 	"github.com/gofiber/fiber/v2"
-	"github.com/progress-platform-services/platform-common/plogger"
+	"go.uber.org/zap"
 )
 
 type DynamoServices struct {
 	db  dboperations.IDbOperations
-	log plogger.ILogger
+	log *zap.Logger
 }
 
 const (
@@ -27,7 +27,7 @@ const (
 	validating_log       = "Error while validating params:"
 )
 
-func NewDynamoServices(db dboperations.IDbOperations, log plogger.ILogger) DynamoServices {
+func NewDynamoServices(db dboperations.IDbOperations, log *zap.Logger) DynamoServices {
 	return DynamoServices{
 		db:  db,
 		log: log,
@@ -62,13 +62,13 @@ func (svc *DynamoServices) ProductDownload(params *RequestParams) (string, error
 
 	requestParams := ValidateRequest(params, flags)
 	if !requestParams.Ok {
-		svc.log.Error(validating_log, errors.New(requestParams.Message))
+		svc.log.Error(validating_log + errors.New(requestParams.Message).Error())
 		return "", fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 	if params.Version == "" || params.Version == "latest" {
 		params.Version, err = svc.db.GetVersionLatest(params.Product)
 		if err != nil {
-			svc.log.Error("Error while fetching latest version for download", err)
+			svc.log.Error("Error while fetching latest version for download: " + err.Error())
 			return "", fiber.NewError(fiber.StatusInternalServerError, utils.DBError)
 		}
 	}
@@ -81,7 +81,7 @@ func (svc *DynamoServices) ProductDownload(params *RequestParams) (string, error
 	details, err := svc.db.GetMetaData(params.Product, params.Version, params.Platform, params.PlatformVersion, params.Architecture)
 
 	if err != nil {
-		svc.log.Error("Error while fetching filename", err)
+		svc.log.Error("Error while fetching filename: " + err.Error())
 		return "", fiber.NewError(fiber.StatusInternalServerError, utils.DBError)
 	}
 	if *details == (models.MetaData{}) {
@@ -110,14 +110,14 @@ func (svc *DynamoServices) ProductMetadata(params *RequestParams) (PackageMetada
 
 	requestParams := ValidateRequest(params, flags)
 	if !requestParams.Ok {
-		svc.log.Error(validating_log, errors.New(requestParams.Message))
+		svc.log.Error(validating_log + " " + errors.New(requestParams.Message).Error())
 		return PackageMetadata{}, fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 
 	if params.Version == "" || params.Version == "latest" {
 		version, err = svc.db.GetVersionLatest(params.Product)
 		if err != nil {
-			svc.log.Error("Error while fetching latest version for metadata", err)
+			svc.log.Error("Error while fetching latest version for metadata: " + err.Error())
 			return PackageMetadata{}, fiber.NewError(fiber.StatusInternalServerError, utils.DBError)
 		}
 	}
@@ -126,7 +126,7 @@ func (svc *DynamoServices) ProductMetadata(params *RequestParams) (PackageMetada
 	details, err := svc.db.GetMetaData(params.Product, version, params.Platform, params.PlatformVersion, params.Architecture)
 
 	if err != nil {
-		svc.log.Error("Error while fetching metadata", err)
+		svc.log.Error("Error while fetching metadata: " + err.Error())
 		return PackageMetadata{}, fiber.NewError(fiber.StatusInternalServerError, utils.DBError)
 	}
 	if *details == (models.MetaData{}) {
@@ -150,21 +150,21 @@ func (svc *DynamoServices) ProductPackages(params *RequestParams) (PackageList, 
 
 	requestParams := ValidateRequest(params, flags)
 	if !requestParams.Ok {
-		svc.log.Error(validating_log, errors.New(requestParams.Message))
+		svc.log.Error(validating_log + " " + errors.New(requestParams.Message).Error())
 		return PackageList{}, fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 
 	if params.Version == "" || params.Version == "latest" {
 		params.Version, err = svc.db.GetVersionLatest(params.Product)
 		if err != nil {
-			svc.log.Error("Error while fetching latest version for packages", err)
+			svc.log.Error("Error while fetching latest version for packages: " + err.Error())
 			return PackageList{}, fiber.NewError(fiber.StatusInternalServerError, utils.DBError)
 		}
 	}
 
 	details, err := svc.db.GetPackages(params.Product, params.Version)
 	if err != nil {
-		svc.log.Error("Error while fetching packages", err)
+		svc.log.Error("Error while fetching packages: " + err.Error())
 		return PackageList{}, fiber.NewError(fiber.StatusInternalServerError, utils.DBError)
 	}
 	if len(details.MetaData) == 0 {
@@ -198,14 +198,14 @@ func (svc *DynamoServices) FetchLatestOsVersion(params *RequestParams) (string, 
 	}
 	requestParams := ValidateRequest(params, flags)
 	if !requestParams.Ok {
-		svc.log.Error(validating_log, errors.New(requestParams.Message))
+		svc.log.Error(validating_log + " " + errors.New(requestParams.Message).Error())
 		return "", fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 
 	var version string
 	versions, err := svc.db.GetVersionAll(params.Product)
 	if err != nil {
-		svc.log.Error("Error while fetching the latest opensource version for the product.", err)
+		svc.log.Error("Error while fetching the latest opensource version for the product: " + err.Error())
 		return version, fiber.NewError(fiber.StatusInternalServerError, utils.DBError)
 	}
 
@@ -234,18 +234,18 @@ func (svc *DynamoServices) VersionAll(params *RequestParams) ([]ProductVersion, 
 	}
 	requestParams := ValidateRequest(params, flags)
 	if !requestParams.Ok {
-		svc.log.Error(validating_log, errors.New(requestParams.Message))
+		svc.log.Error(validating_log + " " + errors.New(requestParams.Message).Error())
 		return productVersions, fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 
 	versions, err := svc.db.GetVersionAll(params.Product)
 
 	if err != nil {
-		svc.log.Error("Error while fetching Versions", err)
+		svc.log.Error("Error while fetching Versions: " + err.Error())
 		return productVersions, fiber.NewError(fiber.StatusInternalServerError, utils.FetchVersionsError)
 	}
 	if len(versions) == 0 {
-		svc.log.Error("Recieved empty version list while fetching Versions", errors.New("got empty versions array"))
+		svc.log.Error("Recieved empty version list while fetching Versions: " + errors.New("got empty versions array").Error())
 		return productVersions, fiber.NewError(fiber.StatusBadRequest, utils.BadRequestError)
 	}
 
@@ -263,13 +263,13 @@ func (svc *DynamoServices) VersionLatest(params *RequestParams) (ProductVersion,
 	}
 	requestParams := ValidateRequest(params, flags)
 	if !requestParams.Ok {
-		svc.log.Error(validating_log, errors.New(requestParams.Message))
+		svc.log.Error(validating_log + " " + errors.New(requestParams.Message).Error())
 		return "", fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 
 	version, err := svc.db.GetVersionLatest(params.Product)
 	if err != nil {
-		svc.log.Error("Error while fetching the latest version for the product.", err)
+		svc.log.Error("Error while fetching the latest version for the product: " + err.Error())
 		return "", fiber.NewError(fiber.StatusInternalServerError, utils.DBError)
 	}
 
@@ -283,20 +283,20 @@ func (svc *DynamoServices) GetRelatedProducts(params *RequestParams) (*models.Re
 	}
 	requestParams := ValidateRequest(params, flags)
 	if !requestParams.Ok {
-		svc.log.Error(validating_log, errors.New(requestParams.Message))
+		svc.log.Error(validating_log + " " + errors.New(requestParams.Message).Error())
 		return relatedProducts, fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 
 	relatedProducts, err := svc.db.GetRelatedProducts(params.BOM)
 
 	if err != nil {
-		svc.log.Error("Error while fetching related products for "+params.BOM, err)
+		svc.log.Error("Error while fetching related products for " + params.BOM + " " + err.Error())
 		//return relatedProducts, fiber.NewError(fiber.StatusInternalServerError, "Unable to retrieve related products for "+params.BOM)
 		return relatedProducts, fiber.NewError(fiber.StatusInternalServerError, utils.DBError)
 	}
 
 	if relatedProducts.Products == nil {
-		svc.log.Error("No related products found for "+params.BOM, errors.New("No related products found for "+params.BOM))
+		svc.log.Error("No related products found for " + params.BOM + " " + errors.New("No related products found for "+params.BOM).Error())
 		//return &models.RelatedProducts{}, fiber.NewError(fiber.StatusBadRequest, "No related products found for BOM")
 		return relatedProducts, fiber.NewError(fiber.StatusBadRequest, utils.BadRequestError)
 	}
@@ -316,14 +316,14 @@ func (svc *DynamoServices) GetFilename(params *RequestParams) (string, error) {
 
 	requestParams := ValidateRequest(params, flags)
 	if !requestParams.Ok {
-		svc.log.Error(validating_log, errors.New(requestParams.Message))
+		svc.log.Error(validating_log + " " + errors.New(requestParams.Message).Error())
 		return "", fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 
 	if params.Version == "" || params.Version == "latest" {
 		version, err = svc.db.GetVersionLatest(params.Product)
 		if err != nil {
-			svc.log.Error("Error while getting latest version for fetching fileName for "+params.Product, err)
+			svc.log.Error("Error while getting latest version for fetching fileName for " + params.Product + " " + err.Error())
 			return "", fiber.NewError(fiber.StatusInternalServerError, utils.DBError)
 		}
 	}
@@ -332,11 +332,11 @@ func (svc *DynamoServices) GetFilename(params *RequestParams) (string, error) {
 	details, err := svc.db.GetMetaData(params.Product, version, params.Platform, params.PlatformVersion, params.Architecture)
 
 	if err != nil {
-		svc.log.Error("Error while fetching fileName for "+params.Product, err)
+		svc.log.Error("Error while fetching fileName for " + params.Product + err.Error())
 		return "", fiber.NewError(fiber.StatusInternalServerError, utils.DBError)
 	}
 	if details == nil || details.FileName == "" {
-		svc.log.Error("Error while fetching fileName for "+params.Product, errors.New("unable to find the product information for given parameters"))
+		svc.log.Error("Error while fetching fileName for " + params.Product + " " + errors.New("unable to find the product information for given parameters").Error())
 		return "", fiber.NewError(fiber.StatusBadRequest, utils.BadRequestError)
 	}
 

@@ -14,16 +14,12 @@ import (
 	"github.com/chef/omnitruck-service/models"
 	"github.com/chef/omnitruck-service/utils/template"
 	"github.com/gofiber/fiber/v2"
-	"github.com/progress-platform-services/platform-common/plogger"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
-func getLogger() plogger.ILogger {
-	plog, _ := plogger.NewLogger(plogger.LoggerConfig{
-		LogToStdout: true,
-		LogLevel:    "DEBUG",
-	})
-	return plog
+func getLogger() *zap.Logger {
+	return zap.NewNop()
 }
 
 func TestRelatedProductsHandler(t *testing.T) {

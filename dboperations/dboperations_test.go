@@ -7,8 +7,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/chef/omnitruck-service/models"
-	"github.com/progress-platform-services/platform-common/plogger"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 type MDB struct {
@@ -24,12 +24,8 @@ func (mdb *MDB) Scan(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
 	return mdb.Scanfunc(input)
 }
 
-func getLogger() plogger.ILogger {
-	plog, _ := plogger.NewLogger(plogger.LoggerConfig{
-		LogToStdout: true,
-		LogLevel:    "DEBUG",
-	})
-	return plog
+func getLogger() *zap.Logger {
+	return zap.NewNop()
 }
 
 func TestGetPackagesSuccess(t *testing.T) {

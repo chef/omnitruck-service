@@ -10,14 +10,14 @@ import (
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/utils"
 	"github.com/gofiber/fiber/v2"
-	"github.com/progress-platform-services/platform-common/plogger"
+	"go.uber.org/zap"
 )
 
 const omnitruckApi = "https://omnitruck.chef.io"
 
 type Omnitruck struct {
 	client *http.Client
-	log    plogger.ILogger
+	log    *zap.Logger
 }
 
 type FiberContext interface {
@@ -100,22 +100,22 @@ func (rp *RequestParams) UrlParams() url.Values {
 	return v
 }
 
-func New(log plogger.ILogger) Omnitruck {
+func New(log *zap.Logger) Omnitruck {
 	return Omnitruck{
 		client: &http.Client{
 			Timeout: 10 * time.Second,
 		},
-		log: log.With(map[string]interface{}{
-			"pkg": "client/omnitruck",
-		}),
+		log: log.With(zap.String("pkg", "client/omnitruck")),
 	}
 }
 
 func (ot *Omnitruck) logRequestError(msg string, request *clients.Request, err error) {
-	ot.log.With(map[string]interface{}{
-		"status": request.Code,
-		"body":   request.Body,
-	}).Error("", err)
+	if err != nil {
+		ot.log.With(zap.Int("status", request.Code), zap.String("body", string(request.Body))).
+			With(zap.String("msg", msg)).
+			Error(err.Error())
+	}
+	ot.log.With(zap.Int("status", request.Code), zap.String("body", string(request.Body))).With(zap.String("msg", msg))
 }
 
 func (ot *Omnitruck) Get(url string) *clients.Request {
