@@ -31,7 +31,7 @@ func (fu *FileUtilsImpl) GetScript(baseUrl string, params *omnitruck.RequestPara
 	var scriptResponse bytes.Buffer
 	err = templateReader.Execute(&scriptResponse, scriptInput)
 	if err != nil {
-		return "", fiber.NewError(http.StatusInternalServerError, "error while executing the tempalte reader object: "+err.Error())
+		return "", fiber.NewError(http.StatusInternalServerError, "error while executing the template reader object: "+err.Error())
 	}
 	return scriptResponse.String(), nil
 }
