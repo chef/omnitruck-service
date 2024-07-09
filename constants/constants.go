@@ -12,5 +12,6 @@ const (
 )
 
 const (
-	UNMARSHAL_ERR_MSG = "error on unmarshal.\n[ERROR] -"
+	UNMARSHAL_ERR_MSG              = "error on unmarshal.\n[ERROR] -"
+	SuccessResponseFromFilenameLog = "Returning success response from fileName API for "
 )

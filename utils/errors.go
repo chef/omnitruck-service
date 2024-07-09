@@ -15,6 +15,7 @@ const (
 	OmnitruckApiError          = "Error while fetching omnitruck data"
 	OmnitruckReqError          = "Error while creating request for omnitruck"
 
-	LicenseReqError = "Error while creating request for License validation"
-	LicenseApiError = "Error while validating License"
+	LicenseReqError                 = "Error while creating request for License validation"
+	LicenseApiError                 = "Error while validating License"
+	ErrorWhileFetchingLatestVersion = "Error while fetching the latest version for the "
 )

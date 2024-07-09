@@ -181,7 +181,7 @@ func (server *ApiService) fetchLatestVersion(params *omnitruck.RequestParams, c 
 		data, err := server.DynamoServices(server.DatabaseService, c).VersionLatest(params)
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
-			server.logCtx(c).WithError(err).Error("Error while fetching the latest version for the " + params.Product)
+			server.logCtx(c).WithError(err).Error(utils.ErrorWhileFetchingLatestVersion + params.Product)
 			request.Failure(code, msg)
 			return data, &request
 		} else {
@@ -193,7 +193,7 @@ func (server *ApiService) fetchLatestVersion(params *omnitruck.RequestParams, c 
 		data, err := server.ReplicatedService(server.Config.ServiceConfig.ReplicatedConfig, server.logCtx(c)).PlatformVersionLatest(params, int(server.Mode))
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
-			server.logCtx(c).WithError(err).Error("Error while fetching the latest version for the " + params.Product)
+			server.logCtx(c).WithError(err).Error(utils.ErrorWhileFetchingLatestVersion + params.Product)
 			request.Failure(code, msg)
 			return data, &request
 		} else {
@@ -215,7 +215,7 @@ func (server *ApiService) fetchLatestOSVersion(params *omnitruck.RequestParams, 
 		data, err := server.ReplicatedService(server.Config.ServiceConfig.ReplicatedConfig, server.logCtx(c)).PlatformVersionLatest(params, int(server.Mode))
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
-			server.logCtx(c).WithError(err).Error("Error while fetching the latest version for the " + params.Product)
+			server.logCtx(c).WithError(err).Error(utils.ErrorWhileFetchingLatestVersion + params.Product)
 			request.Failure(code, msg)
 			return data, &request
 		} else {
@@ -596,7 +596,7 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 		response := map[string]interface{}{
 			"fileName": fileName,
 		}
-		server.logCtx(c).Info("Returning success response from fileName API for " + params.Product)
+		server.logCtx(c).Info(constants.SuccessResponseFromFilenameLog + params.Product)
 		return server.SendResponse(c, response)
 	}
 
@@ -619,7 +619,7 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 		response := map[string]interface{}{
 			"fileName": fileName,
 		}
-		server.logCtx(c).Info("Returning success response from fileName API for " + params.Product)
+		server.logCtx(c).Info(constants.SuccessResponseFromFilenameLog + params.Product)
 		return server.SendResponse(c, response)
 
 	} else {
@@ -632,7 +632,7 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 			response := map[string]interface{}{
 				"fileName": fileName,
 			}
-			server.logCtx(c).Info("Returning success response from fileName API for " + params.Product)
+			server.logCtx(c).Info(constants.SuccessResponseFromFilenameLog + params.Product)
 			return server.SendResponse(c, response)
 		} else {
 			return server.SendError(c, request)
