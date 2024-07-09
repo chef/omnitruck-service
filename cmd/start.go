@@ -54,16 +54,17 @@ to quickly create a Cobra application.`,
 
 		var wg sync.WaitGroup
 		var serviceConfig config.ServiceConfig
-		secret := awsutils.GetSecret(os.Getenv("CONFIG"), os.Getenv("REGION"))
+		secret := awsutils.GetSecret(os.Getenv("CONFIG"), os.Getenv("REGION"), logger)
 		err := json.Unmarshal([]byte(secret), &serviceConfig)
 		if err != nil {
 			logger.Fatal(err.Error())
 		}
 		if cliConfig.Opensource.Enabled {
+			openSource_logger := setupLogging()
 			os_api := services.New(services.Config{
 				Name:   cliConfig.Opensource.Name,
 				Listen: cliConfig.Opensource.Listen,
-				Log: logger.With(map[string]interface{}{
+				Log: openSource_logger.With(map[string]interface{}{
 					"pkg": cliConfig.Opensource.Name,
 				}),
 				Mode:          services.Opensource,
@@ -72,10 +73,11 @@ to quickly create a Cobra application.`,
 			os_api.Start(&wg)
 		}
 		if cliConfig.Trial.Enabled {
+			trial_logger := setupLogging()
 			trial_api := services.New(services.Config{
 				Name:   cliConfig.Trial.Name,
 				Listen: cliConfig.Trial.Listen,
-				Log: logger.With(map[string]interface{}{
+				Log: trial_logger.With(map[string]interface{}{
 					"pkg": cliConfig.Trial.Name,
 				}),
 				Mode:          services.Trial,
@@ -84,10 +86,11 @@ to quickly create a Cobra application.`,
 			trial_api.Start(&wg)
 		}
 		if cliConfig.Commercial.Enabled {
+			commercial_logger := setupLogging()
 			commercial_api := services.New(services.Config{
 				Name:   cliConfig.Commercial.Name,
 				Listen: cliConfig.Commercial.Listen,
-				Log: logger.With(map[string]interface{}{
+				Log: commercial_logger.With(map[string]interface{}{
 					"pkg": cliConfig.Commercial.Name,
 				}),
 				Mode:          services.Commercial,

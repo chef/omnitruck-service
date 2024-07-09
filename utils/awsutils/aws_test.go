@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/chef/omnitruck-service/config"
+	"github.com/progress-platform-services/platform-common/plogger"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,7 +15,12 @@ func TestCreateAWSSession(t *testing.T) {
 		Region:    "your_region",
 	}
 
-	dbc := NewAwsUtils()
+	plog, _ := plogger.NewLogger(plogger.LoggerConfig{
+		LogToStdout: true,
+		LogLevel:    "DEBUG",
+	})
+	
+	dbc := NewAwsUtils(plog)
 	sess, err := dbc.GetNewSession(config)
 
 	assert.NoError(t, err)

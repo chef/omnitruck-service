@@ -78,7 +78,7 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	server.Validator = omnitruck.NewValidator()
 	server.Mode = c.Mode
 	server.TemplateRenderer = template.NewTemplateRender()
-	server.DatabaseService = dboperations.NewDbOperationsService(dbconnection.NewDbConnectionService(awsutils.NewAwsUtils(), c.ServiceConfig), c.ServiceConfig, server.Log)
+	server.DatabaseService = dboperations.NewDbOperationsService(dbconnection.NewDbConnectionService(awsutils.NewAwsUtils(c.Log), c.ServiceConfig, c.Log), c.ServiceConfig, server.Log)
 
 	engine := html.New("./views", ".html")
 
@@ -231,8 +231,6 @@ func (server *ApiService) ValidateRequest(params *omnitruck.RequestParams, c *fi
 	errors := server.Validator.Params(params, context)
 	if errors != nil {
 		msgs, code := server.Validator.ErrorMessages(errors)
-
-		// server.logCtx(c).WithField("errors", msgs).Error("Error validating request")
 		server.logCtx(c).With(map[string]interface{}{
 			"errors": msgs,
 		}).Debug("Error validating request")
