@@ -2,16 +2,13 @@ package replicated_test
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"testing"
 
-	"github.com/chef/omnitruck-service/clients/omnitruck"
 	"github.com/chef/omnitruck-service/clients/omnitruck/replicated"
 	"github.com/chef/omnitruck-service/config"
-	"github.com/chef/omnitruck-service/constants"
 	"github.com/chef/omnitruck-service/logger"
 	"github.com/stretchr/testify/assert"
 )

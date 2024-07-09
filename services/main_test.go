@@ -140,7 +140,7 @@ func TestLatestVersionsHandler(t *testing.T) {
 			versions_err:     nil,
 		},
 		{
-			name:             "success for trail",
+			name:             "success for trial",
 			requestPath:      "/stable/habitat/versions/latest",
 			serverMode:       Trial,
 			expectedStatus:   fiber.StatusOK,
@@ -233,7 +233,7 @@ func TestProductVersionsHandler(t *testing.T) {
 			versions_err:     nil,
 		},
 		{
-			name:             "success for trail",
+			name:             "success for trial",
 			requestPath:      "/stable/habitat/versions/all",
 			serverMode:       Trial,
 			expectedStatus:   fiber.StatusOK,
@@ -336,7 +336,7 @@ func TestProductMetadataHandler(t *testing.T) {
 			versions_err: nil,
 		},
 		{
-			name:             "chef-360 fails on trail server",
+			name:             "chef-360 fails on trial server",
 			serverMode:       Trial,
 			requestPath:      "/stable/chef-360/metadata?p=ubuntu&pv=20.04&m=x86_64&v=latest&eol=false&license_id=viv2c0a2-111f-2caf-1fa2-1211fe1212d1",
 			expectedStatus:   fiber.StatusBadRequest,
@@ -373,7 +373,7 @@ func TestProductMetadataHandler(t *testing.T) {
 			versions_err:     nil,
 		},
 		{
-			name:             "automate not latest version for trail server",
+			name:             "automate not latest version for trial server",
 			serverMode:       Trial,
 			requestPath:      "/stable/automate/metadata?p=linux&m=x86_64&v=1.2",
 			expectedStatus:   fiber.StatusBadRequest,

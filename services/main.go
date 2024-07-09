@@ -369,7 +369,7 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 		return server.SendResponse(c, &data)
 	}
 
-	err = server.versionCheckForTrailAndOsServer(params, c)
+	err = server.versionCheckForTrialAndOsServer(params, c)
 	if err != nil {
 		code, msg := getErrorCodeAndMsg(err)
 		return server.SendErrorResponse(c, code, msg)
@@ -450,7 +450,7 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 		}
 	}
 
-	err = server.versionCheckForTrailAndOsServer(params, c)
+	err = server.versionCheckForTrialAndOsServer(params, c)
 	if err != nil {
 		code, msg := getErrorCodeAndMsg(err)
 		return server.SendErrorResponse(c, code, msg)
@@ -503,7 +503,7 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	err = server.versionCheckForTrailAndOsServer(params, c)
+	err = server.versionCheckForTrialAndOsServer(params, c)
 	if err != nil {
 		code, msg := getErrorCodeAndMsg(err)
 		return server.SendErrorResponse(c, code, msg)
@@ -601,7 +601,7 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 	}
 
 	server.logCtx(c).Info("Validating download file name for " + params.Product + " in channel " + params.Channel)
-	err = server.versionCheckForTrailAndOsServer(params, c)
+	err = server.versionCheckForTrialAndOsServer(params, c)
 	if err != nil {
 		code, msg := getErrorCodeAndMsg(err)
 		return server.SendErrorResponse(c, code, msg)
@@ -646,7 +646,7 @@ func getFileNameFromURL(url string) string {
 	return segments[len(segments)-1]
 }
 
-func (server *ApiService) isLatestForTrail(params *omnitruck.RequestParams, c *fiber.Ctx) *clients.Request {
+func (server *ApiService) isLatestForTrial(params *omnitruck.RequestParams, c *fiber.Ctx) *clients.Request {
 	latestVersion, request := server.fetchLatestVersion(params, c)
 	if params.Version == "latest" || params.Version == "" || params.Version == string(latestVersion) {
 		request.Success()
@@ -670,9 +670,9 @@ func getErrorCodeAndMsg(err error) (code int, msg string) {
 	return fiber.StatusInternalServerError, ""
 }
 
-func (server *ApiService) versionCheckForTrailAndOsServer(params *omnitruck.RequestParams, c *fiber.Ctx) error {
+func (server *ApiService) versionCheckForTrialAndOsServer(params *omnitruck.RequestParams, c *fiber.Ctx) error {
 	if server.Mode == Trial {
-		err := server.isLatestForTrail(params, c)
+		err := server.isLatestForTrial(params, c)
 		if !err.Ok {
 			return fiber.NewError(err.Code, err.Message)
 		}
