@@ -776,6 +776,24 @@ func TestDownloadScriptHandler(t *testing.T) {
 			expectedStatus: 200,
 		},
 		{
+			name: "if request product are automate or habitat",
+			serverMode: 1,
+			mockfileutils: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
+				return "", errors.New("automate and habitat are not supported products.")
+			},
+			requestPath:    `/stable/autoamte/downloadScript?license_id=afd2c0a2-111f-4caf-1fa2-1211fe1212d1&os_type=windows`,
+			expectedStatus: 400,
+		},
+		{
+			name: "if invalid product is entered",
+			serverMode: 1,
+			mockfileutils: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
+				return "", errors.New("invalid product")
+			},
+			requestPath:    `/stable/testproduct/downloadScript?license_id=afd2c0a2-111f-4caf-1fa2-1211fe1212d1&os_type=windows`,
+			expectedStatus: 400,
+		},
+		{
 			name:       "error while parsing the script",
 			serverMode: 1,
 			mockfileutils: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {

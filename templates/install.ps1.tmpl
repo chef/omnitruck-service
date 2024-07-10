@@ -221,7 +221,7 @@ function Get-ProjectMetadata {
     [string]
     # Project to install
     [string]
-    $project = 'chef',
+    $project = {{.Product}},
     # Version of the application to install
     # This parameter is optional, if not supplied it will provide the latest version,
     # and if an iteration number is not specified, it will grab the latest available iteration.

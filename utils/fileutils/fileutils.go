@@ -23,6 +23,7 @@ func (fu *FileUtilsImpl) GetScript(baseUrl string, params *omnitruck.RequestPara
 	scriptInput := models.ScriptParams{
 		BaseUrl:   baseUrl,
 		LicenseId: params.LicenseId,
+		Product:   params.Product,
 	}
 	templateReader, err := template.ParseFiles(filePath)
 	if err != nil {

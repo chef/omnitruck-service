@@ -82,6 +82,16 @@ func (server *ApiService) productsHandler(c *fiber.Ctx) error {
 
 	data = server.DynamoServices(server.DatabaseService, c).Products(data, params.Eol)
 
+	data = server.filterProductList(data, params, c)
+
+	if request.Ok {
+		return server.SendResponse(c, &data)
+	} else {
+		return server.SendError(c, request)
+	}
+}
+
+func (server *ApiService) filterProductList(data omnitruck.ItemList, params *omnitruck.RequestParams, c *fiber.Ctx) omnitruck.ItemList {
 	if server.Mode == Opensource {
 		server.logCtx(c).Info("filtering opensource products")
 		data = omnitruck.SelectList(data, omnitruck.OsProductName)
@@ -94,12 +104,7 @@ func (server *ApiService) productsHandler(c *fiber.Ctx) error {
 		data = omnitruck.FilterProductsForFreeTrial(data, omnitruck.ProductsForFreeTrial)
 		omnitruck.ProductDisplayName(data)
 	}
-
-	if request.Ok {
-		return server.SendResponse(c, &data)
-	} else {
-		return server.SendError(c, request)
-	}
+	return data
 }
 
 // @description Returns a valid list of valid platform keys along with full friendly names.
@@ -650,6 +655,14 @@ func (server *ApiService) isOsVersion(params *omnitruck.RequestParams, c *fiber.
 	return fiber.NewError(fiber.StatusBadRequest, errMsg)
 }
 
+// @description The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned
+// @Param       os_type    query    string true "OS Type"
+// @Param       license_id query    string false "License ID"
+// @Success     200        {object} map[string]interface{}
+// @Failure     400        {object} services.ErrorResponse
+// @Failure     403        {object} services.ErrorResponse
+// @Router      /{channel}/{product}/downloadScript [get]
+
 func (server *ApiService) downloadScriptHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
 	c.Set("Content-Type", "application/x-sh")
@@ -664,11 +677,19 @@ func (server *ApiService) downloadScriptHandler(c *fiber.Ctx) error {
 	if params.OsType != "linux" && params.OsType != "windows" {
 		return server.SendErrorResponse(c, http.StatusBadRequest, "query os_type can only be used as linux or windows depending on your operating system.")
 	}
+	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
+		return server.SendErrorResponse(c, http.StatusBadRequest, "automate and habitat are not supported products.")
+	}
+
+	if !server.getProductdetails(c, params) {
+		return server.SendErrorResponse(c, http.StatusBadRequest, "invalid product")
+	}
+
 	server.logCtx(c).Info("Validating download script for " + params.Product + " in channel " + params.Channel)
 	if server.Mode == Opensource {
 		params.LicenseId = ""
 	}
-	
+
 	var filePath string
 	if params.OsType == "linux" {
 		filePath = "../templates/install.sh.tmpl"
@@ -681,4 +702,16 @@ func (server *ApiService) downloadScriptHandler(c *fiber.Ctx) error {
 		return err
 	}
 	return server.SendXshResponse(c, resp)
+}
+
+func (server *ApiService) getProductdetails(c *fiber.Ctx, params *omnitruck.RequestParams) bool {
+	var data omnitruck.ItemList
+	_ = server.Omnitruck(c).Products(params, &data)
+	data = server.filterProductList(data, params, c)
+	for _, v := range data {
+		if params.Product == v {
+			return true
+		}
+	}
+	return false
 }
