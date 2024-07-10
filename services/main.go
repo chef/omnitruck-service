@@ -82,16 +82,6 @@ func (server *ApiService) productsHandler(c *fiber.Ctx) error {
 
 	data = server.DynamoServices(server.DatabaseService, c).Products(data, params.Eol)
 
-	data = server.filterProductList(data, params, c)
-
-	if request.Ok {
-		return server.SendResponse(c, &data)
-	} else {
-		return server.SendError(c, request)
-	}
-}
-
-func (server *ApiService) filterProductList(data omnitruck.ItemList, params *omnitruck.RequestParams, c *fiber.Ctx) omnitruck.ItemList {
 	if server.Mode == Opensource {
 		server.logCtx(c).Info("filtering opensource products")
 		data = omnitruck.SelectList(data, omnitruck.OsProductName)
@@ -104,7 +94,12 @@ func (server *ApiService) filterProductList(data omnitruck.ItemList, params *omn
 		data = omnitruck.FilterProductsForFreeTrial(data, omnitruck.ProductsForFreeTrial)
 		omnitruck.ProductDisplayName(data)
 	}
-	return data
+
+	if request.Ok {
+		return server.SendResponse(c, &data)
+	} else {
+		return server.SendError(c, request)
+	}
 }
 
 // @description Returns a valid list of valid platform keys along with full friendly names.
@@ -680,7 +675,7 @@ func (server *ApiService) downloadScriptHandler(c *fiber.Ctx) error {
 		return server.SendErrorResponse(c, http.StatusBadRequest, "automate and habitat are not supported products.")
 	}
 
-	if !server.getProductdetails(c, params) {
+	if !server.getProductdetails(params) {
 		return server.SendErrorResponse(c, http.StatusBadRequest, "invalid product")
 	}
 
@@ -688,6 +683,9 @@ func (server *ApiService) downloadScriptHandler(c *fiber.Ctx) error {
 	if server.Mode == Opensource {
 		params.LicenseId = ""
 	}
+
+	res := omnitruck.SupportedVersion(params.Product)
+	server.logCtx(c).Info("the response = ", res)
 
 	var filePath string
 	if params.OsType == "linux" {
@@ -703,14 +701,12 @@ func (server *ApiService) downloadScriptHandler(c *fiber.Ctx) error {
 	return server.SendXshResponse(c, resp)
 }
 
-func (server *ApiService) getProductdetails(c *fiber.Ctx, params *omnitruck.RequestParams) bool {
-	var data omnitruck.ItemList
-	_ = server.Omnitruck(c).Products(params, &data)
-	data = server.filterProductList(data, params, c)
-	for _, v := range data {
-		if params.Product == v {
-			return true
-		}
+func (server *ApiService) getProductdetails(params *omnitruck.RequestParams) bool {
+	productCheck := false
+	if server.Mode == 2 {
+		productCheck = omnitruck.ProductsForCommercial(params.Product)
+	} else if server.Mode == 1 {
+		productCheck = omnitruck.OsProductName(params.Product)
 	}
-	return false
+	return productCheck
 }

@@ -146,3 +146,10 @@ func ProductsForFreeTrial(name string) bool {
 	}
 	return false
 }
+
+func ProductsForCommercial(name string) bool {
+	if _, ok := supportedProducts[name]; ok {
+		return true
+	}
+	return false
+}
