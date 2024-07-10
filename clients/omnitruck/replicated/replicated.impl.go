@@ -149,7 +149,7 @@ func (r *ReplicatedImpl) PlatformMetadata(req *omnitruck.RequestParams, serverMo
 		r.Logger.Error("", requestParams.Message)
 		return omnitruck.PackageMetadata{}, fiber.NewError(requestParams.Code, requestParams.Message)
 	}
-	if serverMode == 2 && req.Product == constants.PLATFORM_SERVICE{
+	if serverMode == 2 && req.Product == constants.PLATFORM_SERVICE {
 		return omnitruck.PackageMetadata{
 			Sha1:    "",
 			Sha256:  "",
@@ -194,7 +194,7 @@ func (r *ReplicatedImpl) PlatformFilename(req *omnitruck.RequestParams, serverMo
 		return "", fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 	if serverMode == 2 {
-		return constants.PLATFORM_SERVICE+".zip", nil
+		return constants.PLATFORM_SERVICE + ".zip", nil
 	}
 	return "", fiber.NewError(fiber.StatusBadRequest, constants.PLATFORM_ERROR)
 }
