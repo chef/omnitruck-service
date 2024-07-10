@@ -662,7 +662,6 @@ func (server *ApiService) isOsVersion(params *omnitruck.RequestParams, c *fiber.
 // @Failure     400        {object} services.ErrorResponse
 // @Failure     403        {object} services.ErrorResponse
 // @Router      /{channel}/{product}/downloadScript [get]
-
 func (server *ApiService) downloadScriptHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
 	c.Set("Content-Type", "application/x-sh")
