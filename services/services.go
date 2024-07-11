@@ -252,10 +252,6 @@ func (server *ApiService) SendResponse(c *fiber.Ctx, data interface{}) error {
 	return server.JSON(c, data)
 }
 
-func (server *ApiService) SendXshResponse(c *fiber.Ctx, data string) error {
-	return c.SendString(data)
-}
-
 func (server *ApiService) SendError(c *fiber.Ctx, request *clients.Request) error {
 
 	return c.Status(request.Code).JSON(ErrorResponse{

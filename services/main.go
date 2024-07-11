@@ -3,7 +3,6 @@ package services
 import (
 	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -49,7 +48,8 @@ func (server *ApiService) buildRouter() {
 	server.App.Get("/:channel/:product/download", requestid.New(), server.productDownloadHandler)
 	server.App.Get("/relatedProducts", requestid.New(), server.relatedProductsHandler)
 	server.App.Get("/:channel/:product/fileName", requestid.New(), server.fileNameHandler)
-	server.App.Get("/:channel/downloadScript", requestid.New(), server.downloadScriptHandler)
+	server.App.Get("/install.sh", requestid.New(), server.downloadLinuxScript)
+	server.App.Get("/install.ps1", requestid.New(), server.downloadWindowsScript)
 }
 
 func (server *ApiService) docsHandler(baseUrl string) func(*fiber.Ctx) error {
@@ -651,39 +651,53 @@ func (server *ApiService) isOsVersion(params *omnitruck.RequestParams, c *fiber.
 }
 
 // @description The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned
-// @Param       os_type    query    string true "OS Type"
 // @Param       license_id query    string false "License ID"
 // @Success     200        {object} map[string]interface{}
 // @Failure     400        {object} services.ErrorResponse
 // @Failure     403        {object} services.ErrorResponse
-// @Router      /{channel}/downloadScript [get]
-func (server *ApiService) downloadScriptHandler(c *fiber.Ctx) error {
+// @Router      /install.sh [get]
+func (server *ApiService) downloadLinuxScript(c *fiber.Ctx) error {
 	params := getRequestParams(c)
 	c.Set("Content-Type", "application/x-sh")
 	err, ok := server.ValidateRequest(params, c)
 	if !ok {
-		server.logCtx(c).Error("Validation of download script API for " + params.Product + " failed")
+		server.logCtx(c).Error("Validation of download linux script API failed: ", err)
 		return err
-	}
-	if params.OsType == "" {
-		return server.SendErrorResponse(c, http.StatusBadRequest, "query os_type can't be empty please use linux or windows depending on your operating system.")
-	}
-	if params.OsType != "linux" && params.OsType != "windows" {
-		return server.SendErrorResponse(c, http.StatusBadRequest, "query os_type can only be used as linux or windows depending on your operating system.")
 	}
 	if server.Mode == Opensource {
 		params.LicenseId = ""
 	}
-	var filePath string
-	if params.OsType == "linux" {
-		filePath = "../templates/install.sh.tmpl"
-	} else if params.OsType == "windows" {
-		filePath = "../templates/install.ps1.tmpl"
-	}
-
+	filePath := "../templates/install.sh.tmpl"
 	resp, err := server.FileUtils.GetScript(c.Hostname(), params, filePath)
 	if err != nil {
 		return err
 	}
-	return server.SendXshResponse(c, resp)
+	c.Set("Content-Disposition", "attachment;filename=install.sh")
+	return c.SendString(resp)
+}
+
+// @description The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned
+// @Param       license_id query    string false "License ID"
+// @Success     200        {object} map[string]interface{}
+// @Failure     400        {object} services.ErrorResponse
+// @Failure     403        {object} services.ErrorResponse
+// @Router      /install.ps1 [get]
+func (server *ApiService) downloadWindowsScript(c *fiber.Ctx) error {
+	params := getRequestParams(c)
+	c.Set("Content-Type", "text/plain")
+	err, ok := server.ValidateRequest(params, c)
+	if !ok {
+		server.logCtx(c).Error("Validation of download windows script API failed: ", err)
+		return err
+	}
+	if server.Mode == Opensource {
+		params.LicenseId = ""
+	}
+	filePath := "../templates/install.ps1.tmpl"
+	resp, err := server.FileUtils.GetScript(c.Hostname(), params, filePath)
+	if err != nil {
+		return err
+	}
+	c.Set("Content-Disposition", "attachment;filename=install.ps1")
+	return c.SendString(resp)
 }
