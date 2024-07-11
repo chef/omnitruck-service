@@ -110,34 +110,6 @@ paths:
           description: Forbidden
           schema:
             $ref: '#/definitions/ErrorResponse'
-  /{channel}/{product}/downloadScript:
-    get:
-      description: The `ACCEPT` HTTP header with a value of `application/json` must
-        be provided in the request for a JSON response to be returned
-      parameters:
-      - description: OS Type
-        in: query
-        name: os_type
-        required: true
-        type: string
-      - description: License ID
-        in: query
-        name: license_id
-        type: string
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/ErrorResponse'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/ErrorResponse'
   /{channel}/{product}/fileName:
     get:
       description: The `ACCEPT` HTTP header with a value of `application/json` must
@@ -384,6 +356,34 @@ paths:
           description: OK
           schema:
             type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /{channel}/downloadScript:
+    get:
+      description: The `ACCEPT` HTTP header with a value of `application/json` must
+        be provided in the request for a JSON response to be returned
+      parameters:
+      - description: OS Type
+        in: query
+        name: os_type
+        required: true
+        type: string
+      - description: License ID
+        in: query
+        name: license_id
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
         "400":
           description: Bad Request
           schema:

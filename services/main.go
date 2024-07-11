@@ -49,7 +49,7 @@ func (server *ApiService) buildRouter() {
 	server.App.Get("/:channel/:product/download", requestid.New(), server.productDownloadHandler)
 	server.App.Get("/relatedProducts", requestid.New(), server.relatedProductsHandler)
 	server.App.Get("/:channel/:product/fileName", requestid.New(), server.fileNameHandler)
-	server.App.Get("/:channel/:product/downloadScript", requestid.New(), server.downloadScriptHandler)
+	server.App.Get("/:channel/downloadScript", requestid.New(), server.downloadScriptHandler)
 }
 
 func (server *ApiService) docsHandler(baseUrl string) func(*fiber.Ctx) error {
@@ -656,7 +656,7 @@ func (server *ApiService) isOsVersion(params *omnitruck.RequestParams, c *fiber.
 // @Success     200        {object} map[string]interface{}
 // @Failure     400        {object} services.ErrorResponse
 // @Failure     403        {object} services.ErrorResponse
-// @Router      /{channel}/{product}/downloadScript [get]
+// @Router      /{channel}/downloadScript [get]
 func (server *ApiService) downloadScriptHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
 	c.Set("Content-Type", "application/x-sh")
@@ -671,21 +671,11 @@ func (server *ApiService) downloadScriptHandler(c *fiber.Ctx) error {
 	if params.OsType != "linux" && params.OsType != "windows" {
 		return server.SendErrorResponse(c, http.StatusBadRequest, "query os_type can only be used as linux or windows depending on your operating system.")
 	}
-	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
-		return server.SendErrorResponse(c, http.StatusBadRequest, "automate and habitat are not supported products.")
-	}
-
-	if !server.getProductdetails(params) {
-		return server.SendErrorResponse(c, http.StatusBadRequest, "invalid product")
-	}
 
 	server.logCtx(c).Info("Validating download script for " + params.Product + " in channel " + params.Channel)
 	if server.Mode == Opensource {
 		params.LicenseId = ""
 	}
-
-	res := omnitruck.SupportedVersion(params.Product)
-	server.logCtx(c).Info("the response = ", res)
 
 	var filePath string
 	if params.OsType == "linux" {
@@ -699,14 +689,4 @@ func (server *ApiService) downloadScriptHandler(c *fiber.Ctx) error {
 		return err
 	}
 	return server.SendXshResponse(c, resp)
-}
-
-func (server *ApiService) getProductdetails(params *omnitruck.RequestParams) bool {
-	productCheck := false
-	if server.Mode == 2 {
-		productCheck = omnitruck.ProductsForCommercial(params.Product)
-	} else if server.Mode == 1 {
-		productCheck = omnitruck.OsProductName(params.Product)
-	}
-	return productCheck
 }

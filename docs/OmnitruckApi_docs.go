@@ -127,6 +127,47 @@ const docTemplateOmnitruckApi = `{
                 }
             }
         },
+        "/{channel}/downloadScript": {
+            "get": {
+                "description": "The ` + "`" + `ACCEPT` + "`" + ` HTTP header with a value of ` + "`" + `application/json` + "`" + ` must be provided in the request for a JSON response to be returned",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "OS Type",
+                        "name": "os_type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "License ID",
+                        "name": "license_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/{channel}/{product}/download": {
             "get": {
                 "description": "Get details for a particular package.\nThe ` + "`" + `ACCEPT` + "`" + ` HTTP header with a value of ` + "`" + `application/json` + "`" + ` must be provided in the request for a JSON response to be returned",
@@ -198,47 +239,6 @@ const docTemplateOmnitruckApi = `{
                 "responses": {
                     "302": {
                         "description": "Found"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/{channel}/{product}/downloadScript": {
-            "get": {
-                "description": "The ` + "`" + `ACCEPT` + "`" + ` HTTP header with a value of ` + "`" + `application/json` + "`" + ` must be provided in the request for a JSON response to be returned",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "OS Type",
-                        "name": "os_type",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "License ID",
-                        "name": "license_id",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
                     },
                     "400": {
                         "description": "Bad Request",

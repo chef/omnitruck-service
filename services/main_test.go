@@ -742,7 +742,7 @@ func TestDownloadScriptHandler(t *testing.T) {
 			mockfileutils: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
 				return "", nil
 			},
-			requestPath:      `/stable/chef/downloadScript?license_id=afd2c0a2-111f-4caf-1fa2-1211fe1212d1&os_type=linux`,
+			requestPath:      `/stable/downloadScript?license_id=afd2c0a2-111f-4caf-1fa2-1211fe1212d1&os_type=linux`,
 			expectedStatus:   200,
 			expectedResponse: "",
 		},
@@ -752,7 +752,7 @@ func TestDownloadScriptHandler(t *testing.T) {
 			mockfileutils: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
 				return "", nil
 			},
-			requestPath:      `/stable/chef/downloadScript?license_id=afd2c0a2-111f-4caf-1fa2-1211fe1212d1&os_type=`,
+			requestPath:      `/stable/downloadScript?license_id=afd2c0a2-111f-4caf-1fa2-1211fe1212d1&os_type=`,
 			expectedStatus:   400,
 			expectedResponse: "",
 		},
@@ -762,7 +762,7 @@ func TestDownloadScriptHandler(t *testing.T) {
 			mockfileutils: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
 				return "", nil
 			},
-			requestPath:      `/stable/chef/downloadScript?license_id=afd2c0a2-111f-4caf-1fa2-1211fe1212d1&os_type=macos`,
+			requestPath:      `/stable/downloadScript?license_id=afd2c0a2-111f-4caf-1fa2-1211fe1212d1&os_type=macos`,
 			expectedStatus:   400,
 			expectedResponse: "",
 		},
@@ -772,26 +772,8 @@ func TestDownloadScriptHandler(t *testing.T) {
 			mockfileutils: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
 				return "", nil
 			},
-			requestPath:    `/stable/chef/downloadScript?license_id=afd2c0a2-111f-4caf-1fa2-1211fe1212d1&os_type=windows`,
+			requestPath:    `/stable/downloadScript?license_id=afd2c0a2-111f-4caf-1fa2-1211fe1212d1&os_type=windows`,
 			expectedStatus: 200,
-		},
-		{
-			name: "if request product are automate or habitat",
-			serverMode: 1,
-			mockfileutils: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
-				return "", errors.New("automate and habitat are not supported products.")
-			},
-			requestPath:    `/stable/autoamte/downloadScript?license_id=afd2c0a2-111f-4caf-1fa2-1211fe1212d1&os_type=windows`,
-			expectedStatus: 400,
-		},
-		{
-			name: "if invalid product is entered",
-			serverMode: 1,
-			mockfileutils: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
-				return "", errors.New("invalid product")
-			},
-			requestPath:    `/stable/testproduct/downloadScript?license_id=afd2c0a2-111f-4caf-1fa2-1211fe1212d1&os_type=windows`,
-			expectedStatus: 400,
 		},
 		{
 			name:       "error while parsing the script",
@@ -799,7 +781,7 @@ func TestDownloadScriptHandler(t *testing.T) {
 			mockfileutils: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
 				return "", errors.New("error while parsing file: /install.sh.tmpl not found")
 			},
-			requestPath:    `/stable/chef/downloadScript?license_id=afd2c0a2-111f-4caf-1fa2-1211fe1212d1&os_type=windows`,
+			requestPath:    `/stable/downloadScript?license_id=afd2c0a2-111f-4caf-1fa2-1211fe1212d1&os_type=windows`,
 			expectedStatus: 500,
 		},
 	}
