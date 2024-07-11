@@ -671,12 +671,9 @@ func (server *ApiService) downloadScriptHandler(c *fiber.Ctx) error {
 	if params.OsType != "linux" && params.OsType != "windows" {
 		return server.SendErrorResponse(c, http.StatusBadRequest, "query os_type can only be used as linux or windows depending on your operating system.")
 	}
-
-	server.logCtx(c).Info("Validating download script for " + params.Product + " in channel " + params.Channel)
 	if server.Mode == Opensource {
 		params.LicenseId = ""
 	}
-
 	var filePath string
 	if params.OsType == "linux" {
 		filePath = "../templates/install.sh.tmpl"

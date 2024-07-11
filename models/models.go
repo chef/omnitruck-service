@@ -29,5 +29,4 @@ type RelatedProducts struct {
 type ScriptParams struct {
 	BaseUrl   string `json:"base_url"`
 	LicenseId string `json:"licenseId"`
-	Product   string `json:"product"`
 }
