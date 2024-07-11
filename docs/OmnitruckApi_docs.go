@@ -60,14 +60,14 @@ const docTemplateOmnitruckApi = `{
                             "additionalProperties": true
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/ErrorResponse"
                         }
                     },
-                    "403": {
-                        "description": "Forbidden",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/ErrorResponse"
                         }
@@ -94,14 +94,14 @@ const docTemplateOmnitruckApi = `{
                             "additionalProperties": true
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/ErrorResponse"
                         }
                     },
-                    "403": {
-                        "description": "Forbidden",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/ErrorResponse"
                         }

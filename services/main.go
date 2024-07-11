@@ -653,8 +653,8 @@ func (server *ApiService) isOsVersion(params *omnitruck.RequestParams, c *fiber.
 // @description The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned
 // @Param       license_id query    string false "License ID"
 // @Success     200        {object} map[string]interface{}
-// @Failure     400        {object} services.ErrorResponse
 // @Failure     403        {object} services.ErrorResponse
+// @Failure     500        {object} services.ErrorResponse
 // @Router      /install.sh [get]
 func (server *ApiService) downloadLinuxScript(c *fiber.Ctx) error {
 	params := getRequestParams(c)
@@ -679,8 +679,8 @@ func (server *ApiService) downloadLinuxScript(c *fiber.Ctx) error {
 // @description The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned
 // @Param       license_id query    string false "License ID"
 // @Success     200        {object} map[string]interface{}
-// @Failure     400        {object} services.ErrorResponse
 // @Failure     403        {object} services.ErrorResponse
+// @Failure     500        {object} services.ErrorResponse
 // @Router      /install.ps1 [get]
 func (server *ApiService) downloadWindowsScript(c *fiber.Ctx) error {
 	params := getRequestParams(c)

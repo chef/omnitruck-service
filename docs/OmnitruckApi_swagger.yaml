@@ -395,12 +395,12 @@ paths:
           schema:
             additionalProperties: true
             type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/ErrorResponse'
         "403":
           description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
   /install.sh:
@@ -418,12 +418,12 @@ paths:
           schema:
             additionalProperties: true
             type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/ErrorResponse'
         "403":
           description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
   /platforms:
