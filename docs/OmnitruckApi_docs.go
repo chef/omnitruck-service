@@ -43,7 +43,7 @@ const docTemplateOmnitruckApi = `{
         },
         "/install.ps1": {
             "get": {
-                "description": "The ` + "`" + `ACCEPT` + "`" + ` HTTP header with a value of ` + "`" + `application/json` + "`" + ` must be provided in the request for a JSON response to be returned",
+                "description": "The ` + "`" + `ACCEPT` + "`" + ` HTTP header with a value of ` + "`" + `text/plain` + "`" + ` must be provided in the request for a text response to be returned",
                 "parameters": [
                     {
                         "type": "string",
@@ -77,7 +77,7 @@ const docTemplateOmnitruckApi = `{
         },
         "/install.sh": {
             "get": {
-                "description": "The ` + "`" + `ACCEPT` + "`" + ` HTTP header with a value of ` + "`" + `application/json` + "`" + ` must be provided in the request for a JSON response to be returned",
+                "description": "The ` + "`" + `ACCEPT` + "`" + ` HTTP header with a value of ` + "`" + `application/x-sh` + "`" + ` must be provided in the request for a shell script response to be returned",
                 "parameters": [
                     {
                         "type": "string",
