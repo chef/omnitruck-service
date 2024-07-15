@@ -6,21 +6,22 @@ import (
 	"testing"
 
 	"github.com/chef/omnitruck-service/dboperations"
+	"github.com/chef/omnitruck-service/logger"
 	"github.com/chef/omnitruck-service/models"
 	"github.com/chef/omnitruck-service/utils"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
-func getLogger() *zap.Logger {
-	return zap.NewNop()
+func getLogger() logger.ILogger {
+	log, _ := logger.NewStandardLogger()
+	return log
 }
 
 func TestNewDBServices(t *testing.T) {
 	mockDbService := new(dboperations.MockIDbOperations)
 	type args struct {
 		db  dboperations.IDbOperations
-		log *zap.Logger
+		log logger.ILogger
 	}
 	tests := []struct {
 		name string
@@ -47,7 +48,7 @@ func TestProducts(t *testing.T) {
 	mockDbService := new(dboperations.MockIDbOperations)
 	type fields struct {
 		db  dboperations.IDbOperations
-		log *zap.Logger
+		log logger.ILogger
 	}
 	type args struct {
 		p   []string
@@ -101,7 +102,7 @@ func TestPlatforms(t *testing.T) {
 	mockDbService := new(dboperations.MockIDbOperations)
 	type fields struct {
 		db  dboperations.IDbOperations
-		log *zap.Logger
+		log logger.ILogger
 	}
 	type args struct {
 		pl PlatformList

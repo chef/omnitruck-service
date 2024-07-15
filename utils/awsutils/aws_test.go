@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/chef/omnitruck-service/config"
+	"github.com/chef/omnitruck-service/logger"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
 func TestCreateAWSSession(t *testing.T) {
@@ -15,7 +15,7 @@ func TestCreateAWSSession(t *testing.T) {
 		Region:    "your_region",
 	}
 
-	log := zap.NewNop()
+	log, _ := logger.NewStandardLogger()
 
 	dbc := NewAwsUtils(log)
 	sess, err := dbc.GetNewSession(config)

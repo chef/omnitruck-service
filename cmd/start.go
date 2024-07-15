@@ -11,11 +11,11 @@ import (
 	"sync"
 
 	"github.com/chef/omnitruck-service/config"
+	"github.com/chef/omnitruck-service/logger"
 	"github.com/chef/omnitruck-service/services"
 	"github.com/chef/omnitruck-service/utils/awsutils"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"gopkg.in/yaml.v3"
 )
 
@@ -62,33 +62,33 @@ to quickly create a Cobra application.`,
 			logger.Fatal(err.Error())
 		}
 		if cliConfig.Opensource.Enabled {
-			openSource_logger := setupLogging()
+			openSourceLogger := setupLogging()
 			os_api := services.New(services.Config{
 				Name:          cliConfig.Opensource.Name,
 				Listen:        cliConfig.Opensource.Listen,
-				Log:           openSource_logger.With(zap.String("pkg", cliConfig.Opensource.Name)),
+				Log:           openSourceLogger,
 				Mode:          services.Opensource,
 				ServiceConfig: serviceConfig,
 			})
 			os_api.Start(&wg)
 		}
 		if cliConfig.Trial.Enabled {
-			trial_logger := setupLogging()
+			trialLogger := setupLogging()
 			trial_api := services.New(services.Config{
 				Name:          cliConfig.Trial.Name,
 				Listen:        cliConfig.Trial.Listen,
-				Log:           trial_logger.With(zap.String("pkg", cliConfig.Trial.Name)),
+				Log:           trialLogger,
 				Mode:          services.Trial,
 				ServiceConfig: serviceConfig,
 			})
 			trial_api.Start(&wg)
 		}
 		if cliConfig.Commercial.Enabled {
-			commercial_logger := setupLogging()
+			commercialLogger := setupLogging()
 			commercial_api := services.New(services.Config{
 				Name:          cliConfig.Commercial.Name,
 				Listen:        cliConfig.Commercial.Listen,
-				Log:           commercial_logger.With(zap.String("pkg", cliConfig.Commercial.Name)),
+				Log:           commercialLogger,
 				Mode:          services.Commercial,
 				ServiceConfig: serviceConfig,
 			})
@@ -98,33 +98,11 @@ to quickly create a Cobra application.`,
 	},
 }
 
-func setupLogging() *zap.Logger {
-	var logger *zap.Logger
-	config := zap.Config{
-		Level:       zap.NewAtomicLevelAt(zap.InfoLevel),
-		Encoding:    cliConfig.Logging.Format,
-		OutputPaths: []string{"stdout"},
-		EncoderConfig: zapcore.EncoderConfig{
-			TimeKey:        zapcore.OmitKey,
-			LevelKey:       "level",
-			NameKey:        "logger",
-			CallerKey:      zapcore.OmitKey,
-			FunctionKey:    zapcore.OmitKey,
-			MessageKey:     "msg",
-			StacktraceKey:  zapcore.OmitKey,
-			LineEnding:     zapcore.DefaultLineEnding,
-			EncodeLevel:    zapcore.LowercaseLevelEncoder,
-			EncodeTime:     zapcore.RFC3339TimeEncoder,
-			EncodeDuration: zapcore.SecondsDurationEncoder,
-			EncodeCaller:   zapcore.ShortCallerEncoder,
-		},
-	}
-	logger, err := config.Build()
+func setupLogging() logger.ILogger {
+	logger, err := logger.NewLogger("info", "", cliConfig.Logging.Format, false)
 	if err != nil {
-		logger.Error("error while creating a logger: " + err.Error())
-		return nil
+		panic(err)
 	}
-	logger = logger.With(zap.String("pkg", "cmd/start"))
 	return logger
 }
 

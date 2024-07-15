@@ -6,9 +6,9 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/chef/omnitruck-service/logger"
 	"github.com/chef/omnitruck-service/models"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
 type MDB struct {
@@ -24,8 +24,9 @@ func (mdb *MDB) Scan(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
 	return mdb.Scanfunc(input)
 }
 
-func getLogger() *zap.Logger {
-	return zap.NewNop()
+func getLogger() logger.ILogger {
+	log, _ := logger.NewStandardLogger()
+	return log
 }
 
 func TestGetPackagesSuccess(t *testing.T) {

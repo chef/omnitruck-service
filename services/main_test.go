@@ -11,15 +11,16 @@ import (
 	"github.com/chef/omnitruck-service/clients/omnitruck"
 	"github.com/chef/omnitruck-service/dboperations"
 	_ "github.com/chef/omnitruck-service/docs"
+	"github.com/chef/omnitruck-service/logger"
 	"github.com/chef/omnitruck-service/models"
 	"github.com/chef/omnitruck-service/utils/template"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
-func getLogger() *zap.Logger {
-	return zap.NewNop()
+func getLogger() logger.ILogger {
+	log, _ := logger.NewStandardLogger()
+	return log
 }
 
 func TestRelatedProductsHandler(t *testing.T) {
