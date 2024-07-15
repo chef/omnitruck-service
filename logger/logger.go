@@ -118,9 +118,9 @@ func NewLogger(level string, out, format string, debug bool) (ILogger, error) {
 			LevelKey:       "level",
 			NameKey:        "logger",
 			CallerKey:      "file",
-			FunctionKey:    "method",
+			FunctionKey:    zapcore.OmitKey,
 			MessageKey:     "msg",
-			StacktraceKey:  "stack trace",
+			StacktraceKey:  zapcore.OmitKey,
 			LineEnding:     zapcore.DefaultLineEnding,
 			EncodeLevel:    zapcore.LowercaseLevelEncoder,
 			EncodeTime:     zapcore.RFC3339TimeEncoder,
@@ -133,7 +133,7 @@ func NewLogger(level string, out, format string, debug bool) (ILogger, error) {
 		return nil, err
 
 	}
-	//logger = logger.With(zap.String("pkg", "server/main"))
+	// logger = logger.With(zap.String("pkg", "server/main"))
 	beginTime := time.Now().UTC()
 	// adding host name field
 	hostname, err := os.Hostname()
@@ -143,7 +143,8 @@ func NewLogger(level string, out, format string, debug bool) (ILogger, error) {
 	return &Logger{logger: logger.WithOptions(
 		zap.AddCallerSkip(0),
 		zap.Fields(zap.String("hostname", hostname)),
-		zap.Fields(zap.String("pkg", "server/main"))),
+		// zap.Fields(zap.String("pkg", "server/main"))
+		),
 
 		beginTime: beginTime}, nil
 }

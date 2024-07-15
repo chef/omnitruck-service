@@ -101,32 +101,23 @@ func (rp *RequestParams) UrlParams() url.Values {
 }
 
 func New(log logger.ILogger) Omnitruck {
+	logfields := utils.AddLogFields("pkg", "client/omnitruck")
+	log.Info("inside the clients/omnitruck package", logfields)
 	return Omnitruck{
 		client: &http.Client{
 			Timeout: 10 * time.Second,
 		},
-		// log: log.With(zap.String("pkg", "client/omnitruck")),
-		log: log.With(map[string]interface{}{
-			"pkg": "client/omnitruck",
-		}),
+		log: log,
 	}
 }
 
 func (ot *Omnitruck) logRequestError(msg string, request *clients.Request, err error) {
-	// ot.log.WithError(err).
-	// 	WithField("status", request.Code).
-	// 	WithField("body", string(request.Body)).
-	// 	Error(msg)
 	if err != nil {
-		// ot.log.With(zap.Int("status", request.Code), zap.String("body", string(request.Body))).
-		// 	With(zap.String("msg", msg)).
-		// 	Error(err.Error())
-		ot.log.With(map[string]interface{}{
+		ot.log.Error(msg, err, map[string]interface{}{
 			"status": request.Code,
 			"body":   string(request.Body),
-		}).Error(msg, err)
+		})
 	}
-	// ot.log.With(zap.Int("status", request.Code), zap.String("body", string(request.Body))).With(zap.String("msg", msg))
 }
 
 func (ot *Omnitruck) Get(url string) *clients.Request {

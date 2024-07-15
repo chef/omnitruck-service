@@ -13,9 +13,9 @@ import (
 	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/logger"
 	"github.com/chef/omnitruck-service/services"
+	"github.com/chef/omnitruck-service/utils"
 	"github.com/chef/omnitruck-service/utils/awsutils"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
 
@@ -62,33 +62,39 @@ to quickly create a Cobra application.`,
 			logger.Fatal(err.Error())
 		}
 		if cliConfig.Opensource.Enabled {
-			openSourceLogger := setupLogging()
+			logger.Info("", map[string]interface{}{
+				"pkg":cliConfig.Opensource.Name,
+			})
 			os_api := services.New(services.Config{
 				Name:          cliConfig.Opensource.Name,
 				Listen:        cliConfig.Opensource.Listen,
-				Log:           openSourceLogger,
+				Log:           logger,
 				Mode:          services.Opensource,
 				ServiceConfig: serviceConfig,
 			})
 			os_api.Start(&wg)
 		}
 		if cliConfig.Trial.Enabled {
-			trialLogger := setupLogging()
+			logger.Info("", map[string]interface{}{
+				"pkg":cliConfig.Trial.Name,
+			})
 			trial_api := services.New(services.Config{
 				Name:          cliConfig.Trial.Name,
 				Listen:        cliConfig.Trial.Listen,
-				Log:           trialLogger,
+				Log:           logger,
 				Mode:          services.Trial,
 				ServiceConfig: serviceConfig,
 			})
 			trial_api.Start(&wg)
 		}
 		if cliConfig.Commercial.Enabled {
-			commercialLogger := setupLogging()
+			logger.Info("", map[string]interface{}{
+				"pkg":cliConfig.Commercial.Name,
+			})
 			commercial_api := services.New(services.Config{
 				Name:          cliConfig.Commercial.Name,
 				Listen:        cliConfig.Commercial.Listen,
-				Log:           commercialLogger,
+				Log:           logger,
 				Mode:          services.Commercial,
 				ServiceConfig: serviceConfig,
 			})
@@ -107,27 +113,28 @@ func setupLogging() logger.ILogger {
 }
 
 func initConfig() {
-	var log *zap.Logger
+	var log logger.ILogger
 	files, err := os.ReadDir("./")
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
 	for _, f := range files {
-		// log.Info(f.Name())
 		fmt.Println(f.Name())
 	}
 	if cfgFile != "" {
 		// Use config file from the flag
 		yamlFile, err := os.ReadFile(cfgFile)
 		if err != nil {
-			log.With(zap.String("cfgfile", cfgFile)).Error("error while reading the config file", zap.Error(err))
+			logFields := utils.AddLogFields("cfgfile", cfgFile)
+			log.Error("error while reading the config file", err, logFields)
 			return
 		}
 
 		err = yaml.Unmarshal(yamlFile, &cliConfig)
 		if err != nil {
-			log.With(zap.String("cfgfile", cfgFile)).Error("error while unmarshing the config file", zap.Error(err))
+			logFields := utils.AddLogFields("cfgfile", cfgFile)
+			log.Error("error while unmarshing the config file", err, logFields)
 			return
 		}
 	}

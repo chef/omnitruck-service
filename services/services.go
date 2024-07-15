@@ -229,10 +229,9 @@ func (server *ApiService) ValidateRequest(params *omnitruck.RequestParams, c *fi
 	error := server.Validator.Params(params, context)
 	if error != nil {
 		msgs, code := server.Validator.ErrorMessages(error)
-		// server.logCtx(c).With(zap.Reflect("errors", msgs)).Error("Error validating request")
-		server.logCtx(c).With(map[string]interface{}{
-			"errors": msgs,
-		}).Error("error validating request", errors.New("errors while validating request"))
+		server.logCtx(c).Error("error validating request", errors.New("errors while validating request"),map[string]interface{}{
+			"errors":msgs,
+		})
 		return c.Status(code).JSON(ErrorResponse{
 			Code:       code,
 			StatusText: http.StatusText(code),
