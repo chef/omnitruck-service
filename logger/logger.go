@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"time"
 
 	"go.uber.org/zap"
@@ -17,7 +16,7 @@ type ILogger interface {
 	Debug(msg string, fields ...map[string]interface{})
 	Warn(msg string, fields ...map[string]interface{})
 	Fatal(msg string, fields ...map[string]interface{})
-	With(fields ...map[string]interface{}) ILogger
+	WithFields(fields ...map[string]interface{}) ILogger
 	LogWritter() io.Writer
 	//zap.Logger
 }
@@ -71,7 +70,7 @@ func (l *Logger) Fatal(msg string, fields ...map[string]interface{}) {
 	l.logger.Fatal(msg, toZapFields(fields)...)
 }
 
-func (l *Logger) With(fields ...map[string]interface{}) ILogger {
+func (l *Logger) WithFields(fields ...map[string]interface{}) ILogger {
 	return &Logger{logger: l.logger.With(toZapFields(fields)...)}
 }
 
@@ -117,7 +116,7 @@ func NewLogger(level string, out, format string, debug bool) (ILogger, error) {
 			TimeKey:        "time",
 			LevelKey:       "level",
 			NameKey:        "logger",
-			CallerKey:      "file",
+			CallerKey:      zapcore.OmitKey,
 			FunctionKey:    zapcore.OmitKey,
 			MessageKey:     "msg",
 			StacktraceKey:  zapcore.OmitKey,
@@ -133,18 +132,13 @@ func NewLogger(level string, out, format string, debug bool) (ILogger, error) {
 		return nil, err
 
 	}
-	// logger = logger.With(zap.String("pkg", "server/main"))
 	beginTime := time.Now().UTC()
-	// adding host name field
-	hostname, err := os.Hostname()
 	if err != nil {
 		logger.Error(fmt.Errorf("not able to get the hostname %s", err.Error()).Error())
 	}
 	return &Logger{logger: logger.WithOptions(
 		zap.AddCallerSkip(0),
-		zap.Fields(zap.String("hostname", hostname)),
-		// zap.Fields(zap.String("pkg", "server/main"))
-		),
+	),
 
 		beginTime: beginTime}, nil
 }

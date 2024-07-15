@@ -13,7 +13,6 @@ import (
 	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/logger"
 	"github.com/chef/omnitruck-service/services"
-	"github.com/chef/omnitruck-service/utils"
 	"github.com/chef/omnitruck-service/utils/awsutils"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -62,39 +61,36 @@ to quickly create a Cobra application.`,
 			logger.Fatal(err.Error())
 		}
 		if cliConfig.Opensource.Enabled {
-			logger.Info("", map[string]interface{}{
-				"pkg":cliConfig.Opensource.Name,
-			})
 			os_api := services.New(services.Config{
-				Name:          cliConfig.Opensource.Name,
-				Listen:        cliConfig.Opensource.Listen,
-				Log:           logger,
+				Name:   cliConfig.Opensource.Name,
+				Listen: cliConfig.Opensource.Listen,
+				Log: logger.WithFields(map[string]interface{}{
+					"pkg": cliConfig.Opensource.Name,
+				}),
 				Mode:          services.Opensource,
 				ServiceConfig: serviceConfig,
 			})
 			os_api.Start(&wg)
 		}
 		if cliConfig.Trial.Enabled {
-			logger.Info("", map[string]interface{}{
-				"pkg":cliConfig.Trial.Name,
-			})
 			trial_api := services.New(services.Config{
-				Name:          cliConfig.Trial.Name,
-				Listen:        cliConfig.Trial.Listen,
-				Log:           logger,
+				Name:   cliConfig.Trial.Name,
+				Listen: cliConfig.Trial.Listen,
+				Log: logger.WithFields(map[string]interface{}{
+					"pkg": cliConfig.Trial.Name,
+				}),
 				Mode:          services.Trial,
 				ServiceConfig: serviceConfig,
 			})
 			trial_api.Start(&wg)
 		}
 		if cliConfig.Commercial.Enabled {
-			logger.Info("", map[string]interface{}{
-				"pkg":cliConfig.Commercial.Name,
-			})
 			commercial_api := services.New(services.Config{
-				Name:          cliConfig.Commercial.Name,
-				Listen:        cliConfig.Commercial.Listen,
-				Log:           logger,
+				Name:   cliConfig.Commercial.Name,
+				Listen: cliConfig.Commercial.Listen,
+				Log: logger.WithFields(map[string]interface{}{
+					"pkg": cliConfig.Commercial.Name,
+				}),
 				Mode:          services.Commercial,
 				ServiceConfig: serviceConfig,
 			})
@@ -126,15 +122,17 @@ func initConfig() {
 		// Use config file from the flag
 		yamlFile, err := os.ReadFile(cfgFile)
 		if err != nil {
-			logFields := utils.AddLogFields("cfgfile", cfgFile)
-			log.Error("error while reading the config file", err, logFields)
+			log.WithFields(map[string]interface{}{
+				"cfgfile": cfgFile,
+			}).Error("error while reading the config file", err)
 			return
 		}
 
 		err = yaml.Unmarshal(yamlFile, &cliConfig)
 		if err != nil {
-			logFields := utils.AddLogFields("cfgfile", cfgFile)
-			log.Error("error while unmarshing the config file", err, logFields)
+			log.WithFields(map[string]interface{}{
+				"cfgfile": cfgFile,
+			}).Error("error while unmarshing the config file", err)
 			return
 		}
 	}

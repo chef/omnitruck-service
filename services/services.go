@@ -209,7 +209,7 @@ func (server *ApiService) DynamoServices(db dboperations.IDbOperations, c *fiber
 }
 
 func (server *ApiService) logCtx(c *fiber.Ctx) log.ILogger {
-	return server.Log.With(map[string]interface{}{
+	return server.Log.WithFields(map[string]interface{}{
 		"license_id": c.Locals("license_id"),
 	})
 }

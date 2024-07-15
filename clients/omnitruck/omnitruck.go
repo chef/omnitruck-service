@@ -101,13 +101,13 @@ func (rp *RequestParams) UrlParams() url.Values {
 }
 
 func New(log logger.ILogger) Omnitruck {
-	logfields := utils.AddLogFields("pkg", "client/omnitruck")
-	log.Info("inside the clients/omnitruck package", logfields)
 	return Omnitruck{
 		client: &http.Client{
 			Timeout: 10 * time.Second,
 		},
-		log: log,
+		log: log.WithFields(map[string]interface{}{
+			"pkg": "client/omnitruck",
+		}),
 	}
 }
 
