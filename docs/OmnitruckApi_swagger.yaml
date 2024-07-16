@@ -380,6 +380,52 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
+  /install.ps1:
+    get:
+      description: The `ACCEPT` HTTP header with a value of `text/plain` must be provided
+        in the request for a text response to be returned
+      parameters:
+      - description: License ID
+        in: query
+        name: license_id
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /install.sh:
+    get:
+      description: The `ACCEPT` HTTP header with a value of `application/x-sh` must
+        be provided in the request for a shell script response to be returned
+      parameters:
+      - description: License ID
+        in: query
+        name: license_id
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
   /platforms:
     get:
       description: |-

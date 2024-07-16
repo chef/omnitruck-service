@@ -33,6 +33,74 @@
                 }
             }
         },
+        "/install.ps1": {
+            "get": {
+                "description": "The `ACCEPT` HTTP header with a value of `text/plain` must be provided in the request for a text response to be returned",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "License ID",
+                        "name": "license_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/install.sh": {
+            "get": {
+                "description": "The `ACCEPT` HTTP header with a value of `application/x-sh` must be provided in the request for a shell script response to be returned",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "License ID",
+                        "name": "license_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/platforms": {
             "get": {
                 "description": "Returns a valid list of valid platform keys along with full friendly names.\nAny of these platform keys can be used in the p query string value in various endpoints below.",

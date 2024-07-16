@@ -48,7 +48,8 @@ func (server *ApiService) buildRouter() {
 	server.App.Get("/:channel/:product/download", requestid.New(), server.productDownloadHandler)
 	server.App.Get("/relatedProducts", requestid.New(), server.relatedProductsHandler)
 	server.App.Get("/:channel/:product/fileName", requestid.New(), server.fileNameHandler)
-
+	server.App.Get("/install.sh", requestid.New(), server.downloadLinuxScript)
+	server.App.Get("/install.ps1", requestid.New(), server.downloadWindowsScript)
 }
 
 func (server *ApiService) docsHandler(baseUrl string) func(*fiber.Ctx) error {
@@ -647,4 +648,56 @@ func (server *ApiService) isOsVersion(params *omnitruck.RequestParams, c *fiber.
 		}
 	}
 	return fiber.NewError(fiber.StatusBadRequest, errMsg)
+}
+
+// @description The `ACCEPT` HTTP header with a value of `application/x-sh` must be provided in the request for a shell script response to be returned
+// @Param       license_id query    string false "License ID"
+// @Success     200        {object} map[string]interface{}
+// @Failure     403        {object} services.ErrorResponse
+// @Failure     500        {object} services.ErrorResponse
+// @Router      /install.sh [get]
+func (server *ApiService) downloadLinuxScript(c *fiber.Ctx) error {
+	params := getRequestParams(c)
+	c.Set("Content-Type", "application/x-sh")
+	err, ok := server.ValidateRequest(params, c)
+	if !ok {
+		server.logCtx(c).Error("Validation of download linux script API failed: ", err)
+		return err
+	}
+	if server.Mode == Opensource {
+		params.LicenseId = ""
+	}
+	filePath := "../templates/install.sh.tmpl"
+	resp, err := server.TemplateRenderer.GetScript(c.Hostname(), params, filePath)
+	if err != nil {
+		return err
+	}
+	c.Set("Content-Disposition", "attachment;filename=install.sh")
+	return c.SendString(resp)
+}
+
+// @description The `ACCEPT` HTTP header with a value of `text/plain` must be provided in the request for a text response to be returned
+// @Param       license_id query    string false "License ID"
+// @Success     200        {object} map[string]interface{}
+// @Failure     403        {object} services.ErrorResponse
+// @Failure     500        {object} services.ErrorResponse
+// @Router      /install.ps1 [get]
+func (server *ApiService) downloadWindowsScript(c *fiber.Ctx) error {
+	params := getRequestParams(c)
+	c.Set("Content-Type", "text/plain")
+	err, ok := server.ValidateRequest(params, c)
+	if !ok {
+		server.logCtx(c).Error("Validation of download windows script API failed: ", err)
+		return err
+	}
+	if server.Mode == Opensource {
+		params.LicenseId = ""
+	}
+	filePath := "../templates/install.ps1.tmpl"
+	resp, err := server.TemplateRenderer.GetScript(c.Hostname(), params, filePath)
+	if err != nil {
+		return err
+	}
+	c.Set("Content-Disposition", "attachment;filename=install.ps1")
+	return c.SendString(resp)
 }

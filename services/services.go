@@ -15,6 +15,7 @@ import (
 	dbconnection "github.com/chef/omnitruck-service/middleware/db"
 	"github.com/chef/omnitruck-service/middleware/license"
 	"github.com/chef/omnitruck-service/utils/awsutils"
+	"github.com/chef/omnitruck-service/utils/template"
 	fiber "github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -53,12 +54,13 @@ type Service interface {
 
 type ApiService struct {
 	sync.Mutex
-	Config          Config
-	Log             *log.Entry
-	App             *fiber.App
-	Validator       omnitruck.RequestValidator
-	Mode            ApiType
-	DatabaseService dboperations.IDbOperations
+	Config           Config
+	Log              *log.Entry
+	App              *fiber.App
+	Validator        omnitruck.RequestValidator
+	Mode             ApiType
+	DatabaseService  dboperations.IDbOperations
+	TemplateRenderer template.TemplateRender
 }
 
 func New(c Config) *ApiService {
@@ -74,6 +76,7 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	server.Validator = omnitruck.NewValidator()
 	server.Mode = c.Mode
 	server.DatabaseService = dboperations.NewDbOperationsService(dbconnection.NewDbConnectionService(awsutils.NewAwsUtils(), c.ServiceConfig), c.ServiceConfig)
+	server.TemplateRenderer = template.NewTemplateRender()
 
 	engine := html.New("./views", ".html")
 
