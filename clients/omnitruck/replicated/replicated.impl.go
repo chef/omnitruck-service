@@ -170,6 +170,9 @@ func (r *ReplicatedImpl) PlatformPackages(req *omnitruck.RequestParams, serverMo
 		r.Logger.Error("", requestParams.Message)
 		return omnitruck.PackageList{}, fiber.NewError(requestParams.Code, requestParams.Message)
 	}
+	if req.Version == "" {
+		req.Version = "latest"
+	}
 	if serverMode == 2 && req.Product == constants.PLATFORM_SERVICE {
 		packageList["linux"] = omnitruck.PlatformVersionList{}
 		packageList["linux"]["pv"] = omnitruck.ArchList{}

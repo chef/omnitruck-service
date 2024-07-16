@@ -330,7 +330,7 @@ func TestProductMetadataHandler(t *testing.T) {
 				SHA256:           "",
 			},
 			err:          nil,
-			version:      "latest",
+			version:      "",
 			version_err:  nil,
 			versions:     []string{},
 			versions_err: nil,

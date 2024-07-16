@@ -446,6 +446,9 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 		} else {
 			url := getDownloadUrl(params, c)
 			data.Url = url
+			if params.Version == "" {
+				data.Version = "latest"
+			}
 			return server.SendResponse(c, &data)
 		}
 	}
