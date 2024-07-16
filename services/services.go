@@ -210,6 +210,11 @@ func (server *ApiService) DynamoServices(db dboperations.IDbOperations, c *fiber
 	return &service
 }
 
+func (server *ApiService) PlatformServices(c *fiber.Ctx) *omnitruck.PlatformServices {
+	service := omnitruck.NewPlatformServices(server.logCtx(c))
+	return &service
+}
+
 func (server *ApiService) ReplicatedService(config config.ReplicatedConfig, log logrus.Logger) replicated.IReplicated {
 	service := replicated.NewReplicatedImpl(config, log)
 	return service

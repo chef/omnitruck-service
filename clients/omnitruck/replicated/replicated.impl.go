@@ -7,12 +7,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/chef/omnitruck-service/clients/omnitruck"
 	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/constants"
 	"github.com/chef/omnitruck-service/logger"
 	"github.com/chef/omnitruck-service/utils"
-	"github.com/gofiber/fiber/v2"
 )
 
 type HTTPClient interface {
@@ -106,98 +104,4 @@ func (r ReplicatedImpl) SearchCustomersByEmail(email string, requestId string) (
 	}
 
 	return respObj.Customers, nil
-}
-
-func (r *ReplicatedImpl) PlatformVersionsAll(req *omnitruck.RequestParams, serverMode int) ([]omnitruck.ProductVersion, error) {
-	productVersions := []omnitruck.ProductVersion{}
-	flags := omnitruck.RequestParamsFlags{
-		Channel: true,
-	}
-	requestParams := omnitruck.ValidateRequest(req, flags)
-	if !requestParams.Ok {
-		r.Logger.Error("", requestParams.Message)
-		return productVersions, fiber.NewError(requestParams.Code, requestParams.Message)
-	}
-	if serverMode == 2 && req.Product == constants.PLATFORM_SERVICE {
-		productVersions = append(productVersions, "latest")
-		return productVersions, nil
-	}
-	return productVersions, fiber.NewError(fiber.StatusBadRequest, constants.PLATFORM_ERROR)
-}
-
-func (r *ReplicatedImpl) PlatformVersionLatest(req *omnitruck.RequestParams, serverMode int) (omnitruck.ProductVersion, error) {
-	flags := omnitruck.RequestParamsFlags{
-		Channel: true,
-	}
-	requestParams := omnitruck.ValidateRequest(req, flags)
-	if !requestParams.Ok {
-		r.Logger.Error("", requestParams.Message)
-		return "", fiber.NewError(requestParams.Code, requestParams.Message)
-	}
-	if serverMode == 2 {
-		return "latest", nil
-	}
-	return "", fiber.NewError(fiber.StatusBadRequest, constants.PLATFORM_ERROR)
-}
-
-func (r *ReplicatedImpl) PlatformMetadata(req *omnitruck.RequestParams, serverMode int) (omnitruck.PackageMetadata, error) {
-	flags := omnitruck.RequestParamsFlags{
-		Channel: true,
-	}
-	requestParams := omnitruck.ValidateRequest(req, flags)
-	if !requestParams.Ok {
-		r.Logger.Error("", requestParams.Message)
-		return omnitruck.PackageMetadata{}, fiber.NewError(requestParams.Code, requestParams.Message)
-	}
-	if serverMode == 2 && req.Product == constants.PLATFORM_SERVICE {
-		return omnitruck.PackageMetadata{
-			Sha1:    "",
-			Sha256:  "",
-			Url:     "",
-			Version: req.Version,
-		}, nil
-	}
-	return omnitruck.PackageMetadata{}, fiber.NewError(fiber.StatusBadRequest, constants.PLATFORM_ERROR)
-}
-
-func (r *ReplicatedImpl) PlatformPackages(req *omnitruck.RequestParams, serverMode int) (omnitruck.PackageList, error) {
-	packageList := omnitruck.PackageList{}
-	flags := omnitruck.RequestParamsFlags{
-		Channel: true,
-	}
-	requestParams := omnitruck.ValidateRequest(req, flags)
-	if !requestParams.Ok {
-		r.Logger.Error("", requestParams.Message)
-		return omnitruck.PackageList{}, fiber.NewError(requestParams.Code, requestParams.Message)
-	}
-	if req.Version == "" {
-		req.Version = "latest"
-	}
-	if serverMode == 2 && req.Product == constants.PLATFORM_SERVICE {
-		packageList["linux"] = omnitruck.PlatformVersionList{}
-		packageList["linux"]["pv"] = omnitruck.ArchList{}
-		packageList["linux"]["pv"]["amd64"] = omnitruck.PackageMetadata{
-			Sha1:    "",
-			Sha256:  "",
-			Url:     "",
-			Version: req.Version,
-		}
-		return packageList, nil
-	}
-	return packageList, fiber.NewError(fiber.StatusBadRequest, constants.PLATFORM_ERROR)
-}
-
-func (r *ReplicatedImpl) PlatformFilename(req *omnitruck.RequestParams, serverMode int) (string, error) {
-	flags := omnitruck.RequestParamsFlags{
-		Channel: true,
-	}
-	requestParams := omnitruck.ValidateRequest(req, flags)
-	if !requestParams.Ok {
-		r.Logger.Error("", requestParams.Message)
-		return "", fiber.NewError(requestParams.Code, requestParams.Message)
-	}
-	if serverMode == 2 {
-		return constants.PLATFORM_SERVICE + ".zip", nil
-	}
-	return "", fiber.NewError(fiber.StatusBadRequest, constants.PLATFORM_ERROR)
 }

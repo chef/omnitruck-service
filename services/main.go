@@ -190,7 +190,7 @@ func (server *ApiService) fetchLatestVersion(params *omnitruck.RequestParams, c 
 		}
 	} else if params.Product == constants.PLATFORM_SERVICE {
 		request := clients.Request{}
-		data, err := server.ReplicatedService(server.Config.ServiceConfig.ReplicatedConfig, server.logCtx(c)).PlatformVersionLatest(params, int(server.Mode))
+		data, err := server.PlatformServices(c).PlatformVersionLatest(params, int(server.Mode))
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
 			server.logCtx(c).WithError(err).Error(utils.ErrorWhileFetchingLatestVersion + params.Product)
@@ -212,7 +212,7 @@ func (server *ApiService) fetchLatestOSVersion(params *omnitruck.RequestParams, 
 	var data []omnitruck.ProductVersion
 	if params.Product == constants.PLATFORM_SERVICE {
 		request := clients.Request{}
-		data, err := server.ReplicatedService(server.Config.ServiceConfig.ReplicatedConfig, server.logCtx(c)).PlatformVersionLatest(params, int(server.Mode))
+		data, err := server.PlatformServices(c).PlatformVersionLatest(params, int(server.Mode))
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
 			server.logCtx(c).WithError(err).Error(utils.ErrorWhileFetchingLatestVersion + params.Product)
@@ -272,26 +272,9 @@ func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 	}
 
 	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
-		data, err := server.DynamoServices(server.DatabaseService, c).VersionAll(params)
-		if err != nil {
-			code, msg := getErrorCodeAndMsg(err)
-			return server.SendErrorResponse(c, code, msg)
-		}
-
-		if params.Product == "habitat" && server.Mode == Opensource {
-			data = omnitruck.FilterList(data, func(v omnitruck.ProductVersion) bool {
-				return !omnitruck.OsProductVersion(params.Product, v)
-			})
-		}
-		if server.Mode == Trial {
-			data = []omnitruck.ProductVersion{
-				data[len(data)-1],
-			}
-		}
-
-		return server.SendResponse(c, &data)
+		return server.createDynamoServiceResponse(params, c)
 	} else if params.Product == constants.PLATFORM_SERVICE {
-		versions, err := server.ReplicatedService(server.Config.ServiceConfig.ReplicatedConfig, server.logCtx(c)).PlatformVersionsAll(params, int(server.Mode))
+		versions, err := server.PlatformServices(c).PlatformVersionsAll(params, int(server.Mode))
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
 			return server.SendErrorResponse(c, code, msg)
@@ -331,6 +314,27 @@ func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 
 }
 
+func (server *ApiService) createDynamoServiceResponse(params *omnitruck.RequestParams, c *fiber.Ctx) error {
+	data, err := server.DynamoServices(server.DatabaseService, c).VersionAll(params)
+		if err != nil {
+			code, msg := getErrorCodeAndMsg(err)
+			return server.SendErrorResponse(c, code, msg)
+		}
+
+		if params.Product == "habitat" && server.Mode == Opensource {
+			data = omnitruck.FilterList(data, func(v omnitruck.ProductVersion) bool {
+				return !omnitruck.OsProductVersion(params.Product, v)
+			})
+		}
+		if server.Mode == Trial {
+			data = []omnitruck.ProductVersion{
+				data[len(data)-1],
+			}
+		}
+
+		return server.SendResponse(c, &data)
+}
+
 // @description Get the full list of all packages for a particular channel and product combination.
 // @description By default all packages for the latest version are returned. If the v query string parameter is included the packages for the specified version are returned.
 // @Param       channel    path     string true  "Channel" Enums(current, stable)
@@ -351,7 +355,7 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 	}
 
 	if params.Product == constants.PLATFORM_SERVICE {
-		data, err = server.ReplicatedService(server.Config.ServiceConfig.ReplicatedConfig, server.logCtx(c)).PlatformPackages(params, int(server.Mode))
+		data, err = server.PlatformServices(c).PlatformPackages(params, int(server.Mode))
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
 			return server.SendErrorResponse(c, code, msg)
@@ -439,17 +443,12 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 
 	if params.Product == constants.PLATFORM_SERVICE {
 		request = &clients.Request{}
-		data, err = server.ReplicatedService(server.Config.ServiceConfig.ReplicatedConfig, server.logCtx(c)).PlatformMetadata(params, int(server.Mode))
+		data, err = server.PlatformServices(c).PlatformMetadata(params, int(server.Mode))
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
 			return server.SendErrorResponse(c, code, msg)
 		} else {
-			url := getDownloadUrl(params, c)
-			data.Url = url
-			if params.Version == "" {
-				data.Version = "latest"
-			}
-			return server.SendResponse(c, &data)
+			return server.getChefPlatformMetaData(params, data, c)
 		}
 	}
 
@@ -482,6 +481,15 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 	} else {
 		return server.SendError(c, request)
 	}
+}
+
+func (server *ApiService) getChefPlatformMetaData(params *omnitruck.RequestParams, data omnitruck.PackageMetadata, c *fiber.Ctx) error {
+	url := getDownloadUrl(params, c)
+	data.Url = url
+	if params.Version == "" {
+		data.Version = "latest"
+	}
+	return server.SendResponse(c, &data)
 }
 
 // @description Get details for a particular package.
@@ -590,7 +598,7 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 	}
 
 	if params.Product == constants.PLATFORM_SERVICE {
-		fileName, err := server.ReplicatedService(server.Config.ServiceConfig.ReplicatedConfig, server.logCtx(c)).PlatformFilename(params, int(server.Mode))
+		fileName, err := server.PlatformServices(c).PlatformFilename(params, int(server.Mode))
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
 			server.logCtx(c).Error("Error while fetching fileName for "+params.Product, err.Error())
