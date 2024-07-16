@@ -12,7 +12,7 @@ import (
 	"github.com/chef/omnitruck-service/dboperations"
 	_ "github.com/chef/omnitruck-service/docs"
 	"github.com/chef/omnitruck-service/models"
-	"github.com/chef/omnitruck-service/utils/fileutils"
+	"github.com/chef/omnitruck-service/utils/template"
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -730,7 +730,7 @@ func TestDownloadLinuxScriptHandler(t *testing.T) {
 	tests := []struct {
 		name             string
 		serverMode       ApiType
-		mockfileutils    func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error)
+		mockTemplate    func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error)
 		requestPath      string
 		expectedStatus   int
 		expectedResponse string
@@ -738,7 +738,7 @@ func TestDownloadLinuxScriptHandler(t *testing.T) {
 		{
 			name:       "success",
 			serverMode: 1,
-			mockfileutils: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
+			mockTemplate: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
 				return "", nil
 			},
 			requestPath:      `/install.sh`,
@@ -748,7 +748,7 @@ func TestDownloadLinuxScriptHandler(t *testing.T) {
 		{
 			name:       "error while parsing the file response",
 			serverMode: 0,
-			mockfileutils: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
+			mockTemplate: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
 				return "", errors.New("filepath not found")
 			},
 			requestPath:      `/install.sh`,
@@ -759,13 +759,13 @@ func TestDownloadLinuxScriptHandler(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			app := fiber.New()
-			mockFileutils := new(fileutils.MockFileUtils)
-			mockFileutils.GetScriptfunc = test.mockfileutils
+			mockTemplate := new(template.MockTemplateRennder)
+			mockTemplate.GetScriptfunc = test.mockTemplate
 			server := &ApiService{
-				App:       app,
-				FileUtils: mockFileutils,
-				Log:       logrus.NewEntry(logrus.New()),
-				Mode:      test.serverMode,
+				App:              app,
+				TemplateRenderer: mockTemplate,
+				Log:              logrus.NewEntry(logrus.New()),
+				Mode:             test.serverMode,
 			}
 			server.buildRouter()
 			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
@@ -780,7 +780,7 @@ func TestDownloadWindowsScriptHandler(t *testing.T) {
 	tests := []struct {
 		name             string
 		serverMode       ApiType
-		mockfileutils    func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error)
+		mockTemplate    func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error)
 		requestPath      string
 		expectedStatus   int
 		expectedResponse string
@@ -788,7 +788,7 @@ func TestDownloadWindowsScriptHandler(t *testing.T) {
 		{
 			name:       "success",
 			serverMode: 1,
-			mockfileutils: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
+			mockTemplate: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
 				return "", nil
 			},
 			requestPath:      `/install.ps1`,
@@ -798,7 +798,7 @@ func TestDownloadWindowsScriptHandler(t *testing.T) {
 		{
 			name:       "error while parsing the file response",
 			serverMode: 0,
-			mockfileutils: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
+			mockTemplate: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
 				return "", errors.New("filepath not found")
 			},
 			requestPath:      `/install.ps1`,
@@ -809,13 +809,13 @@ func TestDownloadWindowsScriptHandler(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			app := fiber.New()
-			mockFileutils := new(fileutils.MockFileUtils)
-			mockFileutils.GetScriptfunc = test.mockfileutils
+			mockTemplate := new(template.MockTemplateRennder)
+			mockTemplate.GetScriptfunc = test.mockTemplate
 			server := &ApiService{
-				App:       app,
-				FileUtils: mockFileutils,
-				Log:       logrus.NewEntry(logrus.New()),
-				Mode:      test.serverMode,
+				App:              app,
+				TemplateRenderer: mockTemplate,
+				Log:              logrus.NewEntry(logrus.New()),
+				Mode:             test.serverMode,
 			}
 			server.buildRouter()
 			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)

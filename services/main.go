@@ -668,7 +668,7 @@ func (server *ApiService) downloadLinuxScript(c *fiber.Ctx) error {
 		params.LicenseId = ""
 	}
 	filePath := "../templates/install.sh.tmpl"
-	resp, err := server.FileUtils.GetScript(c.Hostname(), params, filePath)
+	resp, err := server.TemplateRenderer.GetScript(c.Hostname(), params, filePath)
 	if err != nil {
 		return err
 	}
@@ -694,7 +694,7 @@ func (server *ApiService) downloadWindowsScript(c *fiber.Ctx) error {
 		params.LicenseId = ""
 	}
 	filePath := "../templates/install.ps1.tmpl"
-	resp, err := server.FileUtils.GetScript(c.Hostname(), params, filePath)
+	resp, err := server.TemplateRenderer.GetScript(c.Hostname(), params, filePath)
 	if err != nil {
 		return err
 	}

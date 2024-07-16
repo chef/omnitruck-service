@@ -1,4 +1,4 @@
-package fileutils
+package template
 
 import (
 	"bytes"
@@ -10,16 +10,16 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-type FileUtilsImpl struct{}
+type TemplateRennderImpl struct{}
 
-type FileUtils interface {
+type TemplateRender interface {
 	GetScript(baseUrl string, params *omnitruck.RequestParams, filePath string) (string, error)
 }
 
-func NewFileUtils() *FileUtilsImpl {
-	return &FileUtilsImpl{}
+func NewTemplateRender() *TemplateRennderImpl {
+	return &TemplateRennderImpl{}
 }
-func (fu *FileUtilsImpl) GetScript(baseUrl string, params *omnitruck.RequestParams, filePath string) (string, error) {
+func (fu *TemplateRennderImpl) GetScript(baseUrl string, params *omnitruck.RequestParams, filePath string) (string, error) {
 	scriptInput := models.ScriptParams{
 		BaseUrl:   baseUrl,
 		LicenseId: params.LicenseId,

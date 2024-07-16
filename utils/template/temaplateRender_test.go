@@ -1,16 +1,16 @@
-package fileutils_test
+package template_test
 
 import (
 	"errors"
 	"testing"
 
 	"github.com/chef/omnitruck-service/clients/omnitruck"
-	"github.com/chef/omnitruck-service/utils/fileutils"
+	"github.com/chef/omnitruck-service/utils/template"
 	"github.com/stretchr/testify/assert"
 )
 
 const (
-	HOST_NAME = "example.com"
+	HOST_NAME  = "example.com"
 	LICENSE_ID = "afd2c0a2-111f-4caf-1fa2-1211fe1212d"
 )
 
@@ -65,7 +65,7 @@ func TestGetScript(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fu := &fileutils.FileUtilsImpl{}
+			fu := &template.TemplateRennderImpl{}
 			got, err := fu.GetScript(tt.args.baseUrl, tt.args.params, tt.args.filePath)
 			if err != nil {
 				assert.Equal(t, err.Error(), tt.wantErr.Error())
