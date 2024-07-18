@@ -6,14 +6,14 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
-	"strings"
 	"sync"
 
 	"github.com/chef/omnitruck-service/config"
+	"github.com/chef/omnitruck-service/logger"
 	"github.com/chef/omnitruck-service/services"
 	"github.com/chef/omnitruck-service/utils/awsutils"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -55,16 +55,18 @@ to quickly create a Cobra application.`,
 
 		var wg sync.WaitGroup
 		var serviceConfig config.ServiceConfig
-		secret := awsutils.GetSecret(os.Getenv("CONFIG"), os.Getenv("REGION"))
+		secret := awsutils.GetSecret(os.Getenv("CONFIG"), os.Getenv("REGION"), logger)
 		err := json.Unmarshal([]byte(secret), &serviceConfig)
 		if err != nil {
-			logger.Fatal(err)
+			logger.Fatal(err.Error())
 		}
 		if cliConfig.Opensource.Enabled {
 			os_api := services.New(services.Config{
-				Name:          cliConfig.Opensource.Name,
-				Listen:        cliConfig.Opensource.Listen,
-				Log:           logger.WithField("pkg", cliConfig.Opensource.Name),
+				Name:   cliConfig.Opensource.Name,
+				Listen: cliConfig.Opensource.Listen,
+				Log: logger.WithFields(map[string]interface{}{
+					"pkg": cliConfig.Opensource.Name,
+				}),
 				Mode:          services.Opensource,
 				ServiceConfig: serviceConfig,
 			})
@@ -72,9 +74,11 @@ to quickly create a Cobra application.`,
 		}
 		if cliConfig.Trial.Enabled {
 			trial_api := services.New(services.Config{
-				Name:          cliConfig.Trial.Name,
-				Listen:        cliConfig.Trial.Listen,
-				Log:           logger.WithField("pkg", cliConfig.Trial.Name),
+				Name:   cliConfig.Trial.Name,
+				Listen: cliConfig.Trial.Listen,
+				Log: logger.WithFields(map[string]interface{}{
+					"pkg": cliConfig.Trial.Name,
+				}),
 				Mode:          services.Trial,
 				ServiceConfig: serviceConfig,
 			})
@@ -82,9 +86,11 @@ to quickly create a Cobra application.`,
 		}
 		if cliConfig.Commercial.Enabled {
 			commercial_api := services.New(services.Config{
-				Name:          cliConfig.Commercial.Name,
-				Listen:        cliConfig.Commercial.Listen,
-				Log:           logger.WithField("pkg", cliConfig.Commercial.Name),
+				Name:   cliConfig.Commercial.Name,
+				Listen: cliConfig.Commercial.Listen,
+				Log: logger.WithFields(map[string]interface{}{
+					"pkg": cliConfig.Commercial.Name,
+				}),
 				Mode:          services.Commercial,
 				ServiceConfig: serviceConfig,
 			})
@@ -94,36 +100,39 @@ to quickly create a Cobra application.`,
 	},
 }
 
-func setupLogging() *log.Entry {
-	log.SetOutput(os.Stdout)
-	if strings.ToLower(cliConfig.Logging.Format) == "json" {
-		log.SetFormatter(&log.JSONFormatter{})
+func setupLogging() logger.ILogger {
+	logger, err := logger.NewLogger("info", "", cliConfig.Logging.Format, false)
+	if err != nil {
+		panic(err)
 	}
-	log.SetLevel(log.InfoLevel)
-
-	return log.WithField("pkg", "cmd/start")
+	return logger
 }
 
 func initConfig() {
+	var log logger.ILogger
 	files, err := os.ReadDir("./")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err.Error())
 	}
 
 	for _, f := range files {
-		log.Println(f.Name())
+		fmt.Println(f.Name())
 	}
 	if cfgFile != "" {
 		// Use config file from the flag
 		yamlFile, err := os.ReadFile(cfgFile)
 		if err != nil {
-			log.WithError(err).WithField("cfgFile", cfgFile).Error("Unable to read config file")
+			log.WithFields(map[string]interface{}{
+				"cfgfile": cfgFile,
+			}).Error("error while reading the config file", err)
 			return
 		}
 
 		err = yaml.Unmarshal(yamlFile, &cliConfig)
 		if err != nil {
-			log.WithError(err).WithField("cfgFile", cfgFile).Error("Error parsing config file")
+			log.WithFields(map[string]interface{}{
+				"cfgfile": cfgFile,
+			}).Error("error while unmarshing the config file", err)
 			return
 		}
 	}

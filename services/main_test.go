@@ -11,12 +11,17 @@ import (
 	"github.com/chef/omnitruck-service/clients/omnitruck"
 	"github.com/chef/omnitruck-service/dboperations"
 	_ "github.com/chef/omnitruck-service/docs"
+	"github.com/chef/omnitruck-service/logger"
 	"github.com/chef/omnitruck-service/models"
 	"github.com/chef/omnitruck-service/utils/template"
 	"github.com/gofiber/fiber/v2"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
+
+func getLogger() logger.ILogger {
+	log, _ := logger.NewStandardLogger()
+	return log
+}
 
 func TestRelatedProductsHandler(t *testing.T) {
 
@@ -73,7 +78,7 @@ func TestRelatedProductsHandler(t *testing.T) {
 			server := &ApiService{
 				App:             app,
 				DatabaseService: mockDbService,
-				Log:             logrus.NewEntry(logrus.New()),
+				Log:             getLogger(),
 			}
 			server.buildRouter()
 			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
@@ -149,7 +154,7 @@ func TestLatestVersionsHandler(t *testing.T) {
 			server := &ApiService{
 				App:             app,
 				DatabaseService: mockDbService,
-				Log:             logrus.NewEntry(logrus.New()),
+				Log:             getLogger(),
 				Mode:            test.serverMode,
 			}
 			server.buildRouter()
@@ -217,7 +222,7 @@ func TestProductVersionsHandler(t *testing.T) {
 			server := &ApiService{
 				App:             app,
 				DatabaseService: mockDbService,
-				Log:             logrus.NewEntry(logrus.New()),
+				Log:             getLogger(),
 				Mode:            test.serverMode,
 			}
 			server.buildRouter()
@@ -369,7 +374,7 @@ func TestProductMetadataHandler(t *testing.T) {
 			server := &ApiService{
 				App:             app,
 				DatabaseService: mockDbService,
-				Log:             logrus.NewEntry(logrus.New()),
+				Log:             getLogger(),
 				Mode:            test.serverMode,
 			}
 			server.buildRouter()
@@ -550,7 +555,7 @@ func TestProductPackagesHandler(t *testing.T) {
 			server := &ApiService{
 				App:             app,
 				DatabaseService: mockDbService,
-				Log:             logrus.NewEntry(logrus.New()),
+				Log:             getLogger(),
 				Mode:            test.serverMode,
 			}
 			server.buildRouter()
@@ -700,7 +705,7 @@ func TestFileNameHandler(t *testing.T) {
 				server := &ApiService{
 					App:             app,
 					DatabaseService: mockDbService,
-					Log:             logrus.NewEntry(logrus.New()),
+					Log:             getLogger(),
 					Mode:            test.serverMode,
 				}
 				server.buildRouter()
@@ -764,7 +769,7 @@ func TestDownloadLinuxScriptHandler(t *testing.T) {
 			server := &ApiService{
 				App:              app,
 				TemplateRenderer: mockTemplate,
-				Log:              logrus.NewEntry(logrus.New()),
+				Log:              getLogger(),
 				Mode:             test.serverMode,
 			}
 			server.buildRouter()
@@ -814,7 +819,7 @@ func TestDownloadWindowsScriptHandler(t *testing.T) {
 			server := &ApiService{
 				App:              app,
 				TemplateRenderer: mockTemplate,
-				Log:              logrus.NewEntry(logrus.New()),
+				Log:              getLogger(),
 				Mode:             test.serverMode,
 			}
 			server.buildRouter()

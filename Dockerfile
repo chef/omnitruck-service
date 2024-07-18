@@ -13,7 +13,7 @@ RUN make build
 
 EXPOSE 3000
 EXPOSE 3001
-EXPOSE 3002 
+EXPOSE 3002
 
 FROM golang:1.22.4-alpine 
 
