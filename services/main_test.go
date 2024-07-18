@@ -769,7 +769,7 @@ func TestDownloadLinuxScriptHandler(t *testing.T) {
 			server := &ApiService{
 				App:              app,
 				TemplateRenderer: mockTemplate,
-				Log:              logrus.NewEntry(logrus.New()),
+				Log:              getLogger(),
 				Mode:             test.serverMode,
 			}
 			server.buildRouter()
@@ -819,7 +819,7 @@ func TestDownloadWindowsScriptHandler(t *testing.T) {
 			server := &ApiService{
 				App:              app,
 				TemplateRenderer: mockTemplate,
-				Log:              logrus.NewEntry(logrus.New()),
+				Log:              getLogger(),
 				Mode:             test.serverMode,
 			}
 			server.buildRouter()
