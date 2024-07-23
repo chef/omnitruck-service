@@ -23,11 +23,11 @@ func (r *PlatformServices) PlatformVersionsAll(req *RequestParams, serverMode in
 	}
 	requestParams := ValidateRequest(req, flags)
 	if !requestParams.Ok {
-		r.Logger.Error("", requestParams.Message)
+		r.Logger.Error(validating_log, requestParams.Message)
 		return productVersions, fiber.NewError(requestParams.Code, requestParams.Message)
 	}
-	if serverMode == 2 && req.Product == constants.PLATFORM_SERVICE {
-		productVersions = append(productVersions, "latest")
+	if serverMode == 2 && req.Product == constants.PLATFORM_SERVICE_PRODUCT {
+		productVersions = append(productVersions, constants.LATEST)
 		return productVersions, nil
 	}
 	return productVersions, fiber.NewError(fiber.StatusBadRequest, constants.PLATFORM_ERROR)
@@ -39,11 +39,11 @@ func (r *PlatformServices) PlatformVersionLatest(req *RequestParams, serverMode 
 	}
 	requestParams := ValidateRequest(req, flags)
 	if !requestParams.Ok {
-		r.Logger.Error("", requestParams.Message)
+		r.Logger.Error(validating_log, requestParams.Message)
 		return "", fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 	if serverMode == 2 {
-		return "latest", nil
+		return constants.LATEST, nil
 	}
 	return "", fiber.NewError(fiber.StatusBadRequest, constants.PLATFORM_ERROR)
 }
@@ -54,10 +54,10 @@ func (r *PlatformServices) PlatformMetadata(req *RequestParams, serverMode int) 
 	}
 	requestParams := ValidateRequest(req, flags)
 	if !requestParams.Ok {
-		r.Logger.Error("", requestParams.Message)
+		r.Logger.Error(validating_log, requestParams.Message)
 		return PackageMetadata{}, fiber.NewError(requestParams.Code, requestParams.Message)
 	}
-	if serverMode == 2 && req.Product == constants.PLATFORM_SERVICE {
+	if serverMode == 2 && req.Product == constants.PLATFORM_SERVICE_PRODUCT {
 		return PackageMetadata{
 			Sha1:    "",
 			Sha256:  "",
@@ -75,13 +75,13 @@ func (r *PlatformServices) PlatformPackages(req *RequestParams, serverMode int) 
 	}
 	requestParams := ValidateRequest(req, flags)
 	if !requestParams.Ok {
-		r.Logger.Error("", requestParams.Message)
+		r.Logger.Error(validating_log, requestParams.Message)
 		return PackageList{}, fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 	if req.Version == "" {
-		req.Version = "latest"
+		req.Version = constants.LATEST
 	}
-	if serverMode == 2 && req.Product == constants.PLATFORM_SERVICE {
+	if serverMode == 2 && req.Product == constants.PLATFORM_SERVICE_PRODUCT {
 		packageList["linux"] = PlatformVersionList{}
 		packageList["linux"]["pv"] = ArchList{}
 		packageList["linux"]["pv"]["amd64"] = PackageMetadata{
@@ -101,11 +101,11 @@ func (r *PlatformServices) PlatformFilename(req *RequestParams, serverMode int) 
 	}
 	requestParams := ValidateRequest(req, flags)
 	if !requestParams.Ok {
-		r.Logger.Error("", requestParams.Message)
+		r.Logger.Error(validating_log, requestParams.Message)
 		return "", fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 	if serverMode == 2 {
-		return constants.PLATFORM_SERVICE + ".zip", nil
+		return constants.PLATFORM_SERVICE_PRODUCT + ".tar.gz", nil
 	}
 	return "", fiber.NewError(fiber.StatusBadRequest, constants.PLATFORM_ERROR)
 }

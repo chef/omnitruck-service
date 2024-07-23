@@ -438,7 +438,7 @@ func TestPlatformFilename(t *testing.T) {
 				},
 				serverMode: 2,
 			},
-			want:    "chef-360.zip",
+			want:    "chef-360.tar.gz",
 			wantErr: nil,
 		},
 		{

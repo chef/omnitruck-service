@@ -96,7 +96,7 @@ func (server *ApiService) productsHandler(c *fiber.Ctx) error {
 	}
 
 	if server.Mode == Commercial {
-		data = append(data, constants.PLATFORM_SERVICE)
+		data = append(data, constants.PLATFORM_SERVICE_PRODUCT)
 	}
 
 	if request.Ok {
@@ -188,7 +188,7 @@ func (server *ApiService) fetchLatestVersion(params *omnitruck.RequestParams, c 
 			request.Success()
 			return data, &request
 		}
-	} else if params.Product == constants.PLATFORM_SERVICE {
+	} else if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
 		request := clients.Request{}
 		data, err := server.PlatformServices(c).PlatformVersionLatest(params, int(server.Mode))
 		if err != nil {
@@ -196,10 +196,9 @@ func (server *ApiService) fetchLatestVersion(params *omnitruck.RequestParams, c 
 			server.logCtx(c).WithError(err).Error(utils.ErrorWhileFetchingLatestVersion + params.Product)
 			request.Failure(code, msg)
 			return data, &request
-		} else {
-			request.Success()
-			return data, &request
 		}
+		request.Success()
+		return data, &request
 	}
 	request := server.Omnitruck(c).LatestVersion(params).ParseData(&data)
 
@@ -210,7 +209,7 @@ func (server *ApiService) fetchLatestVersion(params *omnitruck.RequestParams, c 
 // Then we can return the latest OS version
 func (server *ApiService) fetchLatestOSVersion(params *omnitruck.RequestParams, c *fiber.Ctx) (omnitruck.ProductVersion, *clients.Request) {
 	var data []omnitruck.ProductVersion
-	if params.Product == constants.PLATFORM_SERVICE {
+	if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
 		request := clients.Request{}
 		data, err := server.PlatformServices(c).PlatformVersionLatest(params, int(server.Mode))
 		if err != nil {
@@ -218,10 +217,9 @@ func (server *ApiService) fetchLatestOSVersion(params *omnitruck.RequestParams, 
 			server.logCtx(c).WithError(err).Error(utils.ErrorWhileFetchingLatestVersion + params.Product)
 			request.Failure(code, msg)
 			return data, &request
-		} else {
-			request.Success()
-			return data, &request
 		}
+		request.Success()
+		return data, &request
 	}
 	// Need to fetch all versions and filter out to only show the OS versions
 	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
@@ -273,7 +271,7 @@ func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 
 	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
 		return server.createDynamoServiceResponse(params, c)
-	} else if params.Product == constants.PLATFORM_SERVICE {
+	} else if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
 		versions, err := server.PlatformServices(c).PlatformVersionsAll(params, int(server.Mode))
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
@@ -316,23 +314,23 @@ func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 
 func (server *ApiService) createDynamoServiceResponse(params *omnitruck.RequestParams, c *fiber.Ctx) error {
 	data, err := server.DynamoServices(server.DatabaseService, c).VersionAll(params)
-		if err != nil {
-			code, msg := getErrorCodeAndMsg(err)
-			return server.SendErrorResponse(c, code, msg)
-		}
+	if err != nil {
+		code, msg := getErrorCodeAndMsg(err)
+		return server.SendErrorResponse(c, code, msg)
+	}
 
-		if params.Product == "habitat" && server.Mode == Opensource {
-			data = omnitruck.FilterList(data, func(v omnitruck.ProductVersion) bool {
-				return !omnitruck.OsProductVersion(params.Product, v)
-			})
+	if params.Product == constants.HABITAT_PRODUCT && server.Mode == Opensource {
+		data = omnitruck.FilterList(data, func(v omnitruck.ProductVersion) bool {
+			return !omnitruck.OsProductVersion(params.Product, v)
+		})
+	}
+	if server.Mode == Trial {
+		data = []omnitruck.ProductVersion{
+			data[len(data)-1],
 		}
-		if server.Mode == Trial {
-			data = []omnitruck.ProductVersion{
-				data[len(data)-1],
-			}
-		}
+	}
 
-		return server.SendResponse(c, &data)
+	return server.SendResponse(c, &data)
 }
 
 // @description Get the full list of all packages for a particular channel and product combination.
@@ -354,7 +352,7 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	if params.Product == constants.PLATFORM_SERVICE {
+	if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
 		data, err = server.PlatformServices(c).PlatformPackages(params, int(server.Mode))
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
@@ -441,15 +439,15 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	if params.Product == constants.PLATFORM_SERVICE {
+	if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
 		request = &clients.Request{}
 		data, err = server.PlatformServices(c).PlatformMetadata(params, int(server.Mode))
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
 			return server.SendErrorResponse(c, code, msg)
-		} else {
-			return server.getChefPlatformMetaData(params, data, c)
 		}
+		return server.getChefPlatformMetaData(params, data, c)
+
 	}
 
 	err = server.versionCheckForTrialAndOsServer(params, c)
@@ -597,7 +595,7 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	if params.Product == constants.PLATFORM_SERVICE {
+	if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
 		fileName, err := server.PlatformServices(c).PlatformFilename(params, int(server.Mode))
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
@@ -607,7 +605,7 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 		response := map[string]interface{}{
 			"fileName": fileName,
 		}
-		server.logCtx(c).Info(constants.SuccessResponseFromFilenameLog + params.Product)
+		server.logCtx(c).Info(constants.SUCCESS_RESPONSE_FROM_FILENAME_MSG + params.Product)
 		return server.SendResponse(c, response)
 	}
 
@@ -630,7 +628,7 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 		response := map[string]interface{}{
 			"fileName": fileName,
 		}
-		server.logCtx(c).Info(constants.SuccessResponseFromFilenameLog + params.Product)
+		server.logCtx(c).Info(constants.SUCCESS_RESPONSE_FROM_FILENAME_MSG + params.Product)
 		return server.SendResponse(c, response)
 
 	} else {
@@ -643,7 +641,7 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 			response := map[string]interface{}{
 				"fileName": fileName,
 			}
-			server.logCtx(c).Info(constants.SuccessResponseFromFilenameLog + params.Product)
+			server.logCtx(c).Info(constants.SUCCESS_RESPONSE_FROM_FILENAME_MSG + params.Product)
 			return server.SendResponse(c, response)
 		} else {
 			return server.SendError(c, request)
