@@ -54,7 +54,7 @@ func (r ReplicatedImpl) makeRequest(url, method, requestId string, payload io.Re
 
 	res, err := r.Client.Do(req)
 	if err != nil {
-		log.Errorln("error on response.\n[ERROR] -", err.Error())
+		log.Errorln("error on response.\n[ERROR] - ", err.Error())
 		return 0, nil, err
 	}
 
