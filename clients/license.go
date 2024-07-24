@@ -16,9 +16,11 @@ type GetReplicatedCustomerResponse struct {
 	Message         string `json:"message"`
 	StatusCode      string `json:"status_code"`
 }
-
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
 type License struct {
-	client *http.Client
+	client HTTPClient
 }
 
 type RequestParams struct {
@@ -31,7 +33,7 @@ type Response struct {
 	Code    int    //json: "status_code"
 }
 
-func NewLicenseClient() *License {
+func NewLicenseClient() ILicense {
 	return &License{
 		client: &http.Client{
 			Timeout: 10 * time.Second,

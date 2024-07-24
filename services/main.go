@@ -55,6 +55,14 @@ func (server *ApiService) buildRouter() {
 	server.App.Get("/install.ps1", requestid.New(), server.downloadWindowsScript)
 }
 
+var jsonUnmarshal = func(data []byte, v any) error {
+	return json.Unmarshal(data, &v)
+}
+
+var ioCopy = func(dst io.Writer, src io.Reader) (written int64, err error) {
+	return io.Copy(dst, src)
+}
+
 func (server *ApiService) docsHandler(baseUrl string) func(*fiber.Ctx) error {
 	content, err := os.ReadFile("docs/index.md")
 	if err != nil {
@@ -480,7 +488,7 @@ func (server *ApiService) downloadChefPlatform(params *omnitruck.RequestParams, 
 	}
 
 	var replicatedEmailResp clients.GetReplicatedCustomerResponse
-	err := json.Unmarshal(request.Body, &replicatedEmailResp)
+	err := jsonUnmarshal(request.Body, &replicatedEmailResp)
 
 	if err != nil {
 		server.logCtx(c).Errorf("Error while unmarshalling getReplicatedCustomer response : %s", err.Error())
@@ -526,8 +534,9 @@ func (server *ApiService) downloadChefPlatform(params *omnitruck.RequestParams, 
 	// Set status code
 	c.Status(downloadResp.StatusCode)
 
-	if _, err := io.Copy(c.Response().BodyWriter(), downloadResp.Body); err != nil {
-		return err
+	if _, err = ioCopy(c.Response().BodyWriter(), downloadResp.Body); err != nil {
+		code, msg := getErrorCodeAndMsg(err)
+		return server.SendErrorResponse(c, code, msg)
 	}
 
 	return nil

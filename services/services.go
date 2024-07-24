@@ -64,7 +64,7 @@ type ApiService struct {
 	DatabaseService  dboperations.IDbOperations
 	TemplateRenderer template.TemplateRender
 	Replicated       replicated.IReplicated
-	LicenseClient    *clients.License
+	LicenseClient    clients.ILicense
 }
 
 func New(c Config) *ApiService {

@@ -67,7 +67,7 @@ func (r ReplicatedImpl) makeRequest(url, method, requestId string, payload io.Re
 	return res.StatusCode, body, nil
 }
 
-func (r ReplicatedImpl) DownloadFromReplicated(url, requestid, authorization string) (res *http.Response, err error) {
+func (r ReplicatedImpl) DownloadFromReplicated(url, requestId, authorization string) (res *http.Response, err error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
