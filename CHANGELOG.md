@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.46 -->
-## [0.0.46](https://github.com/chef/omnitruck-service/tree/0.0.46) (2024-07-16)
+<!-- latest_release 0.0.47 -->
+## [0.0.47](https://github.com/chef/omnitruck-service/tree/0.0.47) (2024-07-25)
 
 #### Merged Pull Requests
-- Added api for downloading the script [#56](https://github.com/chef/omnitruck-service/pull/56) ([vviveksharma](https://github.com/vviveksharma))
+- Integrate replicated with omnitruck wrapper service [#55](https://github.com/chef/omnitruck-service/pull/55) ([shanmugapriya-tr](https://github.com/shanmugapriya-tr))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Integrate replicated with omnitruck wrapper service [#55](https://github.com/chef/omnitruck-service/pull/55) ([shanmugapriya-tr](https://github.com/shanmugapriya-tr)) <!-- 0.0.47 -->
 - Added api for downloading the script [#56](https://github.com/chef/omnitruck-service/pull/56) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.46 -->
 - Added the changes for updated omnitruck Go version [#58](https://github.com/chef/omnitruck-service/pull/58) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.45 -->
 - Fix for the encoding of json resp [#53](https://github.com/chef/omnitruck-service/pull/53) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.44 -->
