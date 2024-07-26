@@ -22,7 +22,7 @@ type Config struct {
 	URL           string
 	Required      bool
 	Next          func(c *fiber.Ctx) bool
-	LicenseClient *clients.License
+	LicenseClient clients.ILicense
 	Unauthorized  func(code int, msg string, c *fiber.Ctx) error
 }
 

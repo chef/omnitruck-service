@@ -11,8 +11,16 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+type GetReplicatedCustomerResponse struct {
+	ReplicatedEmail string `json:"replicatedEmail"`
+	Message         string `json:"message"`
+	StatusCode      string `json:"status_code"`
+}
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
 type License struct {
-	client *http.Client
+	client HTTPClient
 }
 
 type RequestParams struct {
@@ -25,7 +33,7 @@ type Response struct {
 	Code    int    //json: "status_code"
 }
 
-func NewLicenseClient() *License {
+func NewLicenseClient() ILicense {
 	return &License{
 		client: &http.Client{
 			Timeout: 10 * time.Second,
@@ -70,6 +78,11 @@ func (c *License) Validate(id, licenseServiceUrl string, data *Response) *Reques
 	licenseApi := licenseServiceUrl
 	url := fmt.Sprintf("%s/v1/validate?licenseId=%s", licenseApi, id)
 	return c.Get(url).ParseLicenseResp(&data)
+}
+
+func (c *License) GetReplicatedCustomerEmail(licenseId, licenseServiceUrl string, data *Response) *Request {
+	requestUrl := fmt.Sprintf("%s/v1/getReplicatedCustomer?licenseId=%s", licenseServiceUrl, licenseId)
+	return c.Get(requestUrl).ParseLicenseResp(&data)
 }
 
 func (c *License) IsTrial(l string) bool {
