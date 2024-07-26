@@ -106,6 +106,10 @@ func (server *ApiService) productsHandler(c *fiber.Ctx) error {
 		omnitruck.ProductDisplayName(data)
 	}
 
+	if server.Mode == Commercial {
+		data = append(data, constants.PLATFORM_SERVICE_PRODUCT)
+	}
+
 	if request.Ok {
 		return server.SendResponse(c, &data)
 	} else {
@@ -188,13 +192,24 @@ func (server *ApiService) fetchLatestVersion(params *omnitruck.RequestParams, c 
 		data, err := server.DynamoServices(server.DatabaseService, c).VersionLatest(params)
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
-			server.logCtx(c).WithError(err).Error("Error while fetching the latest version for the " + params.Product)
+			server.logCtx(c).WithError(err).Error(utils.ErrorWhileFetchingLatestVersion + params.Product)
 			request.Failure(code, msg)
 			return data, &request
 		} else {
 			request.Success()
 			return data, &request
 		}
+	} else if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
+		request := clients.Request{}
+		data, err := server.PlatformServices(c).PlatformVersionLatest(params, int(server.Mode))
+		if err != nil {
+			code, msg := getErrorCodeAndMsg(err)
+			server.logCtx(c).WithError(err).Error(utils.ErrorWhileFetchingLatestVersion + params.Product)
+			request.Failure(code, msg)
+			return data, &request
+		}
+		request.Success()
+		return data, &request
 	}
 	request := server.Omnitruck(c).LatestVersion(params).ParseData(&data)
 
@@ -205,6 +220,18 @@ func (server *ApiService) fetchLatestVersion(params *omnitruck.RequestParams, c 
 // Then we can return the latest OS version
 func (server *ApiService) fetchLatestOSVersion(params *omnitruck.RequestParams, c *fiber.Ctx) (omnitruck.ProductVersion, *clients.Request) {
 	var data []omnitruck.ProductVersion
+	if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
+		request := clients.Request{}
+		data, err := server.PlatformServices(c).PlatformVersionLatest(params, int(server.Mode))
+		if err != nil {
+			code, msg := getErrorCodeAndMsg(err)
+			server.logCtx(c).WithError(err).Error(utils.ErrorWhileFetchingLatestVersion + params.Product)
+			request.Failure(code, msg)
+			return data, &request
+		}
+		request.Success()
+		return data, &request
+	}
 	// Need to fetch all versions and filter out to only show the OS versions
 	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
 		request := clients.Request{}
@@ -246,6 +273,7 @@ func (server *ApiService) fetchLatestOSVersion(params *omnitruck.RequestParams, 
 // @Router      /{channel}/{product}/versions/all [get]
 func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
+	var data []omnitruck.ProductVersion
 
 	err, ok := server.ValidateRequest(params, c)
 	if !ok {
@@ -253,27 +281,16 @@ func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 	}
 
 	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
-		data, err := server.DynamoServices(server.DatabaseService, c).VersionAll(params)
+		return server.createDynamoServiceResponse(params, c)
+	} else if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
+		versions, err := server.PlatformServices(c).PlatformVersionsAll(params, int(server.Mode))
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
 			return server.SendErrorResponse(c, code, msg)
 		}
-
-		if params.Product == "habitat" && server.Mode == Opensource {
-			data = omnitruck.FilterList(data, func(v omnitruck.ProductVersion) bool {
-				return !omnitruck.OsProductVersion(params.Product, v)
-			})
-		}
-		if server.Mode == Trial {
-			data = []omnitruck.ProductVersion{
-				data[len(data)-1],
-			}
-		}
-
-		return server.SendResponse(c, &data)
+		return server.SendResponse(c, &versions)
 	}
 
-	var data []omnitruck.ProductVersion
 	request := server.Omnitruck(c).ProductVersions(params).ParseData(&data)
 
 	switch server.Mode {
@@ -306,6 +323,27 @@ func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 
 }
 
+func (server *ApiService) createDynamoServiceResponse(params *omnitruck.RequestParams, c *fiber.Ctx) error {
+	data, err := server.DynamoServices(server.DatabaseService, c).VersionAll(params)
+	if err != nil {
+		code, msg := getErrorCodeAndMsg(err)
+		return server.SendErrorResponse(c, code, msg)
+	}
+
+	if params.Product == constants.HABITAT_PRODUCT && server.Mode == Opensource {
+		data = omnitruck.FilterList(data, func(v omnitruck.ProductVersion) bool {
+			return !omnitruck.OsProductVersion(params.Product, v)
+		})
+	}
+	if server.Mode == Trial {
+		data = []omnitruck.ProductVersion{
+			data[len(data)-1],
+		}
+	}
+
+	return server.SendResponse(c, &data)
+}
+
 // @description Get the full list of all packages for a particular channel and product combination.
 // @description By default all packages for the latest version are returned. If the v query string parameter is included the packages for the specified version are returned.
 // @Param       channel    path     string true  "Channel" Enums(current, stable)
@@ -325,7 +363,26 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	err = server.versionCheckForTrailAndOsServer(params, c)
+	if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
+		data, err = server.PlatformServices(c).PlatformPackages(params, int(server.Mode))
+		if err != nil {
+			code, msg := getErrorCodeAndMsg(err)
+			return server.SendErrorResponse(c, code, msg)
+		}
+
+		data.UpdatePackages(func(platform string, pv string, arch string, m omnitruck.PackageMetadata) omnitruck.PackageMetadata {
+			params.Version = m.Version
+			params.Platform = platform
+			params.Architecture = arch
+
+			m.Url = getDownloadUrl(params, c)
+
+			return m
+		})
+		return server.SendResponse(c, &data)
+	}
+
+	err = server.versionCheckForTrialAndOsServer(params, c)
 	if err != nil {
 		code, msg := getErrorCodeAndMsg(err)
 		return server.SendErrorResponse(c, code, msg)
@@ -393,7 +450,18 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	err = server.versionCheckForTrailAndOsServer(params, c)
+	if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
+		request = &clients.Request{}
+		data, err = server.PlatformServices(c).PlatformMetadata(params, int(server.Mode))
+		if err != nil {
+			code, msg := getErrorCodeAndMsg(err)
+			return server.SendErrorResponse(c, code, msg)
+		}
+		return server.getChefPlatformMetaData(params, data, c)
+
+	}
+
+	err = server.versionCheckForTrialAndOsServer(params, c)
 	if err != nil {
 		code, msg := getErrorCodeAndMsg(err)
 		return server.SendErrorResponse(c, code, msg)
@@ -424,6 +492,15 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 	}
 }
 
+func (server *ApiService) getChefPlatformMetaData(params *omnitruck.RequestParams, data omnitruck.PackageMetadata, c *fiber.Ctx) error {
+	url := getDownloadUrl(params, c)
+	data.Url = url
+	if params.Version == "" {
+		data.Version = "latest"
+	}
+	return server.SendResponse(c, &data)
+}
+
 // @description Get details for a particular package.
 // @description The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned
 // @Param       channel    path   string true  "Channel"                                                                                                                      Enums(current, stable)
@@ -446,7 +523,7 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	err = server.versionCheckForTrailAndOsServer(params, c)
+	err = server.versionCheckForTrialAndOsServer(params, c)
 	if err != nil {
 		code, msg := getErrorCodeAndMsg(err)
 		return server.SendErrorResponse(c, code, msg)
@@ -604,8 +681,23 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 		server.logCtx(c).Error("Validation of file name API for " + params.Product + " failed")
 		return err
 	}
+
+	if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
+		fileName, err := server.PlatformServices(c).PlatformFilename(params, int(server.Mode))
+		if err != nil {
+			code, msg := getErrorCodeAndMsg(err)
+			server.logCtx(c).Error("Error while fetching fileName for "+params.Product, err.Error())
+			return server.SendErrorResponse(c, code, msg)
+		}
+		response := map[string]interface{}{
+			"fileName": fileName,
+		}
+		server.logCtx(c).Info(constants.SUCCESS_RESPONSE_FROM_FILENAME_MSG + params.Product)
+		return server.SendResponse(c, response)
+	}
+
 	server.logCtx(c).Info("Validating download file name for " + params.Product + " in channel " + params.Channel)
-	err = server.versionCheckForTrailAndOsServer(params, c)
+	err = server.versionCheckForTrialAndOsServer(params, c)
 	if err != nil {
 		code, msg := getErrorCodeAndMsg(err)
 		return server.SendErrorResponse(c, code, msg)
@@ -623,7 +715,7 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 		response := map[string]interface{}{
 			"fileName": fileName,
 		}
-		server.logCtx(c).Info("Returning success response from fileName API for " + params.Product)
+		server.logCtx(c).Info(constants.SUCCESS_RESPONSE_FROM_FILENAME_MSG + params.Product)
 		return server.SendResponse(c, response)
 
 	} else {
@@ -636,7 +728,7 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 			response := map[string]interface{}{
 				"fileName": fileName,
 			}
-			server.logCtx(c).Info("Returning success response from fileName API for " + params.Product)
+			server.logCtx(c).Info(constants.SUCCESS_RESPONSE_FROM_FILENAME_MSG + params.Product)
 			return server.SendResponse(c, response)
 		} else {
 			return server.SendError(c, request)
@@ -650,7 +742,7 @@ func getFileNameFromURL(url string) string {
 	return segments[len(segments)-1]
 }
 
-func (server *ApiService) isLatestForTrail(params *omnitruck.RequestParams, c *fiber.Ctx) *clients.Request {
+func (server *ApiService) isLatestForTrial(params *omnitruck.RequestParams, c *fiber.Ctx) *clients.Request {
 	latestVersion, request := server.fetchLatestVersion(params, c)
 	if params.Version == "latest" || params.Version == "" || params.Version == string(latestVersion) {
 		request.Success()
@@ -674,9 +766,9 @@ func getErrorCodeAndMsg(err error) (code int, msg string) {
 	return fiber.StatusInternalServerError, ""
 }
 
-func (server *ApiService) versionCheckForTrailAndOsServer(params *omnitruck.RequestParams, c *fiber.Ctx) error {
+func (server *ApiService) versionCheckForTrialAndOsServer(params *omnitruck.RequestParams, c *fiber.Ctx) error {
 	if server.Mode == Trial {
-		err := server.isLatestForTrail(params, c)
+		err := server.isLatestForTrial(params, c)
 		if !err.Ok {
 			return fiber.NewError(err.Code, err.Message)
 		}
