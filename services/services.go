@@ -13,7 +13,7 @@ import (
 	"github.com/chef/omnitruck-service/clients/omnitruck/replicated"
 	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/dboperations"
-	l "github.com/chef/omnitruck-service/logger"
+	logrus "github.com/chef/omnitruck-service/logger"
 	dbconnection "github.com/chef/omnitruck-service/middleware/db"
 	"github.com/chef/omnitruck-service/middleware/license"
 	"github.com/chef/omnitruck-service/utils/awsutils"
@@ -83,7 +83,7 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	server.TemplateRenderer = template.NewTemplateRender()
 
 	engine := html.New("./views", ".html")
-	server.Replicated = replicated.NewReplicatedImpl(c.ServiceConfig.ReplicatedConfig, l.NewLogrusStandardLogger())
+	server.Replicated = replicated.NewReplicatedImpl(c.ServiceConfig.ReplicatedConfig, logrus.NewLogrusStandardLogger())
 	server.LicenseClient = clients.NewLicenseClient()
 
 	server.App = fiber.New(fiber.Config{
@@ -212,6 +212,16 @@ func (server *ApiService) DynamoServices(db dboperations.IDbOperations, c *fiber
 	service := omnitruck.NewDynamoServices(db, server.logCtx(c))
 
 	return &service
+}
+
+func (server *ApiService) PlatformServices(c *fiber.Ctx) *omnitruck.PlatformServices {
+	service := omnitruck.NewPlatformServices(server.logCtx(c))
+	return &service
+}
+
+func (server *ApiService) ReplicatedService(config config.ReplicatedConfig, log logrus.Logger) replicated.IReplicated {
+	service := replicated.NewReplicatedImpl(config, log)
+	return service
 }
 
 func (server *ApiService) logCtx(c *fiber.Ctx) *log.Entry {
