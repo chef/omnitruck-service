@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.49 -->
-## [0.0.49](https://github.com/chef/omnitruck-service/tree/0.0.49) (2024-07-26)
+<!-- latest_release 0.0.50 -->
+## [0.0.50](https://github.com/chef/omnitruck-service/tree/0.0.50) (2024-07-29)
 
 #### Merged Pull Requests
-- Download flow changed- replicated [#57](https://github.com/chef/omnitruck-service/pull/57) ([shanmugapriya-tr](https://github.com/shanmugapriya-tr))
+- Replicated [#62](https://github.com/chef/omnitruck-service/pull/62) ([sandhi18](https://github.com/sandhi18))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Replicated [#62](https://github.com/chef/omnitruck-service/pull/62) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.50 -->
 - Download flow changed- replicated [#57](https://github.com/chef/omnitruck-service/pull/57) ([shanmugapriya-tr](https://github.com/shanmugapriya-tr)) <!-- 0.0.49 -->
 - updated to golang latest version [#60](https://github.com/chef/omnitruck-service/pull/60) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.48 -->
 - Integrate replicated with omnitruck wrapper service [#55](https://github.com/chef/omnitruck-service/pull/55) ([shanmugapriya-tr](https://github.com/shanmugapriya-tr)) <!-- 0.0.47 -->
