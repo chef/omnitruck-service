@@ -55,7 +55,9 @@ to quickly create a Cobra application.`,
 
 		var wg sync.WaitGroup
 		var serviceConfig config.ServiceConfig
-		secret := awsutils.GetSecret(os.Getenv("CONFIG"), os.Getenv("REGION"))
+		awsClient := awsutils.NewAWSClient()
+		au := awsutils.NewAwsUtils(awsClient)
+		secret := au.GetSecret(os.Getenv("CONFIG"), os.Getenv("REGION"))
 		err := json.Unmarshal([]byte(secret), &serviceConfig)
 		if err != nil {
 			logger.Fatal(err)
