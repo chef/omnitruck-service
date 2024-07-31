@@ -16,4 +16,6 @@ const (
 const (
 	UNMARSHAL_ERR_MSG                  = "error on unmarshal.\n[ERROR] -"
 	SUCCESS_RESPONSE_FROM_FILENAME_MSG = "Returning success response from fileName API for "
+	REPLICATED_CUSTOMER_ERROR          = "error while searching customer in replicated"
+	REPLICATED_DOWNLOAD_ERROR          = "error while downloading from replicated"
 )

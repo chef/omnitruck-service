@@ -14,7 +14,7 @@ import (
 type GetReplicatedCustomerResponse struct {
 	ReplicatedEmail string `json:"replicatedEmail"`
 	Message         string `json:"message"`
-	StatusCode      string `json:"status_code"`
+	StatusCode      int    `json:"status_code"`
 }
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)

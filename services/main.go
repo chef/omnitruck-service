@@ -522,6 +522,7 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 	if !ok {
 		return err
 	}
+	server.logCtx(c).Infof("Recieved product download request for %s", params.Product)
 
 	err = server.versionCheckForTrialAndOsServer(params, c)
 	if err != nil {
@@ -569,8 +570,15 @@ func (server *ApiService) downloadChefPlatform(params *omnitruck.RequestParams, 
 
 	if err != nil {
 		server.logCtx(c).Errorf("Error while unmarshalling getReplicatedCustomer response : %s", err.Error())
-		return server.SendError(c, request)
+		return server.SendErrorResponse(c, http.StatusInternalServerError, constants.UNMARSHAL_ERR_MSG+err.Error())
 	}
+
+	if replicatedEmailResp.StatusCode != http.StatusOK {
+		server.logCtx(c).Errorf("Recieved error response from getReplicatedCustomer")
+		return server.SendErrorResponse(c, replicatedEmailResp.StatusCode, replicatedEmailResp.Message)
+
+	}
+	server.logCtx(c).Debug("Successfully fetched replicated customer email")
 
 	//2. Run a search customer on replicated with email
 	requestId := fmt.Sprint(c.Locals("requestid"))
@@ -578,28 +586,31 @@ func (server *ApiService) downloadChefPlatform(params *omnitruck.RequestParams, 
 
 	if err != nil {
 		server.logCtx(c).Errorf("Error while fetching replicated customers with Email : %s", err.Error())
-		return server.SendError(c, request)
+		return server.SendErrorResponse(c, http.StatusInternalServerError, constants.REPLICATED_CUSTOMER_ERROR)
 	}
 
 	if len(customers) == 0 {
 		server.logCtx(c).Errorf("No replicated customers found with Email : %s", replicatedEmailResp.ReplicatedEmail)
-		return server.SendError(c, request)
+		return server.SendErrorResponse(c, http.StatusInternalServerError, constants.REPLICATED_CUSTOMER_ERROR)
 	}
 	customer := customers[0]
+	server.logCtx(c).Debug("Successfully fetched replicated customer details")
 
 	//3. Based on Airgap flag, formulate the download URL
 	url, err := server.Replicated.GetDowloadUrl(customer, requestId)
 	if err != nil {
-		code, msg := getErrorCodeAndMsg(err)
-		return server.SendErrorResponse(c, code, msg)
+		return server.SendErrorResponse(c, http.StatusInternalServerError, constants.REPLICATED_DOWNLOAD_ERROR)
 	}
+	server.logCtx(c).Debug("Successfully formulated download url")
 
 	downloadResp, err := server.Replicated.DownloadFromReplicated(url, requestId, customer.InstallationId)
 	if err != nil {
 		server.logCtx(c).Errorf("Error while downloading from replicated : %s", err.Error())
-		return server.SendError(c, request)
+		return server.SendErrorResponse(c, http.StatusInternalServerError, constants.REPLICATED_DOWNLOAD_ERROR)
 	}
 	defer downloadResp.Body.Close()
+
+	server.logCtx(c).Debug("Successfully downloaded from replicated")
 
 	// Set response headers
 	for name, values := range downloadResp.Header {
@@ -612,9 +623,10 @@ func (server *ApiService) downloadChefPlatform(params *omnitruck.RequestParams, 
 	c.Status(downloadResp.StatusCode)
 
 	if _, err = ioCopy(c.Response().BodyWriter(), downloadResp.Body); err != nil {
-		code, msg := getErrorCodeAndMsg(err)
-		return server.SendErrorResponse(c, code, msg)
+		server.logCtx(c).Errorf("Error while copying downloaded package to response: %s", err.Error())
+		return server.SendErrorResponse(c, http.StatusInternalServerError, constants.REPLICATED_DOWNLOAD_ERROR)
 	}
+	server.logCtx(c).Debug("Successfully copied response. Returning response")
 
 	return nil
 }
