@@ -603,6 +603,18 @@ func (server *ApiService) downloadChefPlatform(params *omnitruck.RequestParams, 
 	}
 	server.logCtx(c).Debug("Successfully formulated download url")
 
+	// req, err := http.NewRequest("GET", url, nil)
+	// if err != nil {
+	// 	return err
+	// }
+	// req.Header.Add("Authorization", customer.InstallationId)
+
+	// // Perform the request
+	// cli := &http.Client{
+	// 	Timeout: 60 * time.Minute,
+	// }
+	// downloadResp, err := cli.Do(req)
+
 	downloadResp, err := server.Replicated.DownloadFromReplicated(url, requestId, customer.InstallationId)
 	if err != nil {
 		server.logCtx(c).Errorf("Error while downloading from replicated : %s", err.Error())
@@ -621,6 +633,25 @@ func (server *ApiService) downloadChefPlatform(params *omnitruck.RequestParams, 
 
 	// Set status code
 	c.Status(downloadResp.StatusCode)
+	c.Set("Content-Type", "application/octet-stream")
+	c.Set("Content-Length", downloadResp.Header.Get("Content-Length"))
+
+	// buf := make([]byte, 128*1024) // 32 KB buffer
+	// for {
+	// 	n, err := downloadResp.Body.Read(buf)
+	// 	if n > 0 {
+	// 		fmt.Printf("%v th iteration", n)
+	// 		if _, writeErr := c.Response().BodyWriter().Write(buf[:n]); writeErr != nil {
+	// 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to stream file")
+	// 		}
+	// 	}
+	// 	if err == io.EOF {
+	// 		break
+	// 	}
+	// 	if err != nil {
+	// 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to stream file")
+	// 	}
+	// }
 
 	if _, err = ioCopy(c.Response().BodyWriter(), downloadResp.Body); err != nil {
 		server.logCtx(c).Errorf("Error while copying downloaded package to response: %s", err.Error())
