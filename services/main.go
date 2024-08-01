@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -61,6 +62,20 @@ var jsonUnmarshal = func(data []byte, v any) error {
 
 var ioCopy = func(dst io.Writer, src io.Reader) (written int64, err error) {
 	return io.Copy(dst, src)
+}
+
+type FlushWriter struct {
+	writer  io.Writer
+	flusher http.Flusher
+}
+
+func (fw *FlushWriter) Write(b []byte) (int, error) {
+	n, err := fw.writer.Write(b)
+	if err == nil {
+		fw.flusher.Flush()
+		fmt.Println("FLUSHED")
+	}
+	return n, err
 }
 
 func (server *ApiService) docsHandler(baseUrl string) func(*fiber.Ctx) error {
@@ -602,6 +617,8 @@ func (server *ApiService) downloadChefPlatform(params *omnitruck.RequestParams, 
 		return server.SendErrorResponse(c, http.StatusInternalServerError, constants.REPLICATED_DOWNLOAD_ERROR)
 	}
 	server.logCtx(c).Debug("Successfully formulated download url")
+	fmt.Println(url)
+	fmt.Println(customer.InstallationId)
 
 	// req, err := http.NewRequest("GET", url, nil)
 	// if err != nil {
@@ -615,14 +632,15 @@ func (server *ApiService) downloadChefPlatform(params *omnitruck.RequestParams, 
 	// }
 	// downloadResp, err := cli.Do(req)
 
+	server.logCtx(c).Info("Performing download from replicated")
 	downloadResp, err := server.Replicated.DownloadFromReplicated(url, requestId, customer.InstallationId)
 	if err != nil {
 		server.logCtx(c).Errorf("Error while downloading from replicated : %s", err.Error())
 		return server.SendErrorResponse(c, http.StatusInternalServerError, constants.REPLICATED_DOWNLOAD_ERROR)
 	}
-	defer downloadResp.Body.Close()
+	//defer downloadResp.Body.Close()
 
-	server.logCtx(c).Debug("Successfully downloaded from replicated")
+	// server.logCtx(c).Debug("Successfully downloaded from replicated")
 
 	// Set response headers
 	for name, values := range downloadResp.Header {
@@ -635,15 +653,53 @@ func (server *ApiService) downloadChefPlatform(params *omnitruck.RequestParams, 
 	c.Status(downloadResp.StatusCode)
 	c.Set("Content-Type", "application/octet-stream")
 	c.Set("Content-Length", downloadResp.Header.Get("Content-Length"))
+	c.Set(fiber.HeaderTransferEncoding, "chunked")
 
-	// buf := make([]byte, 128*1024) // 32 KB buffer
+	c.Status(200).Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+		buf := make([]byte, 32*1024) // 32KB buffer
+		for {
+			n, err := downloadResp.Body.Read(buf)
+			if n > 0 {
+				fmt.Printf("%v th iteration", n)
+				if n > len(buf) {
+					fmt.Print("32768")
+				}
+				if _, writeErr := c.Write(buf[:n-1]); writeErr != nil {
+					return
+				}
+				// // Explicitly flush the response
+				if err := w.Flush(); err != nil {
+					break
+				}
+				time.Sleep(2 * time.Second)
+			}
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return
+			}
+		}
+	})
+
+	//time.Sleep(5 * time.Minute)
+
+	//downloadResp.Body.Close()
+
+	// buf := make([]byte, 32*1024) // 32 KB buffer
 	// for {
 	// 	n, err := downloadResp.Body.Read(buf)
 	// 	if n > 0 {
 	// 		fmt.Printf("%v th iteration", n)
-	// 		if _, writeErr := c.Response().BodyWriter().Write(buf[:n]); writeErr != nil {
+	// 		if _, writeErr := c.Write(buf[:n]); writeErr != nil {
 	// 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to stream file")
 	// 		}
+	// 		// // Explicitly flush the response
+	// 		// f, ok := c.Context().Response.BodyWriter().(*http.ResponseWriter)
+	// 		// if ok {
+	// 		// 	fmt.Println("FLUSHING")
+	// 		// 	f.Flush()
+	// 		// }
 	// 	}
 	// 	if err == io.EOF {
 	// 		break
@@ -651,13 +707,23 @@ func (server *ApiService) downloadChefPlatform(params *omnitruck.RequestParams, 
 	// 	if err != nil {
 	// 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to stream file")
 	// 	}
+
 	// }
 
-	if _, err = ioCopy(c.Response().BodyWriter(), downloadResp.Body); err != nil {
-		server.logCtx(c).Errorf("Error while copying downloaded package to response: %s", err.Error())
-		return server.SendErrorResponse(c, http.StatusInternalServerError, constants.REPLICATED_DOWNLOAD_ERROR)
-	}
-	server.logCtx(c).Debug("Successfully copied response. Returning response")
+	// f, ok := c.Response().BodyWriter().(interface {Flush()})
+	// f.Flush()
+	// if !ok {
+	// 	server.logCtx(c).Errorf("Error while copying downloaded package to response: %s", err.Error())
+	// 	return server.SendErrorResponse(c, http.StatusInternalServerError, constants.REPLICATED_DOWNLOAD_ERROR)
+	// }
+
+	// fw := &FlushWriter{writer: c.Response().BodyWriter(), flusher: f}
+	// if _, err = ioCopy(fw, downloadResp.Body); err != nil {
+	// 	server.logCtx(c).Errorf("Error while copying downloaded package to response: %s", err.Error())
+	// 	return server.SendErrorResponse(c, http.StatusInternalServerError, constants.REPLICATED_DOWNLOAD_ERROR)
+	// }
+
+	server.logCtx(c).Info("Successfully copied response. Returning response")
 
 	return nil
 }
