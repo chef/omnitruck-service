@@ -6,6 +6,7 @@ type ServiceConfig struct {
 	MetadataDetailsTable string           `json:"metadataDetailsTable"`
 	AWSConfig            AWSConfig        `json:"awsConfig"`
 	ReplicatedConfig     ReplicatedConfig `json:"replicatedConfig"`
+	ReadWriteTimeout     int64            `jso:"readWriteTimeout"`
 }
 
 type ReplicatedConfig struct {

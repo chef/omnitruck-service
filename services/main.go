@@ -631,24 +631,28 @@ func (server *ApiService) downloadChefPlatform(params *omnitruck.RequestParams, 
 		buf := make([]byte, 32*1024) // 32KB buffer
 		for {
 			n, err := downloadResp.Body.Read(buf)
-			if n > 0 {
-				if _, writeErr := w.Write(buf[:n]); writeErr != nil {
-					server.logCtx(c).Errorf("Error while streaming : %s", writeErr.Error())
-					return
-				}
-				// Explicitly flush the response
-				if err := w.Flush(); err != nil {
-					server.logCtx(c).Errorf("Error while streaming : %s", err.Error())
-					break
-				}
-				time.Sleep(1 * time.Second)
-			}
 			if err == io.EOF {
 				break
 			}
 			if err != nil {
-				server.logCtx(c).Errorf("Error while streaming : %s", err.Error())
+				server.Log.Errorf("Error while streaming : %s", err.Error())
 				return
+			}
+			if n > 0 {
+				if _, writeErr := w.Write(buf[:n]); writeErr != nil {
+					server.Log.Errorf("Error while streaming : %s", writeErr.Error())
+					if err := w.Flush(); err != nil {
+						server.Log.Errorf("Error while streaming : %s", err.Error())
+						break
+					}
+					return
+
+				}
+				// Explicitly flush the response
+				if err := w.Flush(); err != nil {
+					server.Log.Errorf("Error while streaming : %s", err.Error())
+					break
+				}
 			}
 		}
 		defer downloadResp.Body.Close()
