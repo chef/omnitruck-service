@@ -89,8 +89,8 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	server.App = fiber.New(fiber.Config{
 		DisableStartupMessage: false,
 		EnablePrintRoutes:     false,
-		ReadTimeout:           300 * time.Second,
-		WriteTimeout:          300 * time.Second,
+		ReadTimeout:           time.Duration(c.ServiceConfig.ReadWriteTimeout) * time.Second,
+		WriteTimeout:          time.Duration(c.ServiceConfig.ReadWriteTimeout) * time.Second,
 		Views:                 engine,
 	})
 
