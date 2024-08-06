@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.52 -->
-## [0.0.52](https://github.com/chef/omnitruck-service/tree/0.0.52) (2024-08-05)
+<!-- latest_release 0.0.53 -->
+## [0.0.53](https://github.com/chef/omnitruck-service/tree/0.0.53) (2024-08-06)
 
 #### Merged Pull Requests
-- Umarshall error fix [#64](https://github.com/chef/omnitruck-service/pull/64) ([shanmugapriya-tr](https://github.com/shanmugapriya-tr))
+- added the script fix [#66](https://github.com/chef/omnitruck-service/pull/66) ([vviveksharma](https://github.com/vviveksharma))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- added the script fix [#66](https://github.com/chef/omnitruck-service/pull/66) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.53 -->
 - Umarshall error fix [#64](https://github.com/chef/omnitruck-service/pull/64) ([shanmugapriya-tr](https://github.com/shanmugapriya-tr)) <!-- 0.0.52 -->
 - add copy templates in dockerfile [#63](https://github.com/chef/omnitruck-service/pull/63) ([vipin230](https://github.com/vipin230)) <!-- 0.0.51 -->
 - Replicated [#62](https://github.com/chef/omnitruck-service/pull/62) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.50 -->
