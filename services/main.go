@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
 	"os"
@@ -905,7 +906,7 @@ func (server *ApiService) downloadLinuxScript(c *fiber.Ctx) error {
 // @Router      /install.ps1 [get]
 func (server *ApiService) downloadWindowsScript(c *fiber.Ctx) error {
 	params := getRequestParams(c)
-	c.Set("Content-Type", "text/plain")
+	c.Set(fiber.HeaderContentType, fiber.MIMETextPlainCharsetUTF8)
 	err, ok := server.ValidateRequest(params, c)
 	if !ok {
 		server.logCtx(c).Error("Validation of download windows script API failed: ", err)
@@ -915,10 +916,11 @@ func (server *ApiService) downloadWindowsScript(c *fiber.Ctx) error {
 		params.LicenseId = ""
 	}
 	filePath := "../templates/install.ps1.tmpl"
-	resp, err := server.TemplateRenderer.GetScript(c.Hostname(), params, filePath)
+	scriptResp, err := server.TemplateRenderer.GetScript(c.BaseURL(), params, filePath)
 	if err != nil {
 		return err
 	}
 	c.Set("Content-Disposition", "attachment;filename=install.ps1")
+	resp := html.UnescapeString(scriptResp)
 	return c.SendString(resp)
 }
