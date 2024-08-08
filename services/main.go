@@ -890,7 +890,7 @@ func (server *ApiService) downloadLinuxScript(c *fiber.Ctx) error {
 		params.LicenseId = ""
 	}
 	filePath := "../templates/install.sh.tmpl"
-	resp, err := server.TemplateRenderer.GetScript(c.Hostname(), params, filePath)
+	resp, err := server.TemplateRenderer.GetScript(c.BaseURL(), params, filePath)
 	if err != nil {
 		return err
 	}

@@ -673,7 +673,7 @@ if test "x$download_url_override" = "x"; then
   echo "Getting information for $project $channel $version for $platform..."
 
   metadata_filename="$tmp_dir/metadata.txt"
-  metadata_url="https://{{.BaseUrl}}/$channel/$project/metadata?v=$version&p=$platform&pv=$platform_version&m=$machine{{if .LicenseId}}&license_id={{.LicenseId}}{{end}}"
+  metadata_url="{{.BaseUrl}}/$channel/$project/metadata?v=$version&p=$platform&pv=$platform_version&m=$machine{{if .LicenseId}}&license_id={{.LicenseId}}{{end}}"
 
   do_download "$metadata_url"  "$metadata_filename"
   meta_response=$(cat "$metadata_filename")
@@ -720,7 +720,7 @@ fi
 # $download_filename: Name of the downloaded file on local disk.
 # $filetype: Type of the file downloaded.
 ############
-filenameurl="https://{{.BaseUrl}}/$channel/$project/fileName?v=$version&p=$platform&pv=$platform_version&m=$machine{{if .LicenseId}}&license_id={{.LicenseId}}{{end}}"
+filenameurl="{{.BaseUrl}}/$channel/$project/fileName?v=$version&p=$platform&pv=$platform_version&m=$machine{{if .LicenseId}}&license_id={{.LicenseId}}{{end}}"
 filepath="$tmp_dir/filename.txt"
 do_download $filenameurl $filepath
 # filename=`echo $download_url | sed -e 's/?.*//' | sed -e 's/^.*\///'`

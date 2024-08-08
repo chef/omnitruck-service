@@ -387,7 +387,12 @@ function Install-Project {
   $request = Invoke-WebRequest -Uri $download_url -MaximumRedirection 0 -ErrorAction Ignore
   $sourceFileLocation = $request.Headers.Location
   $sourceFileName = $sourceFileLocation.SubString($sourceFileLocation.LastIndexOf('/') + 1)
-  $download_destination = join-path $download_directory $sourceFileName
+  if (-not [string]::IsNullOrEmpty($filename) -and $filename -ne "download") {
+      $download_destination = join-path $download_directory $filename
+  }
+  else {
+      $download_destination = join-path $download_directory $sourceFileName
+  }
 
   if ((test-path $download_destination)) {
     Write-Verbose "Found existing installer at $download_destination."
