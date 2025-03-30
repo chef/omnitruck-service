@@ -9,7 +9,8 @@ slack:
   notify_channel: eng-licensing
 
 pipelines:
-  - verify
+  - verify:
+      public: true
   - docker/build:
       definition: .expeditor/build.docker.yml
   - terraform/cdn:
