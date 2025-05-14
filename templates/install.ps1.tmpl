@@ -384,9 +384,11 @@ function Install-Project {
   }
 
   $download_directory = (resolve-path $download_directory).providerpath
-  $request = Invoke-WebRequest -Uri $download_url -MaximumRedirection 0 -ErrorAction Ignore
+  # Ensure -UseBasicParsing is used in Invoke-WebRequest to avoid dependency on Internet Explorer
+  $request = Invoke-WebRequest -Uri $download_url -MaximumRedirection 0 -ErrorAction Ignore -UseBasicParsing
   $sourceFileLocation = $request.Headers.Location
   $sourceFileName = $sourceFileLocation.SubString($sourceFileLocation.LastIndexOf('/') + 1)
+
   if (-not [string]::IsNullOrEmpty($filename) -and $filename -ne "download") {
       $download_destination = join-path $download_directory $filename
   }
