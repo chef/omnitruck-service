@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.58 -->
-## [0.0.58](https://github.com/chef/omnitruck-service/tree/0.0.58) (2025-04-15)
+<!-- latest_release 0.0.59 -->
+## [0.0.59](https://github.com/chef/omnitruck-service/tree/0.0.59) (2025-05-14)
 
 #### Merged Pull Requests
-- make pipelines public: verify [#70](https://github.com/chef/omnitruck-service/pull/70) ([jaymzh](https://github.com/jaymzh))
+- fix for install script in windows [#71](https://github.com/chef/omnitruck-service/pull/71) ([vipin230](https://github.com/vipin230))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- fix for install script in windows [#71](https://github.com/chef/omnitruck-service/pull/71) ([vipin230](https://github.com/vipin230)) <!-- 0.0.59 -->
 - make pipelines public: verify [#70](https://github.com/chef/omnitruck-service/pull/70) ([jaymzh](https://github.com/jaymzh)) <!-- 0.0.58 -->
 - updated go version to 1.23.6 from 1.22.5 [#69](https://github.com/chef/omnitruck-service/pull/69) ([vipin230](https://github.com/vipin230)) <!-- 0.0.57 -->
 - added the docker changes [#61](https://github.com/chef/omnitruck-service/pull/61) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.56 -->
