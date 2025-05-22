@@ -4,7 +4,7 @@ go 1.23.6
 
 require (
 	github.com/aws/aws-sdk-go v1.55.6
-	github.com/gofiber/fiber/v2 v2.52.6
+	github.com/gofiber/fiber/v2 v2.52.7
 	github.com/gofiber/swagger v1.1.1
 	github.com/gofiber/template/html/v2 v2.1.3
 	github.com/gomarkdown/markdown v0.0.0-20250202022148-4f606c78d442
