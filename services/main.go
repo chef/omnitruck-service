@@ -2,6 +2,7 @@ package services
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +13,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
 	"github.com/chef/omnitruck-service/constants"
@@ -22,6 +27,25 @@ import (
 	"github.com/gofiber/swagger"
 	"github.com/gomarkdown/markdown"
 )
+
+const (
+	awsAccessKeyID     = "YOUR_KEY"
+	awsSecretAccessKey = "YOUR_KEY"
+	awsRegion          = "REGION"
+	s3BucketName       = "BUCKET_NAME"
+)
+
+func getS3ClientWithStaticCreds(accessKeyID, secretAccessKey, region string) (*s3.Client, error) {
+	creds := aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(accessKeyID, secretAccessKey, ""))
+	cfg, err := config.LoadDefaultConfig(context.Background(),
+		config.WithRegion(region),
+		config.WithCredentialsProvider(creds),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return s3.NewFromConfig(cfg), nil
+}
 
 // @title        Licensed Omnitruck API
 // @version      1.0
@@ -524,7 +548,7 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 	if !ok {
 		return err
 	}
-	server.logCtx(c).Infof("Recieved product download request for %s", params.Product)
+	server.logCtx(c).Infof("Received product download request for %s", params.Product)
 
 	err = server.versionCheckForTrialAndOsServer(params, c)
 	if err != nil {
@@ -532,10 +556,12 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 		return server.SendErrorResponse(c, code, msg)
 	}
 
+	// Handle automate or habitat products
 	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
 		return server.downloadAutomateOrHabitat(params, c)
 	}
 
+	// Handle chef-360 or platform service
 	if params.Product == constants.PLATFORM_SERVICE {
 		if server.Mode == Commercial {
 			return server.downloadChefPlatform(params, c)
@@ -543,6 +569,12 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 		return server.SendErrorResponse(c, http.StatusBadRequest, constants.PLATFORM_ERROR)
 	}
 
+	// Handle other products (download from private S3 bucket)
+	if params.Product == "my-new-product" { // Replace with your product key
+		return server.downloadFromPrivateS3(params, c)
+	}
+
+	// Default behavior for other products
 	var data omnitruck.PackageMetadata
 	request := server.Omnitruck(c).ProductDownload(params).ParseData(&data)
 
@@ -555,6 +587,65 @@ func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 	} else {
 		return server.SendError(c, request)
 	}
+}
+
+// New function to handle private S3 bucket downloads
+func (server *ApiService) downloadFromPrivateS3(params *omnitruck.RequestParams, c *fiber.Ctx) error {
+	s3Client, err := getS3ClientWithStaticCreds(awsAccessKeyID, awsSecretAccessKey, awsRegion)
+	if err != nil {
+		server.logCtx(c).Errorf("AWS config error: %v", err)
+		return server.SendErrorResponse(c, http.StatusInternalServerError, "Unable to configure AWS client")
+	}
+
+	// You can construct the key however you need — adjust as per your S3 structure
+	key := "chef-360.tar.gz"
+
+	s3Resp, err := s3Client.GetObject(c.Context(), &s3.GetObjectInput{
+		Bucket: aws.String(s3BucketName),
+		Key:    &key,
+	})
+	if err != nil {
+		server.logCtx(c).Errorf("S3 download error for key %s: %v", key, err)
+		return server.SendErrorResponse(c, http.StatusInternalServerError, "Failed to download file from S3")
+	}
+
+	fileName := "chef-360-test.tar.gz"
+	c.Set("Content-Type", *s3Resp.ContentType)
+	c.Set("Content-Length", fmt.Sprintf("%d", s3Resp.ContentLength))
+	c.Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, fileName))
+
+	c.Status(200).Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+		buf := make([]byte, 32*1024) // 32KB buffer
+		for {
+			n, err := s3Resp.Body.Read(buf)
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				server.Log.Errorf("Error while streaming : %s", err.Error())
+				return
+			}
+			if n > 0 {
+				if _, writeErr := w.Write(buf[:n]); writeErr != nil {
+					server.Log.Errorf("Error while streaming : %s", writeErr.Error())
+					if err := w.Flush(); err != nil {
+						server.Log.Errorf("Error while streaming : %s", err.Error())
+						break
+					}
+					return
+
+				}
+				// Explicitly flush the response
+				if err := w.Flush(); err != nil {
+					server.Log.Errorf("Error while streaming : %s", err.Error())
+					break
+				}
+			}
+		}
+		defer s3Resp.Body.Close()
+	})
+	server.logCtx(c).Info("Successfully copied response. Returning response")
+	return nil
 }
 
 func (server *ApiService) downloadChefPlatform(params *omnitruck.RequestParams, c *fiber.Ctx) error {
