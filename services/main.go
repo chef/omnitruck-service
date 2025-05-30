@@ -3,13 +3,11 @@ package services
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"html"
 	"io"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/chef/omnitruck-service/clients"
@@ -95,22 +93,25 @@ func (server *ApiService) productsHandler(c *fiber.Ctx) error {
 
 	data = server.DynamoServices(server.DatabaseService, c).Products(data, params.Eol)
 
-	if server.Mode == Opensource {
-		server.logCtx(c).Info("filtering opensource products")
-		data = omnitruck.SelectList(data, omnitruck.OsProductName)
-	} else if params.Eol != "true" {
-		server.logCtx(c).Info("filtering eol products")
-		data = omnitruck.FilterList(data, omnitruck.EolProductName)
-	}
+	getServerStrategy := SelectModeStrategy(server.Mode)
+	data = getServerStrategy.FilterProducts(data)
 
-	if server.Mode == Trial {
-		data = omnitruck.FilterProductsForFreeTrial(data, omnitruck.ProductsForFreeTrial)
-		omnitruck.ProductDisplayName(data)
-	}
+	// if server.Mode == Opensource {
+	// 	server.logCtx(c).Info("filtering opensource products")
+	// 	data = omnitruck.SelectList(data, omnitruck.OsProductName)
+	// } else if params.Eol != "true" {
+	// 	server.logCtx(c).Info("filtering eol products")
+	// 	data = omnitruck.FilterList(data, omnitruck.EolProductName)
+	// }
 
-	if server.Mode == Commercial {
-		data = append(data, constants.PLATFORM_SERVICE_PRODUCT)
-	}
+	// if server.Mode == Trial {
+	// 	data = omnitruck.FilterProductsForFreeTrial(data, omnitruck.ProductsForFreeTrial)
+	// 	omnitruck.ProductDisplayName(data)
+	// }
+
+	// if server.Mode == Commercial {
+	// 	data = append(data, constants.PLATFORM_SERVICE_PRODUCT)
+	// }
 
 	if request.Ok {
 		return server.SendResponse(c, &data)
@@ -163,28 +164,28 @@ func (server *ApiService) architecturesHandler(c *fiber.Ctx) error {
 // @Router      /{channel}/{product}/versions/latest [get]
 func (server *ApiService) latestVersionHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
-	// Force version to always be latest
 	params.Version = "latest"
 
-	err, ok := server.ValidateRequest(params, c)
-	if !ok {
-		return err
+	// Two-Level Strategy: select both product and mode strategies
+	productStrategy := SelectProductStrategy(params.Product, server)
+	modeStrategy := SelectModeStrategy(server.Mode)
+
+	// Get all versions using product strategy
+	versions, req := productStrategy.GetAllVersions(params, c)
+
+	if !req.Ok {
+		return server.SendError(c, req)
 	}
 
-	var data omnitruck.ProductVersion
-	var request *clients.Request
-
-	if server.Mode == Opensource {
-		data, request = server.fetchLatestOSVersion(params, c)
-	} else {
-		data, request = server.fetchLatestVersion(params, c)
+	// Filter versions using mode strategy
+	filtered := modeStrategy.FilterVersions(versions, params.Product)
+	if len(filtered) == 0 {
+		return server.SendErrorResponse(c, fiber.StatusNotFound, "No versions found for this product/mode")
 	}
 
-	if request.Ok {
-		return server.SendResponse(c, &data)
-	} else {
-		return server.SendError(c, request)
-	}
+	// Return the latest version (assume last in filtered list is latest)
+	latest := filtered[len(filtered)-1]
+	return server.SendResponse(c, &latest)
 }
 
 func (server *ApiService) fetchLatestVersion(params *omnitruck.RequestParams, c *fiber.Ctx) (omnitruck.ProductVersion, *clients.Request) {
@@ -275,54 +276,29 @@ func (server *ApiService) fetchLatestOSVersion(params *omnitruck.RequestParams, 
 // @Router      /{channel}/{product}/versions/all [get]
 func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
-	var data []omnitruck.ProductVersion
+
+	// Two-Level Strategy: select both product and mode strategies
+	productStrategy := SelectProductStrategy(params.Product, server)
+	modeStrategy := SelectModeStrategy(server.Mode)
 
 	err, ok := server.ValidateRequest(params, c)
 	if !ok {
 		return err
 	}
 
-	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
-		return server.createDynamoServiceResponse(params, c)
-	} else if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
-		versions, err := server.PlatformServices(c).PlatformVersionsAll(params, int(server.Mode))
-		if err != nil {
-			code, msg := getErrorCodeAndMsg(err)
-			return server.SendErrorResponse(c, code, msg)
-		}
-		return server.SendResponse(c, &versions)
+	// Get all versions using product strategy
+	versions, req := productStrategy.GetAllVersions(params, c)
+	if !req.Ok {
+		return server.SendError(c, req)
 	}
 
-	request := server.Omnitruck(c).ProductVersions(params).ParseData(&data)
-
-	switch server.Mode {
-	case Commercial:
-		if params.Eol != "true" {
-			data = omnitruck.FilterProductList(data, params.Product, omnitruck.EolProductVersion)
-		}
-	case Trial:
-		if params.Eol != "true" {
-			data = omnitruck.FilterProductList(data, params.Product, omnitruck.EolProductVersion)
-		}
-
-		if len(data) == 0 {
-			data = append(data, "")
-		}
-		data = []omnitruck.ProductVersion{
-			data[len(data)-1],
-		}
-	case Opensource:
-		data = omnitruck.FilterList(data, func(v omnitruck.ProductVersion) bool {
-			return !omnitruck.OsProductVersion(params.Product, v)
-		})
+	// Filter versions using mode strategy
+	filtered := modeStrategy.FilterVersions(versions, params.Product)
+	if len(filtered) == 0 {
+		return server.SendErrorResponse(c, fiber.StatusNotFound, "No versions found for this product/mode")
 	}
 
-	if request.Ok {
-		return server.SendResponse(c, &data)
-	} else {
-		return server.SendError(c, request)
-	}
-
+	return server.SendResponse(c, &filtered)
 }
 
 func (server *ApiService) createDynamoServiceResponse(params *omnitruck.RequestParams, c *fiber.Ctx) error {
@@ -365,68 +341,97 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
-		data, err = server.PlatformServices(c).PlatformPackages(params, int(server.Mode))
-		if err != nil {
-			code, msg := getErrorCodeAndMsg(err)
-			return server.SendErrorResponse(c, code, msg)
-		}
+	productStrategy := SelectProductStrategy(params.Product, server)
+	modeStrategy := SelectModeStrategy(server.Mode)
 
-		data.UpdatePackages(func(platform string, pv string, arch string, m omnitruck.PackageMetadata) omnitruck.PackageMetadata {
-			params.Version = m.Version
-			params.Platform = platform
-			params.Architecture = arch
-
-			m.Url = getDownloadUrl(params, c)
-
-			return m
-		})
-		return server.SendResponse(c, &data)
+	// Get all versions using product strategy
+	versions, req := productStrategy.GetAllVersions(params, c)
+	if !req.Ok || len(versions) == 0 {
+		return server.SendError(c, req)
 	}
 
-	err = server.versionCheckForTrialAndOsServer(params, c)
+	// Filter versions using mode strategy
+	filtered := modeStrategy.FilterVersions(versions, params.Product)
+	if len(filtered) == 0 {
+		return server.SendErrorResponse(c, fiber.StatusNotFound, "No versions found for this product/mode")
+	}
+
+	// If a version is provided, validate it is in the filtered list
+	if err := validateOrSetVersion(params, filtered); err != nil {
+		return server.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
+	}
+
+	data, err = productStrategy.GetPackages(params, c)
 	if err != nil {
 		code, msg := getErrorCodeAndMsg(err)
 		return server.SendErrorResponse(c, code, msg)
 	}
 
-	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
-		data, err = server.DynamoServices(server.DatabaseService, c).ProductPackages(params)
-		if err != nil {
-			code, msg := getErrorCodeAndMsg(err)
-			return server.SendErrorResponse(c, code, msg)
-		}
+	// if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
+	// 	data, err = server.PlatformServices(c).PlatformPackages(params, int(server.Mode))
+	// 	if err != nil {
+	// 		code, msg := getErrorCodeAndMsg(err)
+	// 		return server.SendErrorResponse(c, code, msg)
+	// 	}
 
-		data.UpdatePackages(func(platform string, pv string, arch string, m omnitruck.PackageMetadata) omnitruck.PackageMetadata {
-			params.Version = m.Version
-			params.Platform = platform
-			params.Architecture = arch
+	// 	data.UpdatePackages(func(platform string, pv string, arch string, m omnitruck.PackageMetadata) omnitruck.PackageMetadata {
+	// 		params.Version = m.Version
+	// 		params.Platform = platform
+	// 		params.Architecture = arch
 
-			m.Url = getDownloadUrl(params, c)
+	// 		m.Url = getDownloadUrl(params, c)
 
-			return m
-		})
-		return server.SendResponse(c, &data)
-	}
+	// 		return m
+	// 	})
+	// 	return server.SendResponse(c, &data)
+	// }
 
-	request := server.Omnitruck(c).ProductPackages(params).ParseData(&data)
-	p := getRequestParams(c)
-	data.UpdatePackages(func(platform string, pv string, arch string, m omnitruck.PackageMetadata) omnitruck.PackageMetadata {
-		p.Version = m.Version
-		p.Platform = platform
-		p.PlatformVersion = pv
-		p.Architecture = arch
+	// err = server.versionCheckForTrialAndOsServer(params, c)
+	// if err != nil {
+	// 	code, msg := getErrorCodeAndMsg(err)
+	// 	return server.SendErrorResponse(c, code, msg)
+	// }
 
-		m.Url = getDownloadUrl(p, c)
+	// if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
+	// 	data, err = server.DynamoServices(server.DatabaseService, c).ProductPackages(params)
+	// 	if err != nil {
+	// 		code, msg := getErrorCodeAndMsg(err)
+	// 		return server.SendErrorResponse(c, code, msg)
+	// 	}
 
-		return m
-	})
+	// 	data.UpdatePackages(func(platform string, pv string, arch string, m omnitruck.PackageMetadata) omnitruck.PackageMetadata {
+	// 		params.Version = m.Version
+	// 		params.Platform = platform
+	// 		params.Architecture = arch
 
-	if request.Ok {
-		return server.SendResponse(c, &data)
-	} else {
-		return server.SendError(c, request)
-	}
+	// 		m.Url = getDownloadUrl(params, c)
+
+	// 		return m
+	// 	})
+	// 	return server.SendResponse(c, &data)
+	// }
+
+	// request := server.Omnitruck(c).ProductPackages(params).ParseData(&data)
+
+	// p := getRequestParams(c)
+	productStrategy.UpdatePackages(&data, params, c)
+
+	// data.UpdatePackages(func(platform string, pv string, arch string, m omnitruck.PackageMetadata) omnitruck.PackageMetadata {
+	// 	p.Version = m.Version
+	// 	p.Platform = platform
+	// 	p.PlatformVersion = pv
+	// 	p.Architecture = arch
+
+	// 	m.Url = getDownloadUrl(p, c)
+
+	// 	return m
+	// })
+
+	// if request.Ok {
+	return server.SendResponse(c, &data)
+	// } else {
+	// 	return server.SendError(c, request)
+	// }
 }
 
 // @description Get details for a particular package.
@@ -452,36 +457,58 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
-		request = &clients.Request{}
-		data, err = server.PlatformServices(c).PlatformMetadata(params, int(server.Mode))
-		if err != nil {
-			code, msg := getErrorCodeAndMsg(err)
-			return server.SendErrorResponse(c, code, msg)
-		}
-		return server.getChefPlatformMetaData(params, data, c)
+	productStrategy := SelectProductStrategy(params.Product, server)
+	modeStrategy := SelectModeStrategy(server.Mode)
 
+	// Get all versions using product strategy
+	versions, req := productStrategy.GetAllVersions(params, c)
+	if !req.Ok || len(versions) == 0 {
+		return server.SendError(c, req)
 	}
 
-	err = server.versionCheckForTrialAndOsServer(params, c)
-	if err != nil {
-		code, msg := getErrorCodeAndMsg(err)
-		return server.SendErrorResponse(c, code, msg)
+	// Filter versions using mode strategy
+	filtered := modeStrategy.FilterVersions(versions, params.Product)
+	if len(filtered) == 0 {
+		return server.SendErrorResponse(c, fiber.StatusNotFound, "No versions found for this product/mode")
 	}
 
-	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
-		request = &clients.Request{}
-		data, err = server.DynamoServices(server.DatabaseService, c).ProductMetadata(params)
-		if err != nil {
-			code, msg := getErrorCodeAndMsg(err)
-			request.Failure(code, msg)
-		} else {
-			request.Success()
-		}
-
-	} else {
-		request = server.Omnitruck(c).ProductMetadata(params).ParseData(&data)
+	// If a version is provided, validate it is in the filtered list
+	if err = validateOrSetVersion(params, filtered); err != nil {
+		return server.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
+
+	data, request = productStrategy.GetMetadata(params, c)
+
+	// if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
+	// 	request = &clients.Request{}
+	// 	data, err = server.PlatformServices(c).PlatformMetadata(params, int(server.Mode))
+	// 	if err != nil {
+	// 		code, msg := getErrorCodeAndMsg(err)
+	// 		return server.SendErrorResponse(c, code, msg)
+	// 	}
+	// 	return server.getChefPlatformMetaData(params, data, c)
+
+	// }
+
+	// err = server.versionCheckForTrialAndOsServer(params, c)
+	// if err != nil {
+	// 	code, msg := getErrorCodeAndMsg(err)
+	// 	return server.SendErrorResponse(c, code, msg)
+	// }
+
+	// if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
+	// 	request = &clients.Request{}
+	// 	data, err = server.DynamoServices(server.DatabaseService, c).ProductMetadata(params)
+	// 	if err != nil {
+	// 		code, msg := getErrorCodeAndMsg(err)
+	// 		request.Failure(code, msg)
+	// 	} else {
+	// 		request.Success()
+	// 	}
+
+	// } else {
+	// 	request = server.Omnitruck(c).ProductMetadata(params).ParseData(&data)
+	// }
 
 	// Remap the package url to our download URL
 	url := getDownloadUrl(params, c)
@@ -519,42 +546,35 @@ func (server *ApiService) getChefPlatformMetaData(params *omnitruck.RequestParam
 // @Router      /{channel}/{product}/download [get]
 func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
-	flag := verifyRequestType(params)
 	err, ok := server.ValidateRequest(params, c)
 	if !ok {
 		return err
 	}
 	server.logCtx(c).Infof("Recieved product download request for %s", params.Product)
 
-	err = server.versionCheckForTrialAndOsServer(params, c)
-	if err != nil {
-		code, msg := getErrorCodeAndMsg(err)
-		return server.SendErrorResponse(c, code, msg)
+	// Two-Level Strategy: select both product and mode strategies
+	productStrategy := SelectProductStrategy(params.Product, server)
+	modeStrategy := SelectModeStrategy(server.Mode)
+
+	// Get all versions using product strategy
+	versions, req := productStrategy.GetAllVersions(params, c)
+	if !req.Ok || len(versions) == 0 {
+		return server.SendError(c, req)
 	}
 
-	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
-		return server.downloadAutomateOrHabitat(params, c)
+	// Filter versions using mode strategy
+	filtered := modeStrategy.FilterVersions(versions, params.Product)
+	if len(filtered) == 0 {
+		return server.SendErrorResponse(c, fiber.StatusNotFound, "No versions found for this product/mode")
 	}
 
-	if params.Product == constants.PLATFORM_SERVICE {
-		if server.Mode == Commercial {
-			return server.downloadChefPlatform(params, c)
-		}
-		return server.SendErrorResponse(c, http.StatusBadRequest, constants.PLATFORM_ERROR)
+	// Validate or set version
+	if err := validateOrSetVersion(params, filtered); err != nil {
+		return server.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
 
-	var data omnitruck.PackageMetadata
-	request := server.Omnitruck(c).ProductDownload(params).ParseData(&data)
-
-	if request.Ok {
-		if flag {
-			data.Url = data.Url + substring
-		}
-		server.logCtx(c).Infof("Redirecting user to %s", data.Url)
-		return c.Redirect(data.Url, 302)
-	} else {
-		return server.SendError(c, request)
-	}
+	// Download using the product strategy
+	return productStrategy.Download(params, c)
 }
 
 func (server *ApiService) downloadChefPlatform(params *omnitruck.RequestParams, c *fiber.Ctx) error {
@@ -725,64 +745,38 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
-		fileName, err := server.PlatformServices(c).PlatformFilename(params, int(server.Mode))
-		if err != nil {
-			code, msg := getErrorCodeAndMsg(err)
-			server.logCtx(c).Error("Error while fetching fileName for "+params.Product, err.Error())
-			return server.SendErrorResponse(c, code, msg)
-		}
-		response := map[string]interface{}{
-			"fileName": fileName,
-		}
-		server.logCtx(c).Info(constants.SUCCESS_RESPONSE_FROM_FILENAME_MSG + params.Product)
-		return server.SendResponse(c, response)
+	// Two-Level Strategy: select both product and mode strategies
+	productStrategy := SelectProductStrategy(params.Product, server)
+	modeStrategy := SelectModeStrategy(server.Mode)
+
+	// Get all versions using product strategy
+	versions, req := productStrategy.GetAllVersions(params, c)
+	if !req.Ok || len(versions) == 0 {
+		return server.SendError(c, req)
 	}
 
-	server.logCtx(c).Info("Validating download file name for " + params.Product + " in channel " + params.Channel)
-	err = server.versionCheckForTrialAndOsServer(params, c)
+	// Filter versions using mode strategy
+	filtered := modeStrategy.FilterVersions(versions, params.Product)
+	if len(filtered) == 0 {
+		return server.SendErrorResponse(c, fiber.StatusNotFound, "No versions found for this product/mode")
+	}
+
+	// If a version is provided, validate it is in the filtered list
+	if err := validateOrSetVersion(params, filtered); err != nil {
+		return server.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
+	}
+
+	fileName, err := productStrategy.GetFileName(params, c)
 	if err != nil {
-		code, msg := getErrorCodeAndMsg(err)
-		return server.SendErrorResponse(c, code, msg)
+		server.logCtx(c).Error("Error while fetching fileName for "+params.Product, err.Error())
+		return server.SendErrorResponse(c, fiber.StatusInternalServerError, err.Error())
 	}
 
-	//assuming that the metadata table will always have only the latest version record for automate, querying db without sortkey
-	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
-		fileName, err := server.DynamoServices(server.DatabaseService, c).GetFilename(params)
-		if err != nil {
-			code, msg := getErrorCodeAndMsg(err)
-			server.logCtx(c).Error("Error while fetching fileName for "+params.Product, err.Error())
-			return server.SendErrorResponse(c, code, msg)
-		}
-
-		response := map[string]interface{}{
-			"fileName": fileName,
-		}
-		server.logCtx(c).Info(constants.SUCCESS_RESPONSE_FROM_FILENAME_MSG + params.Product)
-		return server.SendResponse(c, response)
-
-	} else {
-		var data omnitruck.PackageMetadata
-		request := server.Omnitruck(c).ProductMetadata(params).ParseData(&data)
-
-		if request.Ok {
-			url := data.Url
-			fileName := getFileNameFromURL(url)
-			response := map[string]interface{}{
-				"fileName": fileName,
-			}
-			server.logCtx(c).Info(constants.SUCCESS_RESPONSE_FROM_FILENAME_MSG + params.Product)
-			return server.SendResponse(c, response)
-		} else {
-			return server.SendError(c, request)
-		}
-
+	response := map[string]interface{}{
+		"fileName": fileName,
 	}
-}
-
-func getFileNameFromURL(url string) string {
-	segments := strings.Split(url, "/")
-	return segments[len(segments)-1]
+	server.logCtx(c).Info(constants.SUCCESS_RESPONSE_FROM_FILENAME_MSG + params.Product)
+	return server.SendResponse(c, response)
 }
 
 func (server *ApiService) isLatestForTrial(params *omnitruck.RequestParams, c *fiber.Ctx) *clients.Request {
@@ -796,17 +790,6 @@ func (server *ApiService) isLatestForTrial(params *omnitruck.RequestParams, c *f
 	}
 	request.Failure(fiber.StatusBadRequest, "Version is not latest.")
 	return request
-}
-
-func getErrorCodeAndMsg(err error) (code int, msg string) {
-	var fiberErr *fiber.Error
-
-	if errors.As(err, &fiberErr) {
-		code = fiberErr.Code
-		msg = fiberErr.Message
-		return code, msg
-	}
-	return fiber.StatusInternalServerError, ""
 }
 
 func (server *ApiService) versionCheckForTrialAndOsServer(params *omnitruck.RequestParams, c *fiber.Ctx) error {
