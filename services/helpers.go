@@ -1,10 +1,13 @@
 package services
 
 import (
+	"errors"
+	"fmt"
 	"net/url"
 	"strings"
 
 	"github.com/chef/omnitruck-service/clients/omnitruck"
+	"github.com/gofiber/fiber/v2"
 )
 
 const substring = ".metadata.json"
@@ -54,4 +57,34 @@ func verifyRequestType(params *omnitruck.RequestParams) bool {
 		return true
 	}
 	return false
+}
+
+func validateOrSetVersion(params *omnitruck.RequestParams, filtered []omnitruck.ProductVersion) error {
+	if params.Version != "" && params.Version != "latest" {
+		for _, v := range filtered {
+			if string(v) == params.Version {
+				return nil
+			}
+		}
+		return fmt.Errorf("requested version is not latest")
+	}
+	// Use the latest version from filtered list if not provided
+	params.Version = string(filtered[len(filtered)-1])
+	return nil
+}
+
+func getFileNameFromURL(url string) string {
+	segments := strings.Split(url, "/")
+	return segments[len(segments)-1]
+}
+
+func getErrorCodeAndMsg(err error) (code int, msg string) {
+	var fiberErr *fiber.Error
+
+	if errors.As(err, &fiberErr) {
+		code = fiberErr.Code
+		msg = fiberErr.Message
+		return code, msg
+	}
+	return fiber.StatusInternalServerError, ""
 }
