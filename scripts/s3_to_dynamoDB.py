@@ -1,7 +1,7 @@
 import boto3
 import json
 
-METADATA_TABLE = 'metadata-inspec'
+METADATA_TABLE = 'metadata'
 PACKAGE_MANAGER_TABLE = 'package-manager-dev'
 
 def convert_to_dynamodb_format(data):
