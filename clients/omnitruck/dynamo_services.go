@@ -17,13 +17,14 @@ type DynamoServices struct {
 }
 
 const (
-	DOWNLOAD_URL         = `https://packages.chef.io/files/%s/%s/%s/%s`
-	CHEF_AUTOMATE_CLI    = "chef-automate-cli"
-	AUTOMATE_CLI_VERSION = "latest"
-	AUTOMATE_CHANNEL     = "current"
-	AUTOMATE_PRODUCT     = "automate"
-	HABITAT_PRODUCT      = "habitat"
-	validating_log       = "Error while validating params:"
+	DOWNLOAD_URL                         = `https://packages.chef.io/files/%s/%s/%s/%s`
+	CHEF_AUTOMATE_CLI                    = "chef-automate-cli"
+	AUTOMATE_CLI_VERSION                 = "latest"
+	AUTOMATE_CHANNEL                     = "current"
+	AUTOMATE_PRODUCT                     = "automate"
+	HABITAT_PRODUCT                      = "habitat"
+	CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT = "chef-ice"
+	validating_log                       = "Error while validating params:"
 )
 
 func NewDynamoServices(db dboperations.IDbOperations, log *log.Entry) DynamoServices {
@@ -34,7 +35,7 @@ func NewDynamoServices(db dboperations.IDbOperations, log *log.Entry) DynamoServ
 }
 
 func (svc *DynamoServices) Products(products []string, eol string) []string {
-	products = append(products, "habitat")
+	products = append(products, HABITAT_PRODUCT, CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT)
 	if eol == "true" {
 		products = append(products, "automate-1")
 	}
