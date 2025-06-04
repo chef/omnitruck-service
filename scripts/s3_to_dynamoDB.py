@@ -7,7 +7,7 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-METADATA_TABLE = 'metadata'
+METADATA_TABLE = 'package-details-dev'
 PACKAGE_MANAGER_TABLE = 'package-manager-dev'
 
 def convert_to_dynamodb_format(data):
