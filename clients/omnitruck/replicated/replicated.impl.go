@@ -10,6 +10,7 @@ import (
 	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/constants"
 	"github.com/chef/omnitruck-service/logger"
+	"github.com/chef/omnitruck-service/models"
 	"github.com/chef/omnitruck-service/utils"
 )
 
@@ -83,7 +84,7 @@ func (r ReplicatedImpl) DownloadFromReplicated(url, requestId, authorization str
 	return resp, nil
 }
 
-func (r ReplicatedImpl) SearchCustomersByEmail(email string, requestId string) (customers []Customer, err error) {
+func (r ReplicatedImpl) SearchCustomersByEmail(email string, requestId string) (customers []models.Customer, err error) {
 	log := utils.AddLogFields("SearchCustomersByEmail", requestId, r.Logger)
 
 	url := fmt.Sprintf("%s/customers/search", r.ReplicatedConfig.URL)
@@ -112,7 +113,7 @@ func (r ReplicatedImpl) SearchCustomersByEmail(email string, requestId string) (
 		return nil, err
 	}
 
-	var respObj CustomerSearchResponse
+	var respObj models.CustomerSearchResponse
 	err = json.Unmarshal(respBody, &respObj)
 	if err != nil {
 		log.Errorln(constants.UNMARSHAL_ERR_MSG, err.Error())
@@ -122,7 +123,7 @@ func (r ReplicatedImpl) SearchCustomersByEmail(email string, requestId string) (
 	return respObj.Customers, nil
 }
 
-func (r *ReplicatedImpl) GetDowloadUrl(customer Customer, requestId string) (url string, err error) {
+func (r *ReplicatedImpl) GetDowloadUrl(customer models.Customer, requestId string) (url string, err error) {
 	log := utils.AddLogFields("GetDowloadUrl", requestId, r.Logger)
 	if len(customer.Channels) == 0 {
 		log.Error("No channel found for download ")
