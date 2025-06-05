@@ -1291,3 +1291,49 @@ func TestGetFilename(t *testing.T) {
 		})
 	}
 }
+
+func TestGetPackageManagers(t *testing.T) {
+	mockDbService := new(dboperations.MockIDbOperations)
+
+	tests := []struct {
+		name           string
+		mockResult     []string
+		mockError      error
+		expectedResult []string
+		expectError    bool
+	}{
+		{
+			name:           "success - returns package managers",
+			mockResult:     []string{"yum", "apt", "zypper"},
+			mockError:      nil,
+			expectedResult: []string{"yum", "apt", "zypper"},
+			expectError:    false,
+		},
+		{
+			name:           "failure - db error",
+			mockResult:     nil,
+			mockError:      errors.New("database unavailable"),
+			expectedResult: nil,
+			expectError:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDbService.GetPackageManagersfunc = func() ([]string, error) {
+				return tt.mockResult, tt.mockError
+			}
+			svc := &DynamoServices{
+				db:  mockDbService,
+				log: logrus.NewEntry(logrus.New()),
+			}
+			got, err := svc.GetPackageManagers()
+			if tt.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tt.expectedResult, got)
+		})
+	}
+}

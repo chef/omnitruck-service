@@ -1395,3 +1395,68 @@ func TestApiService_downloadChefPlatform(t *testing.T) {
 		})
 	}
 }
+
+func TestPackageManagersHandler(t *testing.T) {
+	tests := []struct {
+		name             string
+		mockData         []string
+		mockErr          error
+		expectedStatus   int
+		expectedResponse string
+		mode             ApiType
+	}{
+		{
+			name:             "Success - package managers fetched",
+			mockData:         []string{"deb", "tar", "rpm"},
+			mockErr:          nil,
+			expectedStatus:   http.StatusOK,
+			expectedResponse: `["deb","tar","rpm"]`,
+			mode:             Commercial,
+		},
+		{
+			name:             "Error - DB call fails",
+			mockData:         nil,
+			mockErr:          errors.New("db failure"),
+			expectedStatus:   http.StatusInternalServerError,
+			expectedResponse: `{"code":500,"message":"","status_text":"Internal Server Error"}`,
+			mode:             Commercial,
+		},
+		{
+			name:             "Error - Not found for opensource mode",
+			mockData:         nil,
+			mockErr:          nil,
+			expectedStatus:   http.StatusNotFound,
+			expectedResponse: `{"code":404,"message":"Not Found","status_text":"Not Found"}`,
+			mode:             Opensource,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDbService := new(dboperations.MockIDbOperations)
+			mockDbService.GetPackageManagersfunc = func() ([]string, error) {
+				return tt.mockData, tt.mockErr
+			}
+
+			app := fiber.New()
+			log := logrus.New()
+			api := &ApiService{
+				DatabaseService: mockDbService,
+				Log:             logrus.NewEntry(log),
+				Mode:            tt.mode,
+			}
+
+			app.Get("/package-managers", api.packageManagersHandler)
+
+			req := httptest.NewRequest(http.MethodGet, "/package-managers", nil)
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedStatus, resp.StatusCode)
+
+			bodyBytes, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+
+			assert.JSONEq(t, tt.expectedResponse, string(bodyBytes))
+		})
+	}
+}

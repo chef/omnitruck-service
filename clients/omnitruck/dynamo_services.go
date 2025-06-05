@@ -338,3 +338,12 @@ func (svc *DynamoServices) GetFilename(params *RequestParams) (string, error) {
 
 	return details.FileName, nil
 }
+
+func (svc *DynamoServices) GetPackageManagers() ([]string, error) {
+	result, err := svc.db.GetPackageManagers()
+	if err != nil {
+		svc.log.WithError(err).Error("Failed to fetch package managers from DB")
+		return nil, err
+	}
+	return result, nil
+}
