@@ -1396,6 +1396,63 @@ func TestApiService_downloadChefPlatform(t *testing.T) {
 	}
 }
 
+func TestPackageManagersHandler(t *testing.T) {
+	tests := []struct {
+		name             string
+		mockData         []string
+		mockErr          error
+		expectedStatus   int
+		expectedResponse string
+		mode             ApiType
+	}{
+		{
+			name:             "Success - package managers fetched",
+			mockData:         []string{"deb", "tar", "rpm"},
+			mockErr:          nil,
+			expectedStatus:   http.StatusOK,
+			expectedResponse: `["deb","tar","rpm"]`,
+			mode:             Commercial,
+		},
+		{
+			name:             "Error - DB call fails",
+			mockData:         nil,
+			mockErr:          errors.New("db failure"),
+			expectedStatus:   http.StatusInternalServerError,
+			expectedResponse: `{"code":500,"message":"Error while fetching the information for the product from DB.","status_text":"Internal Server Error"}`,
+			mode:             Commercial,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDbService := new(dboperations.MockIDbOperations)
+			mockDbService.GetPackageManagersfunc = func() ([]string, error) {
+				return tt.mockData, tt.mockErr
+			}
+
+			app := fiber.New()
+			log := logrus.New()
+			api := &ApiService{
+				DatabaseService: mockDbService,
+				Log:             logrus.NewEntry(log),
+				Mode:            tt.mode,
+			}
+
+			app.Get("/package-managers", api.packageManagersHandler)
+
+			req := httptest.NewRequest(http.MethodGet, "/package-managers", nil)
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedStatus, resp.StatusCode)
+
+			bodyBytes, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+
+			assert.JSONEq(t, tt.expectedResponse, string(bodyBytes))
+		})
+	}
+}
+
 func TestProductsHandler(t *testing.T) {
 	tests := []struct {
 		name             string
@@ -1440,22 +1497,19 @@ func TestProductsHandler(t *testing.T) {
 			expectedContains: []string{"chef-360", "chef-ice", "automate-1"},
 		},
 		{
-			name:           "Trial mode returns formatted products",
-			serverMode:     Trial,
-			eolParam:       "false",
-			expectedStatus: fiber.StatusOK,
+			name:             "Trial mode returns formatted products",
+			serverMode:       Trial,
+			eolParam:         "false",
+			expectedStatus:   fiber.StatusOK,
 			expectedContains: []string{"automate:Chef Automate", "chef:Chef Infra Client", "chef-server:Chef Infra Server", "chef-workstation:Chef Workstation", "habitat:Chef Habitat", "inspec:InSpec", "chef-ice:Chef Infra Client Enterprise"},
-
 		},
 		{
-			name:           "Commercial mode returns full product list",
-			serverMode:     Commercial,
-			eolParam:       "false",
-			expectedStatus: fiber.StatusOK,
+			name:             "Commercial mode returns full product list",
+			serverMode:       Commercial,
+			eolParam:         "false",
+			expectedStatus:   fiber.StatusOK,
 			expectedContains: []string{"automate", "chef", "chef-backend", "chef-server", "chef-workstation", "habitat", "inspec", "manage", "supermarket", "chef-360", "chef-ice"},
-
 		},
-		
 	}
 
 	for _, tt := range tests {
@@ -1494,4 +1548,3 @@ func TestProductsHandler(t *testing.T) {
 		})
 	}
 }
-

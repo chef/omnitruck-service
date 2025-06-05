@@ -489,3 +489,94 @@ func TestGetRelatedProductsFailure(t *testing.T) {
 		})
 	}
 }
+
+func TestGetPackageManagers(t *testing.T) {
+	tests := []struct {
+		name                  string
+		mockScanOutput        *dynamodb.ScanOutput
+		mockScanError         error
+		expected              []string
+		expectError           bool
+		expectedErrorContains string
+	}{
+		{
+			name: "Success",
+			mockScanOutput: &dynamodb.ScanOutput{
+				Items: []map[string]*dynamodb.AttributeValue{
+					{
+						"packages": {S: aws.String("pkg1")},
+					},
+					{
+						"packages": {S: aws.String("pkg2")},
+					},
+				},
+			},
+			expected:    []string{"pkg1", "pkg2"},
+			expectError: false,
+		},
+		{
+			name:           "Scan failure",
+			mockScanOutput: nil,
+			mockScanError: &dynamodb.ReplicaNotFoundException{
+				Message_: aws.String("Requested resource not found"),
+			},
+			expectError:           true,
+			expectedErrorContains: "Requested resource not found",
+		},
+		{
+			name: "Unmarshal failure",
+			mockScanOutput: &dynamodb.ScanOutput{
+				Items: []map[string]*dynamodb.AttributeValue{
+					{
+						"packages": {M: map[string]*dynamodb.AttributeValue{
+							"invalid": {S: aws.String("oops")},
+						}},
+					},
+				},
+			},
+			expectError:           true,
+			expectedErrorContains: "unmarshal",
+		},
+		{
+			name:                  "Nil response from Scan",
+			mockScanOutput:        nil,
+			mockScanError:         nil,
+			expectError:           true,
+			expectedErrorContains: "scan returned no items",
+		},
+		{
+			name: "Nil Items in Scan result",
+			mockScanOutput: &dynamodb.ScanOutput{
+				Items: nil,
+			},
+			mockScanError:         nil,
+			expectError:           true,
+			expectedErrorContains: "scan returned no items",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ser := &DbOperationsService{
+				db: &MDB{
+					Scanfunc: func(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+						return tt.mockScanOutput, tt.mockScanError
+					},
+				},
+				packageManagersTable: "package-manager-dev",
+			}
+
+			got, err := ser.GetPackageManagers()
+
+			if tt.expectError {
+				assert.Error(t, err)
+				if tt.expectedErrorContains != "" {
+					assert.Contains(t, err.Error(), tt.expectedErrorContains)
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, got)
+			}
+		})
+	}
+}

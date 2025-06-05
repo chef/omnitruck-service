@@ -7,6 +7,7 @@ type ServiceConfig struct {
 	AWSConfig            AWSConfig        `json:"awsConfig"`
 	ReplicatedConfig     ReplicatedConfig `json:"replicatedConfig"`
 	ReadWriteTimeout     int64            `jso:"readWriteTimeout"`
+	PackageManagersTable string           `json:"packageManagersTable"`
 }
 
 type ReplicatedConfig struct {

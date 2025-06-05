@@ -45,6 +45,7 @@ func (server *ApiService) buildRouter() {
 	server.App.Get("/status", requestid.New(), server.HealthCheck)
 	server.App.Get("/products", requestid.New(), server.productsHandler)
 	server.App.Get("/platforms", requestid.New(), server.platformsHandler)
+	server.App.Get("/package-managers", requestid.New(), server.packageManagersHandler)
 	server.App.Get("/architectures", requestid.New(), server.architecturesHandler)
 	server.App.Get("/:channel/:product/versions/latest", requestid.New(), server.latestVersionHandler)
 	server.App.Get("/:channel/:product/versions/all", requestid.New(), server.productVersionsHandler)
@@ -923,4 +924,20 @@ func (server *ApiService) downloadWindowsScript(c *fiber.Ctx) error {
 	c.Set("Content-Disposition", "attachment;filename=install.ps1")
 	resp := html.UnescapeString(scriptResp)
 	return c.SendString(resp)
+}
+
+// @description Get the list of available package managers
+// @Success 200 {object} map[string]interface{}
+// @Failure     500 {object} services.ErrorResponse
+// @Router /package-managers [get]
+func (server *ApiService) packageManagersHandler(c *fiber.Ctx) error {
+	server.logCtx(c).Info("Fetching package managers")
+
+	packageManagers, err := server.DynamoServices(server.DatabaseService, c).GetPackageManagers()
+	if err != nil {
+		code, msg := getErrorCodeAndMsg(err)
+		return server.SendErrorResponse(c, code, msg)
+	}
+
+	return server.SendResponse(c, packageManagers)
 }
