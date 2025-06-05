@@ -88,11 +88,11 @@ func (server *ApiService) docsHandler(baseUrl string) func(*fiber.Ctx) error {
 // @Router      /products [get]
 func (server *ApiService) productsHandler(c *fiber.Ctx) error {
 	params := getRequestParams(c)
-
+	server.setLocals(c)
 	var data omnitruck.ItemList
-	request := server.Omnitruck(c).Products(params, &data)
+	request := server.Omnitruck().Products(params, &data)
 
-	data = server.DynamoServices(server.DatabaseService, c).Products(data, params.Eol)
+	data = server.DynamoServices(server.DatabaseService).Products(data, params.Eol)
 
 	getServerStrategy := SelectModeStrategy(server.Mode)
 	data = getServerStrategy.FilterProducts(data)
@@ -128,9 +128,10 @@ func (server *ApiService) productsHandler(c *fiber.Ctx) error {
 // @Router      /platforms [get]
 func (server *ApiService) platformsHandler(c *fiber.Ctx) error {
 	var data omnitruck.PlatformList
-	request := server.Omnitruck(c).Platforms().ParseData(&data)
+	server.setLocals(c)
+	request := server.Omnitruck().Platforms().ParseData(&data)
 
-	data = server.DynamoServices(server.DatabaseService, c).Platforms(data)
+	data = server.DynamoServices(server.DatabaseService).Platforms(data)
 	if request.Ok {
 		return server.SendResponse(c, &data)
 	} else {
@@ -144,9 +145,9 @@ func (server *ApiService) platformsHandler(c *fiber.Ctx) error {
 // @Failure     500 {object} services.ErrorResponse
 // @Router      /architectures [get]
 func (server *ApiService) architecturesHandler(c *fiber.Ctx) error {
-
+	server.setLocals(c)
 	var data omnitruck.ItemList
-	request := server.Omnitruck(c).Architectures().ParseData(&data)
+	request := server.Omnitruck().Architectures().ParseData(&data)
 
 	if request.Ok {
 		return server.SendResponse(c, &data)
@@ -164,6 +165,7 @@ func (server *ApiService) architecturesHandler(c *fiber.Ctx) error {
 // @Failure     403        {object} services.ErrorResponse
 // @Router      /{channel}/{product}/versions/latest [get]
 func (server *ApiService) latestVersionHandler(c *fiber.Ctx) error {
+	server.setLocals(c)
 	params := getRequestParams(c)
 	params.Version = "latest"
 
@@ -172,7 +174,7 @@ func (server *ApiService) latestVersionHandler(c *fiber.Ctx) error {
 	modeStrategy := SelectModeStrategy(server.Mode)
 
 	// Get all versions using product strategy
-	versions, req := productStrategy.GetAllVersions(params, c)
+	versions, req := productStrategy.GetAllVersions(params)
 
 	if !req.Ok {
 		return server.SendError(c, req)
@@ -191,12 +193,14 @@ func (server *ApiService) latestVersionHandler(c *fiber.Ctx) error {
 
 func (server *ApiService) fetchLatestVersion(params *omnitruck.RequestParams, c *fiber.Ctx) (omnitruck.ProductVersion, *clients.Request) {
 	var data omnitruck.ProductVersion
+	server.setLocals(c)
+
 	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
 		request := clients.Request{}
-		data, err := server.DynamoServices(server.DatabaseService, c).VersionLatest(params)
+		data, err := server.DynamoServices(server.DatabaseService).VersionLatest(params)
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
-			server.logCtx(c).WithError(err).Error(utils.ErrorWhileFetchingLatestVersion + params.Product)
+			server.logCtx().WithError(err).Error(utils.ErrorWhileFetchingLatestVersion + params.Product)
 			request.Failure(code, msg)
 			return data, &request
 		} else {
@@ -205,17 +209,17 @@ func (server *ApiService) fetchLatestVersion(params *omnitruck.RequestParams, c 
 		}
 	} else if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
 		request := clients.Request{}
-		data, err := server.PlatformServices(c).PlatformVersionLatest(params, int(server.Mode))
+		data, err := server.PlatformServices().PlatformVersionLatest(params, int(server.Mode))
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
-			server.logCtx(c).WithError(err).Error(utils.ErrorWhileFetchingLatestVersion + params.Product)
+			server.logCtx().WithError(err).Error(utils.ErrorWhileFetchingLatestVersion + params.Product)
 			request.Failure(code, msg)
 			return data, &request
 		}
 		request.Success()
 		return data, &request
 	}
-	request := server.Omnitruck(c).LatestVersion(params).ParseData(&data)
+	request := server.Omnitruck().LatestVersion(params).ParseData(&data)
 
 	return data, request
 }
@@ -224,12 +228,13 @@ func (server *ApiService) fetchLatestVersion(params *omnitruck.RequestParams, c 
 // Then we can return the latest OS version
 func (server *ApiService) fetchLatestOSVersion(params *omnitruck.RequestParams, c *fiber.Ctx) (omnitruck.ProductVersion, *clients.Request) {
 	var data []omnitruck.ProductVersion
+	server.setLocals(c)
 	if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
 		request := clients.Request{}
-		data, err := server.PlatformServices(c).PlatformVersionLatest(params, int(server.Mode))
+		data, err := server.PlatformServices().PlatformVersionLatest(params, int(server.Mode))
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
-			server.logCtx(c).WithError(err).Error(utils.ErrorWhileFetchingLatestVersion + params.Product)
+			server.logCtx().WithError(err).Error(utils.ErrorWhileFetchingLatestVersion + params.Product)
 			request.Failure(code, msg)
 			return data, &request
 		}
@@ -239,10 +244,10 @@ func (server *ApiService) fetchLatestOSVersion(params *omnitruck.RequestParams, 
 	// Need to fetch all versions and filter out to only show the OS versions
 	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
 		request := clients.Request{}
-		latestVersion, err := server.DynamoServices(server.DatabaseService, c).FetchLatestOsVersion(params)
+		latestVersion, err := server.DynamoServices(server.DatabaseService).FetchLatestOsVersion(params)
 		if err != nil {
 			code, msg := getErrorCodeAndMsg(err)
-			server.logCtx(c).WithError(err).Error("Error while fetching the latest opensource version for the " + params.Product)
+			server.logCtx().WithError(err).Error("Error while fetching the latest opensource version for the " + params.Product)
 			request.Failure(code, msg)
 			return omnitruck.ProductVersion(latestVersion), &request
 		} else {
@@ -250,7 +255,7 @@ func (server *ApiService) fetchLatestOSVersion(params *omnitruck.RequestParams, 
 			return omnitruck.ProductVersion(latestVersion), &request
 		}
 	}
-	request := server.Omnitruck(c).ProductVersions(params).ParseData(&data)
+	request := server.Omnitruck().ProductVersions(params).ParseData(&data)
 
 	if request.Ok {
 		data = omnitruck.FilterList(data, func(v omnitruck.ProductVersion) bool {
@@ -276,6 +281,7 @@ func (server *ApiService) fetchLatestOSVersion(params *omnitruck.RequestParams, 
 // @Failure     403        {object} services.ErrorResponse
 // @Router      /{channel}/{product}/versions/all [get]
 func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
+	server.setLocals(c)
 	params := getRequestParams(c)
 
 	// Two-Level Strategy: select both product and mode strategies
@@ -288,7 +294,7 @@ func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 	}
 
 	// Get all versions using product strategy
-	versions, req := productStrategy.GetAllVersions(params, c)
+	versions, req := productStrategy.GetAllVersions(params)
 	if !req.Ok {
 		return server.SendError(c, req)
 	}
@@ -303,7 +309,7 @@ func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 }
 
 func (server *ApiService) createDynamoServiceResponse(params *omnitruck.RequestParams, c *fiber.Ctx) error {
-	data, err := server.DynamoServices(server.DatabaseService, c).VersionAll(params)
+	data, err := server.DynamoServices(server.DatabaseService).VersionAll(params)
 	if err != nil {
 		code, msg := getErrorCodeAndMsg(err)
 		return server.SendErrorResponse(c, code, msg)
@@ -335,6 +341,7 @@ func (server *ApiService) createDynamoServiceResponse(params *omnitruck.RequestP
 // @Failure     403        {object} services.ErrorResponse
 // @Router      /{channel}/{product}/packages [get]
 func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
+	server.setLocals(c)
 	params := getRequestParams(c)
 	var data omnitruck.PackageList
 	err, ok := server.ValidateRequest(params, c)
@@ -346,7 +353,7 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 	modeStrategy := SelectModeStrategy(server.Mode)
 
 	// Get all versions using product strategy
-	versions, req := productStrategy.GetAllVersions(params, c)
+	versions, req := productStrategy.GetAllVersions(params)
 	if !req.Ok || len(versions) == 0 {
 		return server.SendError(c, req)
 	}
@@ -362,7 +369,7 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 		return server.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
 
-	data, err = productStrategy.GetPackages(params, c)
+	data, err = productStrategy.GetPackages(params)
 	if err != nil {
 		code, msg := getErrorCodeAndMsg(err)
 		return server.SendErrorResponse(c, code, msg)
@@ -415,7 +422,7 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 	// request := server.Omnitruck(c).ProductPackages(params).ParseData(&data)
 
 	// p := getRequestParams(c)
-	productStrategy.UpdatePackages(&data, params, c)
+	productStrategy.UpdatePackages(&data, params, c.BaseURL())
 
 	// data.UpdatePackages(func(platform string, pv string, arch string, m omnitruck.PackageMetadata) omnitruck.PackageMetadata {
 	// 	p.Version = m.Version
@@ -450,6 +457,7 @@ func (server *ApiService) productPackagesHandler(c *fiber.Ctx) error {
 // @Failure     403        {object} services.ErrorResponse
 // @Router      /{channel}/{product}/metadata [get]
 func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
+	server.setLocals(c)
 	params := getRequestParams(c)
 	var data omnitruck.PackageMetadata
 	var request *clients.Request
@@ -462,7 +470,7 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 	modeStrategy := SelectModeStrategy(server.Mode)
 
 	// Get all versions using product strategy
-	versions, req := productStrategy.GetAllVersions(params, c)
+	versions, req := productStrategy.GetAllVersions(params)
 	if !req.Ok || len(versions) == 0 {
 		return server.SendError(c, req)
 	}
@@ -478,7 +486,7 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 		return server.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
 
-	data, request = productStrategy.GetMetadata(params, c)
+	data, request = productStrategy.GetMetadata(params)
 
 	// if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
 	// 	request = &clients.Request{}
@@ -512,7 +520,7 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 	// }
 
 	// Remap the package url to our download URL
-	url := getDownloadUrl(params, c)
+	url := getDownloadUrl(params, c.BaseURL())
 	data.Url = url
 
 	if request.Ok {
@@ -522,14 +530,14 @@ func (server *ApiService) productMetadataHandler(c *fiber.Ctx) error {
 	}
 }
 
-func (server *ApiService) getChefPlatformMetaData(params *omnitruck.RequestParams, data omnitruck.PackageMetadata, c *fiber.Ctx) error {
-	url := getDownloadUrl(params, c)
-	data.Url = url
-	if params.Version == "" {
-		data.Version = "latest"
-	}
-	return server.SendResponse(c, &data)
-}
+// func (server *ApiService) getChefPlatformMetaData(params *omnitruck.RequestParams, data omnitruck.PackageMetadata, c *fiber.Ctx) error {
+// 	url := getDownloadUrl(params, c)
+// 	data.Url = url
+// 	if params.Version == "" {
+// 		data.Version = "latest"
+// 	}
+// 	return server.SendResponse(c, &data)
+// }
 
 // @description Get details for a particular package.
 // @description The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned
@@ -546,19 +554,20 @@ func (server *ApiService) getChefPlatformMetaData(params *omnitruck.RequestParam
 // @Failure     403 {object} services.ErrorResponse
 // @Router      /{channel}/{product}/download [get]
 func (server *ApiService) productDownloadHandler(c *fiber.Ctx) error {
+	server.setLocals(c)
 	params := getRequestParams(c)
 	err, ok := server.ValidateRequest(params, c)
 	if !ok {
 		return err
 	}
-	server.logCtx(c).Infof("Recieved product download request for %s", params.Product)
+	server.logCtx().Infof("Recieved product download request for %s", params.Product)
 
 	// Two-Level Strategy: select both product and mode strategies
 	productStrategy := SelectProductStrategy(params.Product, server)
 	modeStrategy := SelectModeStrategy(server.Mode)
 
 	// Get all versions using product strategy
-	versions, req := productStrategy.GetAllVersions(params, c)
+	versions, req := productStrategy.GetAllVersions(params)
 	if !req.Ok || len(versions) == 0 {
 		return server.SendError(c, req)
 	}
@@ -584,7 +593,7 @@ func (server *ApiService) downloadChefPlatform(params *omnitruck.RequestParams, 
 	request := server.LicenseClient.GetReplicatedCustomerEmail(params.LicenseId, server.Config.ServiceConfig.LicenseServiceUrl, &resp)
 
 	if !request.Ok {
-		server.logCtx(c).Errorf("Recieved error response from getReplicatedCustomer")
+		server.logCtx().Errorf("Recieved error response from getReplicatedCustomer")
 		return server.SendErrorResponse(c, request.Code, request.Message)
 	}
 
@@ -592,49 +601,49 @@ func (server *ApiService) downloadChefPlatform(params *omnitruck.RequestParams, 
 	err := jsonUnmarshal(request.Body, &replicatedEmailResp)
 
 	if err != nil {
-		server.logCtx(c).Errorf("Error while unmarshalling getReplicatedCustomer response : %s", err.Error())
+		server.logCtx().Errorf("Error while unmarshalling getReplicatedCustomer response : %s", err.Error())
 		return server.SendErrorResponse(c, http.StatusInternalServerError, constants.UNMARSHAL_ERR_MSG+err.Error())
 	}
 
 	if replicatedEmailResp.StatusCode != http.StatusOK {
-		server.logCtx(c).Errorf("Recieved error response from getReplicatedCustomer")
+		server.logCtx().Errorf("Recieved error response from getReplicatedCustomer")
 		return server.SendErrorResponse(c, replicatedEmailResp.StatusCode, replicatedEmailResp.Message)
 
 	}
-	server.logCtx(c).Debug("Successfully fetched replicated customer email")
+	server.logCtx().Debug("Successfully fetched replicated customer email")
 
 	//2. Run a search customer on replicated with email
 	requestId := fmt.Sprint(c.Locals("requestid"))
 	customers, err := server.Replicated.SearchCustomersByEmail(replicatedEmailResp.ReplicatedEmail, requestId)
 
 	if err != nil {
-		server.logCtx(c).Errorf("Error while fetching replicated customers with Email : %s", err.Error())
+		server.logCtx().Errorf("Error while fetching replicated customers with Email : %s", err.Error())
 		return server.SendErrorResponse(c, http.StatusInternalServerError, constants.REPLICATED_CUSTOMER_ERROR)
 	}
 
 	if len(customers) == 0 {
-		server.logCtx(c).Errorf("No replicated customers found with Email : %s", replicatedEmailResp.ReplicatedEmail)
+		server.logCtx().Errorf("No replicated customers found with Email : %s", replicatedEmailResp.ReplicatedEmail)
 		return server.SendErrorResponse(c, http.StatusInternalServerError, constants.REPLICATED_CUSTOMER_ERROR)
 	}
 	customer := customers[0]
-	server.logCtx(c).Debug("Successfully fetched replicated customer details")
+	server.logCtx().Debug("Successfully fetched replicated customer details")
 
 	//3. Based on Airgap flag, formulate the download URL
 	url, err := server.Replicated.GetDowloadUrl(customer, requestId)
 	if err != nil {
 		return server.SendErrorResponse(c, http.StatusInternalServerError, constants.REPLICATED_DOWNLOAD_ERROR)
 	}
-	server.logCtx(c).Info("Successfully formulated download url")
+	server.logCtx().Info("Successfully formulated download url")
 
-	server.logCtx(c).Info("Performing download from replicated")
+	server.logCtx().Info("Performing download from replicated")
 	downloadResp, err := server.Replicated.DownloadFromReplicated(url, requestId, customer.InstallationId)
 	if err != nil {
-		server.logCtx(c).Errorf("Error while downloading from replicated : %s", err.Error())
+		server.logCtx().Errorf("Error while downloading from replicated : %s", err.Error())
 		return server.SendErrorResponse(c, http.StatusInternalServerError, constants.REPLICATED_DOWNLOAD_ERROR)
 	}
 	//	defer downloadResp.Body.Close()
 
-	server.logCtx(c).Info("Successfully downloaded from replicated")
+	server.logCtx().Info("Successfully downloaded from replicated")
 
 	// Set response headers
 	for name, values := range downloadResp.Header {
@@ -679,17 +688,18 @@ func (server *ApiService) downloadChefPlatform(params *omnitruck.RequestParams, 
 		}
 		defer downloadResp.Body.Close()
 	})
-	server.logCtx(c).Info("Successfully copied response. Returning response")
+	server.logCtx().Info("Successfully copied response. Returning response")
 	return nil
 }
 
 func (server *ApiService) downloadAutomateOrHabitat(params *omnitruck.RequestParams, c *fiber.Ctx) error {
-	url, err := server.DynamoServices(server.DatabaseService, c).ProductDownload(params)
+	server.setLocals(c)
+	url, err := server.DynamoServices(server.DatabaseService).ProductDownload(params)
 	if err != nil {
 		code, msg := getErrorCodeAndMsg(err)
 		return server.SendErrorResponse(c, code, msg)
 	}
-	server.logCtx(c).Infof("Redirecting user to %s", url)
+	server.logCtx().Infof("Redirecting user to %s", url)
 	return c.Redirect(url, 302)
 }
 
@@ -701,28 +711,29 @@ func (server *ApiService) downloadAutomateOrHabitat(params *omnitruck.RequestPar
 // @Failure     403 {object} services.ErrorResponse
 // @Router      /relatedProducts [get]
 func (server *ApiService) relatedProductsHandler(c *fiber.Ctx) error {
+	server.setLocals(c)
 	params := getRequestParams(c)
 
-	server.logCtx(c).Info("Validating related products API for " + params.BOM)
+	server.logCtx().Info("Validating related products API for " + params.BOM)
 
 	err, ok := server.ValidateRequest(params, c)
 	if !ok {
-		server.logCtx(c).Error("Validation of related products API for "+params.BOM+"failed", err.Error())
+		server.logCtx().Error("Validation of related products API for "+params.BOM+"failed", err.Error())
 		return err
 	}
 
-	relatedProducts, err := server.DynamoServices(server.DatabaseService, c).GetRelatedProducts(params)
+	relatedProducts, err := server.DynamoServices(server.DatabaseService).GetRelatedProducts(params)
 
 	if err != nil {
 		code, msg := getErrorCodeAndMsg(err)
-		server.logCtx(c).Error("Error while fetching related products for "+params.BOM, err.Error())
+		server.logCtx().Error("Error while fetching related products for "+params.BOM, err.Error())
 		return server.SendErrorResponse(c, code, msg)
 	}
 
 	response := map[string]interface{}{
 		"relatedProducts": relatedProducts.Products,
 	}
-	server.logCtx(c).Info("Returning success response from related products API for " + params.BOM)
+	server.logCtx().Info("Returning success response from related products API for " + params.BOM)
 	return server.SendResponse(c, response)
 }
 
@@ -739,10 +750,11 @@ func (server *ApiService) relatedProductsHandler(c *fiber.Ctx) error {
 // @Failure     403        {object} services.ErrorResponse
 // @Router      /{channel}/{product}/fileName [get]
 func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
+	server.setLocals(c)
 	params := getRequestParams(c)
 	err, ok := server.ValidateRequest(params, c)
 	if !ok {
-		server.logCtx(c).Error("Validation of file name API for " + params.Product + " failed")
+		server.logCtx().Error("Validation of file name API for " + params.Product + " failed")
 		return err
 	}
 
@@ -751,7 +763,7 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 	modeStrategy := SelectModeStrategy(server.Mode)
 
 	// Get all versions using product strategy
-	versions, req := productStrategy.GetAllVersions(params, c)
+	versions, req := productStrategy.GetAllVersions(params)
 	if !req.Ok || len(versions) == 0 {
 		return server.SendError(c, req)
 	}
@@ -767,16 +779,16 @@ func (server *ApiService) fileNameHandler(c *fiber.Ctx) error {
 		return server.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
 
-	fileName, err := productStrategy.GetFileName(params, c)
+	fileName, err := productStrategy.GetFileName(params)
 	if err != nil {
-		server.logCtx(c).Error("Error while fetching fileName for "+params.Product, err.Error())
+		server.logCtx().Error("Error while fetching fileName for "+params.Product, err.Error())
 		return server.SendErrorResponse(c, fiber.StatusInternalServerError, err.Error())
 	}
 
 	response := map[string]interface{}{
 		"fileName": fileName,
 	}
-	server.logCtx(c).Info(constants.SUCCESS_RESPONSE_FROM_FILENAME_MSG + params.Product)
+	server.logCtx().Info(constants.SUCCESS_RESPONSE_FROM_FILENAME_MSG + params.Product)
 	return server.SendResponse(c, response)
 }
 
@@ -794,6 +806,7 @@ func (server *ApiService) isLatestForTrial(params *omnitruck.RequestParams, c *f
 }
 
 func (server *ApiService) versionCheckForTrialAndOsServer(params *omnitruck.RequestParams, c *fiber.Ctx) error {
+	server.setLocals(c)
 	if server.Mode == Trial {
 		err := server.isLatestForTrial(params, c)
 		if !err.Ok {
@@ -803,7 +816,7 @@ func (server *ApiService) versionCheckForTrialAndOsServer(params *omnitruck.Requ
 		if isLatest(params.Version) {
 			v, err := server.fetchLatestOSVersion(params, c)
 			if !err.Ok {
-				server.logCtx(c).Error("Error while fetching latest opensource version for the product ", params.Product, " error :- ", err.Message)
+				server.logCtx().Error("Error while fetching latest opensource version for the product ", params.Product, " error :- ", err.Message)
 				return fiber.NewError(err.Code, err.Message)
 			}
 			params.Version = string(v)
@@ -818,6 +831,7 @@ func (server *ApiService) versionCheckForTrialAndOsServer(params *omnitruck.Requ
 }
 
 func (server *ApiService) isOsVersion(params *omnitruck.RequestParams, c *fiber.Ctx) error {
+	server.setLocals(c)
 	var err error
 	version := params.Version
 	allversions := []omnitruck.ProductVersion{}
@@ -825,15 +839,15 @@ func (server *ApiService) isOsVersion(params *omnitruck.RequestParams, c *fiber.
 	errMsg := fmt.Sprintf(`Version %s not support on this persona.`, version)
 	errLog := fmt.Sprintf(`Error while fetching all versions for the product %s. error :- `, params.Product)
 	if params.Product == constants.HABITAT_PRODUCT || params.Product == constants.AUTOMATE_PRODUCT {
-		allversions, err = server.DynamoServices(server.DatabaseService, c).VersionAll(params)
+		allversions, err = server.DynamoServices(server.DatabaseService).VersionAll(params)
 		if err != nil {
-			server.logCtx(c).Error(errLog, err.Error())
+			server.logCtx().Error(errLog, err.Error())
 			return fiber.NewError(fiber.StatusInternalServerError, utils.DBError)
 		}
 	} else {
-		request := server.Omnitruck(c).ProductVersions(params).ParseData(&allversions)
+		request := server.Omnitruck().ProductVersions(params).ParseData(&allversions)
 		if !request.Ok {
-			server.logCtx(c).Error(errLog, request.Message)
+			server.logCtx().Error(errLog, request.Message)
 			return fiber.NewError(request.Code, request.Message)
 		}
 	}
@@ -863,11 +877,12 @@ func (server *ApiService) isOsVersion(params *omnitruck.RequestParams, c *fiber.
 // @Failure     500        {object} services.ErrorResponse
 // @Router      /install.sh [get]
 func (server *ApiService) downloadLinuxScript(c *fiber.Ctx) error {
+	server.setLocals(c)
 	params := getRequestParams(c)
 	c.Set("Content-Type", "application/x-sh")
 	err, ok := server.ValidateRequest(params, c)
 	if !ok {
-		server.logCtx(c).Error("Validation of download linux script API failed: ", err)
+		server.logCtx().Error("Validation of download linux script API failed: ", err)
 		return err
 	}
 	if server.Mode == Opensource {
@@ -889,11 +904,12 @@ func (server *ApiService) downloadLinuxScript(c *fiber.Ctx) error {
 // @Failure     500        {object} services.ErrorResponse
 // @Router      /install.ps1 [get]
 func (server *ApiService) downloadWindowsScript(c *fiber.Ctx) error {
+	server.setLocals(c)
 	params := getRequestParams(c)
 	c.Set(fiber.HeaderContentType, fiber.MIMETextPlainCharsetUTF8)
 	err, ok := server.ValidateRequest(params, c)
 	if !ok {
-		server.logCtx(c).Error("Validation of download windows script API failed: ", err)
+		server.logCtx().Error("Validation of download windows script API failed: ", err)
 		return err
 	}
 	if server.Mode == Opensource {
@@ -914,13 +930,24 @@ func (server *ApiService) downloadWindowsScript(c *fiber.Ctx) error {
 // @Failure     500 {object} services.ErrorResponse
 // @Router /package-managers [get]
 func (server *ApiService) packageManagersHandler(c *fiber.Ctx) error {
-	server.logCtx(c).Info("Fetching package managers")
+	server.logCtx().Info("Fetching package managers")
 
-	packageManagers, err := server.DynamoServices(server.DatabaseService, c).GetPackageManagers()
+	packageManagers, err := server.DynamoServices(server.DatabaseService).GetPackageManagers()
 	if err != nil {
 		code, msg := getErrorCodeAndMsg(err)
 		return server.SendErrorResponse(c, code, msg)
 	}
 
 	return server.SendResponse(c, packageManagers)
+}
+
+func (server *ApiService) setLocals(c *fiber.Ctx) {
+	licenseId := c.Locals("license_id").(string)
+	validLicense := c.Locals("valid_license").(bool)
+
+	locals := map[string]interface{}{
+		"license_id":    licenseId,
+		"valid_license": validLicense,
+	}
+	server.locals = locals
 }
