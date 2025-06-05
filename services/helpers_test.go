@@ -94,7 +94,7 @@ func Test_getDownloadUrl(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := getDownloadUrl(getRequestParams(tt.args), tt.args); got != tt.want {
+			if got := getDownloadUrl(getRequestParams(tt.args), "https://commercial.chef.io"); got != tt.want {
 				t.Errorf("getDownloadUrl() = %v, want %v", got, tt.want)
 			}
 		})

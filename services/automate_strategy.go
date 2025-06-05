@@ -10,14 +10,15 @@ import (
 // Uses DynamoDB for most operations
 type ProductDynamoStrategy struct {
 	Server *ApiService
+	locals map[string]interface{}
 }
 
-func (s *ProductDynamoStrategy) GetLatestVersion(params *omnitruck.RequestParams, c *fiber.Ctx) (omnitruck.ProductVersion, *clients.Request) {
+func (s *ProductDynamoStrategy) GetLatestVersion(params *omnitruck.RequestParams) (omnitruck.ProductVersion, *clients.Request) {
 	request := clients.Request{}
-	data, err := s.Server.DynamoServices(s.Server.DatabaseService, c).VersionLatest(params)
+	data, err := s.Server.DynamoServices(s.Server.DatabaseService).VersionLatest(params)
 	if err != nil {
 		code, msg := getErrorCodeAndMsg(err)
-		s.Server.logCtx(c).WithError(err).Error("Error while fetching latest version for Automate/Habitat")
+		s.Server.logCtx().WithError(err).Error("Error while fetching latest version for Automate/Habitat")
 		request.Failure(code, msg)
 		return data, &request
 	}
@@ -25,9 +26,9 @@ func (s *ProductDynamoStrategy) GetLatestVersion(params *omnitruck.RequestParams
 	return data, &request
 }
 
-func (s *ProductDynamoStrategy) GetAllVersions(params *omnitruck.RequestParams, c *fiber.Ctx) ([]omnitruck.ProductVersion, *clients.Request) {
+func (s *ProductDynamoStrategy) GetAllVersions(params *omnitruck.RequestParams) ([]omnitruck.ProductVersion, *clients.Request) {
 	request := clients.Request{}
-	data, err := s.Server.DynamoServices(s.Server.DatabaseService, c).VersionAll(params)
+	data, err := s.Server.DynamoServices(s.Server.DatabaseService).VersionAll(params)
 	if err != nil {
 		code, msg := getErrorCodeAndMsg(err)
 		request.Failure(code, msg)
@@ -37,13 +38,13 @@ func (s *ProductDynamoStrategy) GetAllVersions(params *omnitruck.RequestParams, 
 	return data, &request
 }
 
-func (s *ProductDynamoStrategy) GetPackages(params *omnitruck.RequestParams, c *fiber.Ctx) (omnitruck.PackageList, error) {
-	return s.Server.DynamoServices(s.Server.DatabaseService, c).ProductPackages(params)
+func (s *ProductDynamoStrategy) GetPackages(params *omnitruck.RequestParams) (omnitruck.PackageList, error) {
+	return s.Server.DynamoServices(s.Server.DatabaseService).ProductPackages(params)
 }
 
-func (s *ProductDynamoStrategy) GetMetadata(params *omnitruck.RequestParams, c *fiber.Ctx) (omnitruck.PackageMetadata, *clients.Request) {
+func (s *ProductDynamoStrategy) GetMetadata(params *omnitruck.RequestParams) (omnitruck.PackageMetadata, *clients.Request) {
 	request := &clients.Request{}
-	data, err := s.Server.DynamoServices(s.Server.DatabaseService, c).ProductMetadata(params)
+	data, err := s.Server.DynamoServices(s.Server.DatabaseService).ProductMetadata(params)
 	if err != nil {
 		code, msg := getErrorCodeAndMsg(err)
 		request.Failure(code, msg)
@@ -54,27 +55,27 @@ func (s *ProductDynamoStrategy) GetMetadata(params *omnitruck.RequestParams, c *
 }
 
 func (s *ProductDynamoStrategy) Download(params *omnitruck.RequestParams, c *fiber.Ctx) error {
-	url, err := s.Server.DynamoServices(s.Server.DatabaseService, c).ProductDownload(params)
+	url, err := s.Server.DynamoServices(s.Server.DatabaseService).ProductDownload(params)
 	if err != nil {
 		code, msg := getErrorCodeAndMsg(err)
 		return s.Server.SendErrorResponse(c, code, msg)
 	}
-	s.Server.logCtx(c).Infof("Redirecting user to %s", url)
+	s.Server.logCtx().Infof("Redirecting user to %s", url)
 	return c.Redirect(url, 302)
 }
 
-func (s *ProductDynamoStrategy) GetFileName(params *omnitruck.RequestParams, c *fiber.Ctx) (string, error) {
-	fileName, err := s.Server.DynamoServices(s.Server.DatabaseService, c).GetFilename(params)
+func (s *ProductDynamoStrategy) GetFileName(params *omnitruck.RequestParams) (string, error) {
+	fileName, err := s.Server.DynamoServices(s.Server.DatabaseService).GetFilename(params)
 	return fileName, err
 }
 
-func (s *ProductDynamoStrategy) UpdatePackages(data *omnitruck.PackageList, params *omnitruck.RequestParams, c *fiber.Ctx) {
+func (s *ProductDynamoStrategy) UpdatePackages(data *omnitruck.PackageList, params *omnitruck.RequestParams, baseUrl string) {
 	data.UpdatePackages(func(platform string, pv string, arch string, m omnitruck.PackageMetadata) omnitruck.PackageMetadata {
 		params.Version = m.Version
 		params.Platform = platform
 		params.Architecture = arch
 
-		m.Url = getDownloadUrl(params, c)
+		m.Url = getDownloadUrl(params, baseUrl)
 
 		return m
 	})

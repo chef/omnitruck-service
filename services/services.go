@@ -65,6 +65,7 @@ type ApiService struct {
 	TemplateRenderer template.TemplateRender
 	Replicated       replicated.IReplicated
 	LicenseClient    clients.ILicense
+	locals           map[string]interface{}
 }
 
 func New(c Config) *ApiService {
@@ -202,20 +203,20 @@ func (server *ApiService) StartService() {
 	}
 }
 
-func (server *ApiService) Omnitruck(c *fiber.Ctx) *omnitruck.Omnitruck {
-	client := omnitruck.New(server.logCtx(c))
+func (server *ApiService) Omnitruck() *omnitruck.Omnitruck {
+	client := omnitruck.New(server.logCtx())
 
 	return &client
 }
 
-func (server *ApiService) DynamoServices(db dboperations.IDbOperations, c *fiber.Ctx) *omnitruck.DynamoServices {
-	service := omnitruck.NewDynamoServices(db, server.logCtx(c))
+func (server *ApiService) DynamoServices(db dboperations.IDbOperations) *omnitruck.DynamoServices {
+	service := omnitruck.NewDynamoServices(db, server.logCtx())
 
 	return &service
 }
 
-func (server *ApiService) PlatformServices(c *fiber.Ctx) *omnitruck.PlatformServices {
-	service := omnitruck.NewPlatformServices(server.logCtx(c))
+func (server *ApiService) PlatformServices() *omnitruck.PlatformServices {
+	service := omnitruck.NewPlatformServices(server.logCtx())
 	return &service
 }
 
@@ -224,8 +225,8 @@ func (server *ApiService) ReplicatedService(config config.ReplicatedConfig, log 
 	return service
 }
 
-func (server *ApiService) logCtx(c *fiber.Ctx) *log.Entry {
-	return server.Log.WithField("license_id", c.Locals("license_id"))
+func (server *ApiService) logCtx() *log.Entry {
+	return server.Log.WithField("license_id", server.locals["license_id"])
 }
 
 func (server *ApiService) validLicense(c *fiber.Ctx) bool {
@@ -234,7 +235,7 @@ func (server *ApiService) validLicense(c *fiber.Ctx) bool {
 }
 
 func (server *ApiService) ValidateRequest(params *omnitruck.RequestParams, c *fiber.Ctx) (error, bool) {
-	server.logCtx(c).Debugf("Validating request %+v", params)
+	server.logCtx().Debugf("Validating request %+v", params)
 	context := omnitruck.Context{
 		License: server.validLicense(c),
 	}
@@ -243,7 +244,7 @@ func (server *ApiService) ValidateRequest(params *omnitruck.RequestParams, c *fi
 	if errors != nil {
 		msgs, code := server.Validator.ErrorMessages(errors)
 
-		server.logCtx(c).WithField("errors", msgs).Error("Error validating request")
+		server.logCtx().WithField("errors", msgs).Error("Error validating request")
 		return c.Status(code).JSON(ErrorResponse{
 			Code:       code,
 			StatusText: http.StatusText(code),

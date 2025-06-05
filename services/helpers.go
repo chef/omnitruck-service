@@ -21,8 +21,8 @@ func buildEndpointUrl(baseUrl string, endpoint string, params *omnitruck.Request
 	return u
 }
 
-func getDownloadUrl(params *omnitruck.RequestParams, c omnitruck.FiberContext) string {
-	return buildEndpointUrl(c.BaseURL(), "download", params).String()
+func getDownloadUrl(params *omnitruck.RequestParams, baseUrl string) string {
+	return buildEndpointUrl(baseUrl, "download", params).String()
 }
 
 func getRequestParams(c omnitruck.FiberContext) *omnitruck.RequestParams {
