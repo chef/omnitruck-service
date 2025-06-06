@@ -1,23 +1,24 @@
-package services
+package strategy
 
 import (
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
+	helpers "github.com/chef/omnitruck-service/internal/helper"
 	"github.com/gofiber/fiber/v2"
 )
 
 // ProductDynamoStrategy implements ProductStrategy for Automate and Habitat products
 // Uses DynamoDB for most operations
 type ProductDynamoStrategy struct {
-	Server *ApiService
-	locals map[string]interface{}
+	DynamoService *omnitruck.DynamoServices
+	locals        map[string]interface{}
 }
 
 func (s *ProductDynamoStrategy) GetLatestVersion(params *omnitruck.RequestParams) (omnitruck.ProductVersion, *clients.Request) {
 	request := clients.Request{}
-	data, err := s.Server.DynamoServices(s.Server.DatabaseService).VersionLatest(params)
+	data, err := s.DynamoService.VersionLatest(params)
 	if err != nil {
-		code, msg := getErrorCodeAndMsg(err)
+		code, msg := helpers.GetErrorCodeAndMsg(err)
 		s.Server.logCtx().WithError(err).Error("Error while fetching latest version for Automate/Habitat")
 		request.Failure(code, msg)
 		return data, &request
@@ -28,9 +29,9 @@ func (s *ProductDynamoStrategy) GetLatestVersion(params *omnitruck.RequestParams
 
 func (s *ProductDynamoStrategy) GetAllVersions(params *omnitruck.RequestParams) ([]omnitruck.ProductVersion, *clients.Request) {
 	request := clients.Request{}
-	data, err := s.Server.DynamoServices(s.Server.DatabaseService).VersionAll(params)
+	data, err := s.DynamoService.VersionAll(params)
 	if err != nil {
-		code, msg := getErrorCodeAndMsg(err)
+		code, msg := helpers.GetErrorCodeAndMsg(err)
 		request.Failure(code, msg)
 		return nil, &request
 	}
@@ -39,14 +40,14 @@ func (s *ProductDynamoStrategy) GetAllVersions(params *omnitruck.RequestParams) 
 }
 
 func (s *ProductDynamoStrategy) GetPackages(params *omnitruck.RequestParams) (omnitruck.PackageList, error) {
-	return s.Server.DynamoServices(s.Server.DatabaseService).ProductPackages(params)
+	return s.DynamoService.ProductPackages(params)
 }
 
 func (s *ProductDynamoStrategy) GetMetadata(params *omnitruck.RequestParams) (omnitruck.PackageMetadata, *clients.Request) {
 	request := &clients.Request{}
-	data, err := s.Server.DynamoServices(s.Server.DatabaseService).ProductMetadata(params)
+	data, err := s.DynamoService.ProductMetadata(params)
 	if err != nil {
-		code, msg := getErrorCodeAndMsg(err)
+		code, msg := helpers.GetErrorCodeAndMsg(err)
 		request.Failure(code, msg)
 	} else {
 		request.Success()
@@ -55,9 +56,9 @@ func (s *ProductDynamoStrategy) GetMetadata(params *omnitruck.RequestParams) (om
 }
 
 func (s *ProductDynamoStrategy) Download(params *omnitruck.RequestParams, c *fiber.Ctx) error {
-	url, err := s.Server.DynamoServices(s.Server.DatabaseService).ProductDownload(params)
+	url, err := s.DynamoService.ProductDownload(params)
 	if err != nil {
-		code, msg := getErrorCodeAndMsg(err)
+		code, msg := helpers.GetErrorCodeAndMsg(err)
 		return s.Server.SendErrorResponse(c, code, msg)
 	}
 	s.Server.logCtx().Infof("Redirecting user to %s", url)
@@ -65,7 +66,7 @@ func (s *ProductDynamoStrategy) Download(params *omnitruck.RequestParams, c *fib
 }
 
 func (s *ProductDynamoStrategy) GetFileName(params *omnitruck.RequestParams) (string, error) {
-	fileName, err := s.Server.DynamoServices(s.Server.DatabaseService).GetFilename(params)
+	fileName, err := s.DynamoService.GetFilename(params)
 	return fileName, err
 }
 
@@ -75,7 +76,7 @@ func (s *ProductDynamoStrategy) UpdatePackages(data *omnitruck.PackageList, para
 		params.Platform = platform
 		params.Architecture = arch
 
-		m.Url = getDownloadUrl(params, baseUrl)
+		m.Url = helpers.GetDownloadUrl(params, baseUrl)
 
 		return m
 	})

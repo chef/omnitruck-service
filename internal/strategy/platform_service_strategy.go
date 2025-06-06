@@ -1,23 +1,25 @@
-package services
+package strategy
 
 import (
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
 	"github.com/chef/omnitruck-service/constants"
+	helpers "github.com/chef/omnitruck-service/internal/helper"
+	"github.com/chef/omnitruck-service/models"
 	"github.com/gofiber/fiber/v2"
 )
 
 // PlatformServiceStrategy implements ProductStrategy for PlatformService product
 type PlatformServiceStrategy struct {
-	Server *ApiService
-	locals map[string]interface{}
+	PlatformService *omnitruck.PlatformServices
+	locals          map[string]interface{}
 }
 
 func (s *PlatformServiceStrategy) GetLatestVersion(params *omnitruck.RequestParams) (omnitruck.ProductVersion, *clients.Request) {
 	request := clients.Request{}
-	data, err := s.Server.PlatformServices().PlatformVersionLatest(params, int(s.Server.Mode))
+	data, err := s.PlatformService.PlatformVersionLatest(params, int(s.Server.Mode))
 	if err != nil {
-		code, msg := getErrorCodeAndMsg(err)
+		code, msg := helpers.GetErrorCodeAndMsg(err)
 		request.Failure(code, msg)
 		return data, &request
 	}
@@ -26,10 +28,10 @@ func (s *PlatformServiceStrategy) GetLatestVersion(params *omnitruck.RequestPara
 }
 
 func (s *PlatformServiceStrategy) GetAllVersions(params *omnitruck.RequestParams) ([]omnitruck.ProductVersion, *clients.Request) {
-	data, err := s.Server.PlatformServices().PlatformVersionsAll(params, int(s.Server.Mode))
+	data, err := s.PlatformService.PlatformVersionsAll(params, int(s.Server.Mode))
 	request := &clients.Request{}
 	if err != nil {
-		code, msg := getErrorCodeAndMsg(err)
+		code, msg := helpers.GetErrorCodeAndMsg(err)
 		request.Failure(code, msg)
 		return nil, request
 	}
@@ -38,14 +40,14 @@ func (s *PlatformServiceStrategy) GetAllVersions(params *omnitruck.RequestParams
 }
 
 func (s *PlatformServiceStrategy) GetPackages(params *omnitruck.RequestParams) (omnitruck.PackageList, error) {
-	return s.Server.PlatformServices().PlatformPackages(params, int(s.Server.Mode))
+	return s.PlatformService.PlatformPackages(params, int(s.Server.Mode))
 }
 
 func (s *PlatformServiceStrategy) GetMetadata(params *omnitruck.RequestParams) (omnitruck.PackageMetadata, *clients.Request) {
 	request := &clients.Request{}
-	data, err := s.Server.PlatformServices().PlatformMetadata(params, int(s.Server.Mode))
+	data, err := s.PlatformService.PlatformMetadata(params, int(s.Server.Mode))
 	if err != nil {
-		code, msg := getErrorCodeAndMsg(err)
+		code, msg := helpers.GetErrorCodeAndMsg(err)
 		request.Failure(code, msg)
 	} else {
 		request.Success()
@@ -54,14 +56,14 @@ func (s *PlatformServiceStrategy) GetMetadata(params *omnitruck.RequestParams) (
 }
 
 func (s *PlatformServiceStrategy) Download(params *omnitruck.RequestParams, c *fiber.Ctx) error {
-	if s.Server.Mode == Commercial {
+	if s.Server.Mode == models.Commercial {
 		return s.Server.downloadChefPlatform(params, c)
 	}
 	return s.Server.SendErrorResponse(c, fiber.StatusBadRequest, constants.PLATFORM_ERROR)
 }
 
 func (s *PlatformServiceStrategy) GetFileName(params *omnitruck.RequestParams) (string, error) {
-	return s.Server.PlatformServices().PlatformFilename(params, int(s.Server.Mode))
+	return s.PlatformService.PlatformFilename(params, int(s.Server.Mode))
 }
 
 func (s *PlatformServiceStrategy) UpdatePackages(data *omnitruck.PackageList, params *omnitruck.RequestParams, baseUrl string) {
@@ -70,7 +72,7 @@ func (s *PlatformServiceStrategy) UpdatePackages(data *omnitruck.PackageList, pa
 		params.Platform = platform
 		params.Architecture = arch
 
-		m.Url = getDownloadUrl(params, baseUrl)
+		m.Url = helpers.GetDownloadUrl(params, baseUrl)
 
 		return m
 	})

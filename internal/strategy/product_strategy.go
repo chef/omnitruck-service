@@ -1,4 +1,4 @@
-package services
+package strategy
 
 import (
 	"github.com/chef/omnitruck-service/clients"
@@ -17,14 +17,20 @@ type ProductStrategy interface {
 	UpdatePackages(data *omnitruck.PackageList, params *omnitruck.RequestParams, baseUrl string)
 }
 
+type ProductStrategyDeps struct {
+	DynamoService    *omnitruck.DynamoServices
+	PlatformService  *omnitruck.PlatformServices
+	OmnitruckService *omnitruck.Omnitruck
+}
+
 // SelectProductStrategy returns the appropriate ProductStrategy based on the product.
-func SelectProductStrategy(product string, server *ApiService) ProductStrategy {
+func SelectProductStrategy(product string, deps *ProductStrategyDeps) ProductStrategy {
 	switch product {
 	case constants.AUTOMATE_PRODUCT, constants.HABITAT_PRODUCT:
-		return &ProductDynamoStrategy{Server: server}
+		return &ProductDynamoStrategy{DynamoService: deps.DynamoService}
 	case constants.PLATFORM_SERVICE_PRODUCT:
-		return &PlatformServiceStrategy{Server: server}
+		return &PlatformServiceStrategy{PlatformService: deps.PlatformService}
 	default:
-		return &DefaultProductStrategy{Server: server}
+		return &DefaultProductStrategy{OmnitruckService: deps.OmnitruckService}
 	}
 }

@@ -70,3 +70,11 @@ type EntitlementValues struct {
 	Name      string `json:"name"`
 	Value     string `json:"value"`
 }
+
+type ApiType int
+
+const (
+	Trial ApiType = iota
+	Opensource
+	Commercial
+)

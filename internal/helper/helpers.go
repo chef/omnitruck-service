@@ -1,4 +1,4 @@
-package services
+package helpers
 
 import (
 	"errors"
@@ -12,7 +12,7 @@ import (
 
 const substring = ".metadata.json"
 
-func buildEndpointUrl(baseUrl string, endpoint string, params *omnitruck.RequestParams) *url.URL {
+func BuildEndpointUrl(baseUrl string, endpoint string, params *omnitruck.RequestParams) *url.URL {
 	u, _ := url.Parse(baseUrl)
 	path, _ := url.JoinPath(params.Channel, params.Product, endpoint)
 	u.Path = path
@@ -21,11 +21,11 @@ func buildEndpointUrl(baseUrl string, endpoint string, params *omnitruck.Request
 	return u
 }
 
-func getDownloadUrl(params *omnitruck.RequestParams, baseUrl string) string {
-	return buildEndpointUrl(baseUrl, "download", params).String()
+func GetDownloadUrl(params *omnitruck.RequestParams, baseUrl string) string {
+	return BuildEndpointUrl(baseUrl, "download", params).String()
 }
 
-func getRequestParams(c omnitruck.FiberContext) *omnitruck.RequestParams {
+func GetRequestParams(c omnitruck.FiberContext) *omnitruck.RequestParams {
 	return &omnitruck.RequestParams{
 		Channel:         c.Params("channel"),
 		Product:         c.Params("product"),
@@ -39,7 +39,7 @@ func getRequestParams(c omnitruck.FiberContext) *omnitruck.RequestParams {
 	}
 }
 
-func verifyRequestType(params *omnitruck.RequestParams) bool {
+func VerifyRequestType(params *omnitruck.RequestParams) bool {
 	if strings.Contains(params.Architecture, substring) {
 		params.Architecture = strings.Replace(params.Architecture, substring, "", 1)
 		return true
@@ -59,7 +59,7 @@ func verifyRequestType(params *omnitruck.RequestParams) bool {
 	return false
 }
 
-func validateOrSetVersion(params *omnitruck.RequestParams, filtered []omnitruck.ProductVersion) error {
+func ValidateOrSetVersion(params *omnitruck.RequestParams, filtered []omnitruck.ProductVersion) error {
 	if params.Version != "" && params.Version != "latest" {
 		for _, v := range filtered {
 			if string(v) == params.Version {
@@ -73,12 +73,12 @@ func validateOrSetVersion(params *omnitruck.RequestParams, filtered []omnitruck.
 	return nil
 }
 
-func getFileNameFromURL(url string) string {
+func GetFileNameFromURL(url string) string {
 	segments := strings.Split(url, "/")
 	return segments[len(segments)-1]
 }
 
-func getErrorCodeAndMsg(err error) (code int, msg string) {
+func GetErrorCodeAndMsg(err error) (code int, msg string) {
 	var fiberErr *fiber.Error
 
 	if errors.As(err, &fiberErr) {
