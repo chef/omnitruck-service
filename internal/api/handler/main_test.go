@@ -1,4 +1,4 @@
-package services
+package handler
 
 import (
 	"bytes"
@@ -1001,7 +1001,7 @@ func TestApiService_downloadChefPlatform(t *testing.T) {
 			name: "Success",
 			fields: fields{
 				Replicated: replicated.MockReplicated{
-					GetDowloadUrlFunc: func(customer replicated.Customer, requestId string) (url string, err error) {
+					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
 					},
 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
@@ -1009,8 +1009,8 @@ func TestApiService_downloadChefPlatform(t *testing.T) {
 						mockResponse.Header.Set("Content-Type", "application/json")
 						return &mockResponse, nil
 					},
-					SearchCustomersByEmailFunc: func(email, requestId string) (customers []replicated.Customer, err error) {
-						return []replicated.Customer{
+					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+						return []models.Customer{
 							{
 								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
 								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
@@ -1018,7 +1018,7 @@ func TestApiService_downloadChefPlatform(t *testing.T) {
 								Email:          "george.westwater@progress.com",
 								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
 								Airgap:         false,
-								Channels: []replicated.Channel{
+								Channels: []models.Channel{
 									{
 										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
 										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
@@ -1078,13 +1078,13 @@ func TestApiService_downloadChefPlatform(t *testing.T) {
 			name: "Search Customer error",
 			fields: fields{
 				Replicated: replicated.MockReplicated{
-					GetDowloadUrlFunc: func(customer replicated.Customer, requestId string) (url string, err error) {
+					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
 					},
 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
 						return &http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body")))}, nil
 					},
-					SearchCustomersByEmailFunc: func(email, requestId string) (customers []replicated.Customer, err error) {
+					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
 						return nil, errors.New("Error fetching customer")
 					},
 				},
@@ -1114,14 +1114,14 @@ func TestApiService_downloadChefPlatform(t *testing.T) {
 			name: "0 customers found",
 			fields: fields{
 				Replicated: replicated.MockReplicated{
-					GetDowloadUrlFunc: func(customer replicated.Customer, requestId string) (url string, err error) {
+					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
 					},
 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
 						return &http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body")))}, nil
 					},
-					SearchCustomersByEmailFunc: func(email, requestId string) (customers []replicated.Customer, err error) {
-						return []replicated.Customer{}, nil
+					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+						return []models.Customer{}, nil
 					},
 				},
 				LicenseClient: &clients.MockLicense{
@@ -1150,14 +1150,14 @@ func TestApiService_downloadChefPlatform(t *testing.T) {
 			name: "GetUrl Err",
 			fields: fields{
 				Replicated: replicated.MockReplicated{
-					GetDowloadUrlFunc: func(customer replicated.Customer, requestId string) (url string, err error) {
+					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
 						return "", errors.New("error getting download url")
 					},
 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
 						return &http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body")))}, nil
 					},
-					SearchCustomersByEmailFunc: func(email, requestId string) (customers []replicated.Customer, err error) {
-						return []replicated.Customer{
+					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+						return []models.Customer{
 							{
 								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
 								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
@@ -1165,7 +1165,7 @@ func TestApiService_downloadChefPlatform(t *testing.T) {
 								Email:          "george.westwater@progress.com",
 								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
 								Airgap:         false,
-								Channels: []replicated.Channel{
+								Channels: []models.Channel{
 									{
 										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
 										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
@@ -1205,14 +1205,14 @@ func TestApiService_downloadChefPlatform(t *testing.T) {
 			name: "Download error",
 			fields: fields{
 				Replicated: replicated.MockReplicated{
-					GetDowloadUrlFunc: func(customer replicated.Customer, requestId string) (url string, err error) {
+					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
 					},
 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
 						return nil, errors.New("error downloading")
 					},
-					SearchCustomersByEmailFunc: func(email, requestId string) (customers []replicated.Customer, err error) {
-						return []replicated.Customer{
+					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+						return []models.Customer{
 							{
 								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
 								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
@@ -1220,7 +1220,7 @@ func TestApiService_downloadChefPlatform(t *testing.T) {
 								Email:          "george.westwater@progress.com",
 								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
 								Airgap:         false,
-								Channels: []replicated.Channel{
+								Channels: []models.Channel{
 									{
 										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
 										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
@@ -1260,7 +1260,7 @@ func TestApiService_downloadChefPlatform(t *testing.T) {
 			name: "Unmarshal Error",
 			fields: fields{
 				Replicated: replicated.MockReplicated{
-					GetDowloadUrlFunc: func(customer replicated.Customer, requestId string) (url string, err error) {
+					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
 					},
 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
@@ -1268,8 +1268,8 @@ func TestApiService_downloadChefPlatform(t *testing.T) {
 						mockResponse.Header.Set("Content-Type", "application/json")
 						return &mockResponse, nil
 					},
-					SearchCustomersByEmailFunc: func(email, requestId string) (customers []replicated.Customer, err error) {
-						return []replicated.Customer{
+					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+						return []models.Customer{
 							{
 								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
 								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
@@ -1277,7 +1277,7 @@ func TestApiService_downloadChefPlatform(t *testing.T) {
 								Email:          "george.westwater@progress.com",
 								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
 								Airgap:         false,
-								Channels: []replicated.Channel{
+								Channels: []models.Channel{
 									{
 										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
 										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
@@ -1320,7 +1320,7 @@ func TestApiService_downloadChefPlatform(t *testing.T) {
 			name: "IO Copy Error",
 			fields: fields{
 				Replicated: replicated.MockReplicated{
-					GetDowloadUrlFunc: func(customer replicated.Customer, requestId string) (url string, err error) {
+					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
 					},
 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
@@ -1328,8 +1328,8 @@ func TestApiService_downloadChefPlatform(t *testing.T) {
 						mockResponse.Header.Set("Content-Type", "application/json")
 						return &mockResponse, nil
 					},
-					SearchCustomersByEmailFunc: func(email, requestId string) (customers []replicated.Customer, err error) {
-						return []replicated.Customer{
+					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+						return []models.Customer{
 							{
 								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
 								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
@@ -1337,7 +1337,7 @@ func TestApiService_downloadChefPlatform(t *testing.T) {
 								Email:          "george.westwater@progress.com",
 								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
 								Airgap:         false,
-								Channels: []replicated.Channel{
+								Channels: []models.Channel{
 									{
 										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
 										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
