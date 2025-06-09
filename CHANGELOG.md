@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.59 -->
-## [0.0.59](https://github.com/chef/omnitruck-service/tree/0.0.59) (2025-05-14)
+<!-- latest_release 0.0.60 -->
+## [0.0.60](https://github.com/chef/omnitruck-service/tree/0.0.60) (2025-06-09)
 
 #### Merged Pull Requests
-- fix for install script in windows [#71](https://github.com/chef/omnitruck-service/pull/71) ([vipin230](https://github.com/vipin230))
+- Add chef-ice to products list for commercial and trial modes [#73](https://github.com/chef/omnitruck-service/pull/73) ([swathi-s3](https://github.com/swathi-s3))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Add chef-ice to products list for commercial and trial modes [#73](https://github.com/chef/omnitruck-service/pull/73) ([swathi-s3](https://github.com/swathi-s3)) <!-- 0.0.60 -->
 - fix for install script in windows [#71](https://github.com/chef/omnitruck-service/pull/71) ([vipin230](https://github.com/vipin230)) <!-- 0.0.59 -->
 - make pipelines public: verify [#70](https://github.com/chef/omnitruck-service/pull/70) ([jaymzh](https://github.com/jaymzh)) <!-- 0.0.58 -->
 - updated go version to 1.23.6 from 1.22.5 [#69](https://github.com/chef/omnitruck-service/pull/69) ([vipin230](https://github.com/vipin230)) <!-- 0.0.57 -->
