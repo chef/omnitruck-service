@@ -12,18 +12,22 @@ import (
 	"github.com/chef/omnitruck-service/config"
 )
 
-type AwsUtilsImpl struct{}
+type AwsUtilsImpl struct {
+	AWSClient IAWSClient
+}
 
 type AwsUtils interface {
 	GetNewSession(config config.AWSConfig) (*session.Session, error)
 }
 
-func NewAwsUtils() *AwsUtilsImpl {
-	return &AwsUtilsImpl{}
+func NewAwsUtils(awsclient IAWSClient) *AwsUtilsImpl {
+	return &AwsUtilsImpl{
+		AWSClient: awsclient,
+	}
 }
 
 func (au *AwsUtilsImpl) GetNewSession(config config.AWSConfig) (*session.Session, error) {
-	session, err := session.NewSessionWithOptions(session.Options{
+	session, err := au.AWSClient.NewSessionWithOptions(session.Options{
 		Config: aws.Config{
 			Credentials: credentials.NewStaticCredentials(config.AccessKey, config.SecretKey, ""),
 			Region:      aws.String(config.Region),
@@ -36,8 +40,8 @@ func (au *AwsUtilsImpl) GetNewSession(config config.AWSConfig) (*session.Session
 	return session, nil
 }
 
-var GetSecret = func(secretKey, region string) (secret string) {
-	sess, err := session.NewSession()
+func (au *AwsUtilsImpl) GetSecret(secretKey, region string) (secret string) {
+	sess, err := au.AWSClient.NewSession()
 	if err != nil {
 		// Handle session creation error
 		log.Println(err.Error())
@@ -49,7 +53,7 @@ var GetSecret = func(secretKey, region string) (secret string) {
 		SecretId: aws.String(secretKey),
 	}
 
-	result, err := svc.GetSecretValue(input)
+	result, err := au.AWSClient.GetSecretValue(svc, input)
 
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {

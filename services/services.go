@@ -79,7 +79,8 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	server.Config = c
 	server.Validator = omnitruck.NewValidator()
 	server.Mode = c.Mode
-	server.DatabaseService = dboperations.NewDbOperationsService(dbconnection.NewDbConnectionService(awsutils.NewAwsUtils(), c.ServiceConfig), c.ServiceConfig)
+	awsClient := awsutils.NewAWSClient()
+	server.DatabaseService = dboperations.NewDbOperationsService(dbconnection.NewDbConnectionService(awsutils.NewAwsUtils(awsClient), c.ServiceConfig), c.ServiceConfig)
 	server.TemplateRenderer = template.NewTemplateRender()
 
 	engine := html.New("./views", ".html")
