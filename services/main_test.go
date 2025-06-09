@@ -1395,3 +1395,103 @@ func TestApiService_downloadChefPlatform(t *testing.T) {
 		})
 	}
 }
+
+func TestProductsHandler(t *testing.T) {
+	tests := []struct {
+		name             string
+		serverMode       ApiType
+		eolParam         string
+		expectedStatus   int
+		expectedContains []string
+	}{
+		{
+			name:             "Opensource mode filters products",
+			serverMode:       Opensource,
+			eolParam:         "false",
+			expectedStatus:   fiber.StatusOK,
+			expectedContains: []string{"habitat"},
+		},
+		{
+			name:             "Trial mode adds enterprise product",
+			serverMode:       Trial,
+			eolParam:         "false",
+			expectedStatus:   fiber.StatusOK,
+			expectedContains: []string{"Chef Infra Client Enterprise"},
+		},
+		{
+			name:             "Commercial mode adds products",
+			serverMode:       Commercial,
+			eolParam:         "false",
+			expectedStatus:   fiber.StatusOK,
+			expectedContains: []string{"chef-360", "chef-ice"},
+		},
+		{
+			name:             "Trial mode with eol true includes Chef Infra Client Enterprise and automate-1",
+			serverMode:       Trial,
+			eolParam:         "true",
+			expectedStatus:   fiber.StatusOK,
+			expectedContains: []string{"Chef Infra Client Enterprise", "automate-1"},
+		},
+		{
+			name:             "Commercial mode with eol true includes automate-1",
+			serverMode:       Commercial,
+			eolParam:         "true",
+			expectedStatus:   fiber.StatusOK,
+			expectedContains: []string{"chef-360", "chef-ice", "automate-1"},
+		},
+		{
+			name:           "Trial mode returns formatted products",
+			serverMode:     Trial,
+			eolParam:       "false",
+			expectedStatus: fiber.StatusOK,
+			expectedContains: []string{"automate:Chef Automate", "chef:Chef Infra Client", "chef-server:Chef Infra Server", "chef-workstation:Chef Workstation", "habitat:Chef Habitat", "inspec:InSpec", "chef-ice:Chef Infra Client Enterprise"},
+
+		},
+		{
+			name:           "Commercial mode returns full product list",
+			serverMode:     Commercial,
+			eolParam:       "false",
+			expectedStatus: fiber.StatusOK,
+			expectedContains: []string{"automate", "chef", "chef-backend", "chef-server", "chef-workstation", "habitat", "inspec", "manage", "supermarket", "chef-360", "chef-ice"},
+
+		},
+		
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := fiber.New()
+
+			// Mock DB Service
+			mockDb := new(dboperations.MockIDbOperations)
+			mockDb.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
+				return []string{"0.1.0"}, nil
+			}
+			mockDb.GetVersionLatestfunc = func(partitionValue string) (string, error) {
+				return "0.1.0", nil
+			}
+
+			server := &ApiService{
+				App:             app,
+				DatabaseService: mockDb,
+				Log:             logrus.NewEntry(logrus.New()),
+				Mode:            tt.serverMode,
+			}
+
+			server.buildRouter()
+
+			req := httptest.NewRequest(http.MethodGet, "/products?eol="+tt.eolParam, nil)
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedStatus, resp.StatusCode)
+
+			bodyBytes, _ := io.ReadAll(resp.Body)
+			body := string(bodyBytes)
+
+			for _, expected := range tt.expectedContains {
+				assert.Contains(t, body, expected)
+			}
+		})
+	}
+}
+
