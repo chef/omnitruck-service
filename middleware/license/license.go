@@ -7,7 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-var re = regexp.MustCompile(`platforms|architectures|products|swagger`)
+var re = regexp.MustCompile(`platforms|architectures|products|swagger|package-managers`)
 
 type InvalidLicense struct {
 	Code int

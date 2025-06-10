@@ -1,6 +1,8 @@
 package dboperations
 
 import (
+	"errors"
+	"fmt"
 	"sort"
 
 	log "github.com/sirupsen/logrus"
@@ -21,6 +23,7 @@ type IDbOperations interface {
 	GetMetaData(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (*models.MetaData, error)
 	GetVersionLatest(partitionValue string) (string, error)
 	GetRelatedProducts(partitionValue string) (*models.RelatedProducts, error)
+	GetPackageManagers() ([]string, error)
 }
 
 type IDynamoDBOps interface {
@@ -29,16 +32,31 @@ type IDynamoDBOps interface {
 }
 
 type DbOperationsService struct {
-	db               IDynamoDBOps
-	productTableName string
-	skuTableName     string
+	db                   IDynamoDBOps
+	productTableName     string
+	skuTableName         string
+	packageManagersTable string
+}
+
+// Expected structure of each item in the DynamoDB "package-manager-dev" table:
+//
+// {
+//     "packages": "deb"
+// }
+//
+// - Each item represents a single package manager.
+// - The "packages" attribute is a string containing the name of the package manager (e.g., "deb", "rpm", "msi").
+// - One package per item is stored.
+type PackageManagerItem struct {
+	Packages string `json:"packages"`
 }
 
 func NewDbOperationsService(dbConnection dbconnection.DbConnection, config config.ServiceConfig) *DbOperationsService {
 	return &DbOperationsService{
-		db:               dbConnection.GetDbConnection(),
-		productTableName: config.MetadataDetailsTable,
-		skuTableName:     config.RelatedProductsTable,
+		db:                   dbConnection.GetDbConnection(),
+		productTableName:     config.MetadataDetailsTable,
+		skuTableName:         config.RelatedProductsTable,
+		packageManagersTable: config.PackageManagersTable,
 	}
 }
 
@@ -178,4 +196,36 @@ func (dbo *DbOperationsService) fetchDataValuesWithSortKey(partitionValue string
 		return nil, err
 	}
 	return res, nil
+}
+
+func (dbo *DbOperationsService) GetPackageManagers() ([]string, error) {
+	tableName := dbo.packageManagersTable
+
+	input := &dynamodb.ScanInput{
+		TableName: aws.String(tableName),
+	}
+
+	res, err := dbo.db.Scan(input)
+	if err != nil {
+		log.Errorf("Error scanning table %s: %v", tableName, err)
+		return nil, err
+	}
+	if res == nil || res.Items == nil {
+		log.Errorf("Scan result is nil or missing Items from table %s", tableName)
+		return nil, errors.New("scan returned no items")
+	}
+
+	var results []string
+	for _, item := range res.Items {
+		var pkgItem PackageManagerItem
+		if err := dynamodbattribute.UnmarshalMap(item, &pkgItem); err != nil {
+			log.Errorf("Unmarshal error: %v", err)
+			return nil, fmt.Errorf("failed to unmarshal item: %w", err)
+		}
+		if pkgItem.Packages != "" {
+			results = append(results, pkgItem.Packages)
+		}
+	}
+
+	return results, nil
 }
