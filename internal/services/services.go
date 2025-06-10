@@ -569,6 +569,24 @@ func (server *DownloadService) ProductDownload(params *omnitruck.RequestParams, 
 	return productStrategy.Download(params, c)
 }
 
+func (server *DownloadService) GetPackageManagers() (data omnitruck.ItemList, request *clients.Request) {
+	server.logCtx().Info("Fetching package managers")
+	packageManagers, err := server.DynamoServices(server.DatabaseService).GetPackageManagers()
+	if err != nil {
+		code, msg := helpers.GetErrorCodeAndMsg(err)
+		return nil, &clients.Request{
+			Ok:      false,
+			Code:    code,
+			Message: msg,
+		}
+	}
+	return packageManagers, &clients.Request{
+		Ok:      true,
+		Code:    fiber.StatusOK,
+		Message: "Package managers retrieved successfully",
+	}
+}
+
 func isLatest(v string) bool {
 	return len(v) == 0 || v == "latest"
 }

@@ -395,3 +395,20 @@ func (h *DownloadsHandler) DownloadWindowsScript(c *fiber.Ctx) error {
 		return c.SendString(resp)
 	}
 }
+
+// @description Get the list of available package managers
+// @Success 200 {object} map[string]interface{}
+// @Failure     500 {object} services.ErrorResponse
+// @Router /package-managers [get]
+func (h *DownloadsHandler) PackageManagersHandler(c *fiber.Ctx) error {
+	downloadService, err := services.NewDownloadService(c, h.Log)
+	if err != nil {
+		return h.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create download service")
+	}
+	packageManagers, request := downloadService.GetPackageManagers()
+	if !request.Ok {
+		return h.SendError(c, request)
+	} else {
+		return h.SendResponse(c, packageManagers)
+	}
+}
