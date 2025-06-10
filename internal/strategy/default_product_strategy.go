@@ -1,16 +1,20 @@
 package strategy
 
 import (
+	"io"
+	"net/http"
+
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
 	helpers "github.com/chef/omnitruck-service/internal/helper"
 	"github.com/gofiber/fiber/v2"
+	log "github.com/sirupsen/logrus"
 )
 
 // DefaultProductStrategy implements ProductStrategy for all other products
 type DefaultProductStrategy struct {
 	OmnitruckService *omnitruck.Omnitruck
-	locals           map[string]interface{}
+	Log              *log.Entry
 }
 
 func (s *DefaultProductStrategy) GetLatestVersion(params *omnitruck.RequestParams) (omnitruck.ProductVersion, *clients.Request) {
@@ -40,13 +44,17 @@ func (s *DefaultProductStrategy) GetMetadata(params *omnitruck.RequestParams) (o
 	return data, request
 }
 
-func (s *DefaultProductStrategy) Download(params *omnitruck.RequestParams, c *fiber.Ctx) error {
+func (s *DefaultProductStrategy) Download(params *omnitruck.RequestParams, c *fiber.Ctx) (url string, resp io.ReadCloser, header http.Header, msg string, code int, err error) {
 	var data omnitruck.PackageMetadata
 	request := s.OmnitruckService.ProductDownload(params).ParseData(&data)
-	if request.Ok {
-		return c.Redirect(data.Url, 302)
+	if !request.Ok {
+		return "", nil, nil, request.Message, request.Code, fiber.NewError(request.Code, request.Message)
 	}
-	return s.Server.SendError(c, request)
+	return data.Url, nil, nil, request.Message, request.Code, nil
+	// if request.Ok {
+	// 	return c.Redirect(data.Url, 302)
+	// }
+	// return s.Server.SendError(c, request)
 }
 
 func (s *DefaultProductStrategy) GetFileName(params *omnitruck.RequestParams) (string, error) {

@@ -1,17 +1,21 @@
 package strategy
 
 import (
+	"io"
+	"net/http"
+
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
 	helpers "github.com/chef/omnitruck-service/internal/helper"
 	"github.com/gofiber/fiber/v2"
+	log "github.com/sirupsen/logrus"
 )
 
 // ProductDynamoStrategy implements ProductStrategy for Automate and Habitat products
 // Uses DynamoDB for most operations
 type ProductDynamoStrategy struct {
 	DynamoService *omnitruck.DynamoServices
-	locals        map[string]interface{}
+	Log           *log.Entry
 }
 
 func (s *ProductDynamoStrategy) GetLatestVersion(params *omnitruck.RequestParams) (omnitruck.ProductVersion, *clients.Request) {
@@ -19,7 +23,7 @@ func (s *ProductDynamoStrategy) GetLatestVersion(params *omnitruck.RequestParams
 	data, err := s.DynamoService.VersionLatest(params)
 	if err != nil {
 		code, msg := helpers.GetErrorCodeAndMsg(err)
-		s.Server.logCtx().WithError(err).Error("Error while fetching latest version for Automate/Habitat")
+		s.Log.WithError(err).Error("Error while fetching latest version for Automate/Habitat")
 		request.Failure(code, msg)
 		return data, &request
 	}
@@ -55,14 +59,15 @@ func (s *ProductDynamoStrategy) GetMetadata(params *omnitruck.RequestParams) (om
 	return data, request
 }
 
-func (s *ProductDynamoStrategy) Download(params *omnitruck.RequestParams, c *fiber.Ctx) error {
-	url, err := s.DynamoService.ProductDownload(params)
-	if err != nil {
-		code, msg := helpers.GetErrorCodeAndMsg(err)
-		return s.Server.SendErrorResponse(c, code, msg)
-	}
-	s.Server.logCtx().Infof("Redirecting user to %s", url)
-	return c.Redirect(url, 302)
+func (s *ProductDynamoStrategy) Download(params *omnitruck.RequestParams, c *fiber.Ctx) (url string, resp io.ReadCloser, header http.Header, msg string, code int, err error) {
+	url, err = s.DynamoService.ProductDownload(params)
+	return url, nil, nil, "", 0, err
+	// if err != nil {
+	// 	code, msg := helpers.GetErrorCodeAndMsg(err)
+	// 	return s.Server.SendErrorResponse(c, code, msg)
+	// }
+	// s.Log.Infof("Redirecting user to %s", url)
+	// return c.Redirect(url, 302)
 }
 
 func (s *ProductDynamoStrategy) GetFileName(params *omnitruck.RequestParams) (string, error) {

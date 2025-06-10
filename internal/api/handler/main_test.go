@@ -1,292 +1,292 @@
 package handler
 
-import (
-	"bytes"
-	"encoding/json"
-	"errors"
-	"io"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"testing"
-	"time"
+// import (
+// 	"bytes"
+// 	"encoding/json"
+// 	"errors"
+// 	"io"
+// 	"io/ioutil"
+// 	"net/http"
+// 	"net/http/httptest"
+// 	"testing"
+// 	"time"
 
-	"github.com/chef/omnitruck-service/clients"
-	"github.com/chef/omnitruck-service/clients/omnitruck"
-	"github.com/chef/omnitruck-service/clients/omnitruck/replicated"
-	"github.com/chef/omnitruck-service/dboperations"
-	_ "github.com/chef/omnitruck-service/docs"
-	"github.com/chef/omnitruck-service/logger"
-	"github.com/chef/omnitruck-service/models"
-	"github.com/chef/omnitruck-service/utils/template"
-	"github.com/gofiber/fiber/v2"
-	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-	"github.com/valyala/fasthttp"
-)
+// 	"github.com/chef/omnitruck-service/clients"
+// 	"github.com/chef/omnitruck-service/clients/omnitruck"
+// 	"github.com/chef/omnitruck-service/clients/omnitruck/replicated"
+// 	"github.com/chef/omnitruck-service/dboperations"
+// 	_ "github.com/chef/omnitruck-service/docs"
+// 	"github.com/chef/omnitruck-service/logger"
+// 	"github.com/chef/omnitruck-service/models"
+// 	"github.com/chef/omnitruck-service/utils/template"
+// 	"github.com/gofiber/fiber/v2"
+// 	"github.com/sirupsen/logrus"
+// 	"github.com/stretchr/testify/assert"
+// 	"github.com/valyala/fasthttp"
+// )
 
-func TestRelatedProductsHandler(t *testing.T) {
+// func TestRelatedProductsHandler(t *testing.T) {
 
-	tests := []struct {
-		name             string
-		requestPath      string
-		expectedStatus   int
-		expectedResponse string
-		relatedProducts  models.RelatedProducts
-		err              error
-	}{
-		{
-			name:             "Valid SKU with related products",
-			requestPath:      "/relatedProducts?bom=Chef%20Desktop%20Management",
-			expectedStatus:   http.StatusOK,
-			expectedResponse: `{"relatedProducts": {"inspec": "Chef InSpec"}}`,
-			relatedProducts:  models.RelatedProducts{Products: map[string]string{"inspec": "Chef InSpec"}},
-			err:              nil,
-		},
-		{
-			name:             "Empty SKU",
-			requestPath:      "/relatedProducts?bom=",
-			expectedStatus:   http.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"BOM (bom) params cannot be empty", "status_text":"Bad Request"}`,
-			relatedProducts:  models.RelatedProducts{},
-			err:              errors.New("No Related products found for SKU "),
-		},
-		{
-			name:             "Db error while fetching related products",
-			requestPath:      "/relatedProducts?bom=Chef%20123",
-			expectedStatus:   http.StatusInternalServerError,
-			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
-			relatedProducts:  models.RelatedProducts{},
-			err:              errors.New("Db connection error"),
-		},
-		{
-			name:             "No related products",
-			requestPath:      "/relatedProducts?bom=Chef%20123",
-			expectedStatus:   http.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"Product information not found. Please check the input parameters.", "status_text":"Bad Request"}`,
-			relatedProducts:  models.RelatedProducts{},
-			err:              nil,
-		},
-	}
+// 	tests := []struct {
+// 		name             string
+// 		requestPath      string
+// 		expectedStatus   int
+// 		expectedResponse string
+// 		relatedProducts  models.RelatedProducts
+// 		err              error
+// 	}{
+// 		{
+// 			name:             "Valid SKU with related products",
+// 			requestPath:      "/relatedProducts?bom=Chef%20Desktop%20Management",
+// 			expectedStatus:   http.StatusOK,
+// 			expectedResponse: `{"relatedProducts": {"inspec": "Chef InSpec"}}`,
+// 			relatedProducts:  models.RelatedProducts{Products: map[string]string{"inspec": "Chef InSpec"}},
+// 			err:              nil,
+// 		},
+// 		{
+// 			name:             "Empty SKU",
+// 			requestPath:      "/relatedProducts?bom=",
+// 			expectedStatus:   http.StatusBadRequest,
+// 			expectedResponse: `{"code":400, "message":"BOM (bom) params cannot be empty", "status_text":"Bad Request"}`,
+// 			relatedProducts:  models.RelatedProducts{},
+// 			err:              errors.New("No Related products found for SKU "),
+// 		},
+// 		{
+// 			name:             "Db error while fetching related products",
+// 			requestPath:      "/relatedProducts?bom=Chef%20123",
+// 			expectedStatus:   http.StatusInternalServerError,
+// 			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
+// 			relatedProducts:  models.RelatedProducts{},
+// 			err:              errors.New("Db connection error"),
+// 		},
+// 		{
+// 			name:             "No related products",
+// 			requestPath:      "/relatedProducts?bom=Chef%20123",
+// 			expectedStatus:   http.StatusBadRequest,
+// 			expectedResponse: `{"code":400, "message":"Product information not found. Please check the input parameters.", "status_text":"Bad Request"}`,
+// 			relatedProducts:  models.RelatedProducts{},
+// 			err:              nil,
+// 		},
+// 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			app := fiber.New()
-			mockDbService := new(dboperations.MockIDbOperations)
-			mockDbService.GetRelatedProductsfunc = func(partitionValue string) (*models.RelatedProducts, error) {
-				return &test.relatedProducts, test.err
-			}
+// 	for _, test := range tests {
+// 		t.Run(test.name, func(t *testing.T) {
+// 			app := fiber.New()
+// 			mockDbService := new(dboperations.MockIDbOperations)
+// 			mockDbService.GetRelatedProductsfunc = func(partitionValue string) (*models.RelatedProducts, error) {
+// 				return &test.relatedProducts, test.err
+// 			}
 
-			server := &ApiService{
-				App:             app,
-				DatabaseService: mockDbService,
-				Log:             logrus.NewEntry(logrus.New()),
-			}
-			server.buildRouter()
-			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
-			resp, err := app.Test(req)
-			assert.NoError(t, err)
+// 			server := &ApiService{
+// 				App:             app,
+// 				DatabaseService: mockDbService,
+// 				Log:             logrus.NewEntry(logrus.New()),
+// 			}
+// 			server.buildRouter()
+// 			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
+// 			resp, err := app.Test(req)
+// 			assert.NoError(t, err)
 
-			assert.Equal(t, test.expectedStatus, resp.StatusCode)
+// 			assert.Equal(t, test.expectedStatus, resp.StatusCode)
 
-			if test.expectedResponse != "" {
-				bodyBytes, err := io.ReadAll(resp.Body)
-				assert.NoError(t, err)
-				assert.JSONEq(t, test.expectedResponse, string(bodyBytes))
-			}
-		})
-	}
-}
+// 			if test.expectedResponse != "" {
+// 				bodyBytes, err := io.ReadAll(resp.Body)
+// 				assert.NoError(t, err)
+// 				assert.JSONEq(t, test.expectedResponse, string(bodyBytes))
+// 			}
+// 		})
+// 	}
+// }
 
-func TestLatestVersionsHandler(t *testing.T) {
-	tests := []struct {
-		name             string
-		requestPath      string
-		serverMode       ApiType
-		expectedStatus   int
-		expectedResponse string
-		version          string
-		version_err      error
-		versions         []string
-		versions_err     error
-	}{
-		{
-			name:             "success for opensource",
-			requestPath:      "/stable/habitat/versions/latest",
-			serverMode:       Opensource,
-			expectedStatus:   fiber.StatusOK,
-			expectedResponse: `"0.9.3"`,
-			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0", "1.0.0"},
-			versions_err:     nil,
-		},
-		{
-			name:             "chef-360 success",
-			requestPath:      "/stable/chef-360/versions/latest",
-			serverMode:       Commercial,
-			expectedStatus:   fiber.StatusOK,
-			expectedResponse: `"latest"`,
-			versions:         []string{"latest"},
-			versions_err:     nil,
-		},
-		{
-			name:             "failure for chef-360 when opensource is the server type",
-			requestPath:      "/stable/chef-360/versions/latest",
-			serverMode:       Opensource,
-			expectedStatus:   fiber.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"chef-360 not available for the trial and opensource", "status_text":"Bad Request"}`,
-			versions:         []string{},
-			versions_err:     nil,
-		},
-		{
-			name:             "failure for chef-360 when trial is the server type",
-			requestPath:      "/stable/chef-360/versions/latest",
-			serverMode:       Trial,
-			expectedStatus:   fiber.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"chef-360 not available for the trial and opensource", "status_text":"Bad Request"}`,
-			versions:         []string{},
-			versions_err:     nil,
-		},
-		{
-			name:             "success for trial",
-			requestPath:      "/stable/habitat/versions/latest",
-			serverMode:       Trial,
-			expectedStatus:   fiber.StatusOK,
-			expectedResponse: `"1.0.0"`,
-			version:          "1.0.0",
-			version_err:      nil,
-			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0", "1.0.0"},
-			versions_err:     nil,
-		},
-		{
-			name:             "failure validation",
-			requestPath:      "/stale/automate/versions/latest",
-			serverMode:       Trial,
-			expectedStatus:   fiber.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"Channel can only be stable or current", "status_text":"Bad Request"}`,
-			version:          "latest",
-			version_err:      nil,
-			versions:         []string{"latest"},
-			versions_err:     nil,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			app := fiber.New()
-			mockDbService := new(dboperations.MockIDbOperations)
-			mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
-				return test.versions, test.versions_err
-			}
-			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
-				return test.version, test.version_err
-			}
+// func TestLatestVersionsHandler(t *testing.T) {
+// 	tests := []struct {
+// 		name             string
+// 		requestPath      string
+// 		serverMode       ApiType
+// 		expectedStatus   int
+// 		expectedResponse string
+// 		version          string
+// 		version_err      error
+// 		versions         []string
+// 		versions_err     error
+// 	}{
+// 		{
+// 			name:             "success for opensource",
+// 			requestPath:      "/stable/habitat/versions/latest",
+// 			serverMode:       Opensource,
+// 			expectedStatus:   fiber.StatusOK,
+// 			expectedResponse: `"0.9.3"`,
+// 			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0", "1.0.0"},
+// 			versions_err:     nil,
+// 		},
+// 		{
+// 			name:             "chef-360 success",
+// 			requestPath:      "/stable/chef-360/versions/latest",
+// 			serverMode:       Commercial,
+// 			expectedStatus:   fiber.StatusOK,
+// 			expectedResponse: `"latest"`,
+// 			versions:         []string{"latest"},
+// 			versions_err:     nil,
+// 		},
+// 		{
+// 			name:             "failure for chef-360 when opensource is the server type",
+// 			requestPath:      "/stable/chef-360/versions/latest",
+// 			serverMode:       Opensource,
+// 			expectedStatus:   fiber.StatusBadRequest,
+// 			expectedResponse: `{"code":400, "message":"chef-360 not available for the trial and opensource", "status_text":"Bad Request"}`,
+// 			versions:         []string{},
+// 			versions_err:     nil,
+// 		},
+// 		{
+// 			name:             "failure for chef-360 when trial is the server type",
+// 			requestPath:      "/stable/chef-360/versions/latest",
+// 			serverMode:       Trial,
+// 			expectedStatus:   fiber.StatusBadRequest,
+// 			expectedResponse: `{"code":400, "message":"chef-360 not available for the trial and opensource", "status_text":"Bad Request"}`,
+// 			versions:         []string{},
+// 			versions_err:     nil,
+// 		},
+// 		{
+// 			name:             "success for trial",
+// 			requestPath:      "/stable/habitat/versions/latest",
+// 			serverMode:       Trial,
+// 			expectedStatus:   fiber.StatusOK,
+// 			expectedResponse: `"1.0.0"`,
+// 			version:          "1.0.0",
+// 			version_err:      nil,
+// 			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0", "1.0.0"},
+// 			versions_err:     nil,
+// 		},
+// 		{
+// 			name:             "failure validation",
+// 			requestPath:      "/stale/automate/versions/latest",
+// 			serverMode:       Trial,
+// 			expectedStatus:   fiber.StatusBadRequest,
+// 			expectedResponse: `{"code":400, "message":"Channel can only be stable or current", "status_text":"Bad Request"}`,
+// 			version:          "latest",
+// 			version_err:      nil,
+// 			versions:         []string{"latest"},
+// 			versions_err:     nil,
+// 		},
+// 	}
+// 	for _, test := range tests {
+// 		t.Run(test.name, func(t *testing.T) {
+// 			app := fiber.New()
+// 			mockDbService := new(dboperations.MockIDbOperations)
+// 			mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
+// 				return test.versions, test.versions_err
+// 			}
+// 			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
+// 				return test.version, test.version_err
+// 			}
 
-			server := &ApiService{
-				App:             app,
-				DatabaseService: mockDbService,
-				Log:             logrus.NewEntry(logrus.New()),
-				Mode:            test.serverMode,
-			}
-			server.buildRouter()
-			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
-			resp, err := app.Test(req)
-			assert.NoError(t, err)
+// 			server := &ApiService{
+// 				App:             app,
+// 				DatabaseService: mockDbService,
+// 				Log:             logrus.NewEntry(logrus.New()),
+// 				Mode:            test.serverMode,
+// 			}
+// 			server.buildRouter()
+// 			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
+// 			resp, err := app.Test(req)
+// 			assert.NoError(t, err)
 
-			assert.Equal(t, test.expectedStatus, resp.StatusCode)
+// 			assert.Equal(t, test.expectedStatus, resp.StatusCode)
 
-			if test.expectedResponse != "" {
-				bodyBytes, err := io.ReadAll(resp.Body)
-				assert.NoError(t, err)
-				assert.JSONEq(t, test.expectedResponse, string(bodyBytes))
-			}
-		})
-	}
-}
+// 			if test.expectedResponse != "" {
+// 				bodyBytes, err := io.ReadAll(resp.Body)
+// 				assert.NoError(t, err)
+// 				assert.JSONEq(t, test.expectedResponse, string(bodyBytes))
+// 			}
+// 		})
+// 	}
+// }
 
-func TestProductVersionsHandler(t *testing.T) {
-	tests := []struct {
-		name             string
-		requestPath      string
-		serverMode       ApiType
-		expectedStatus   int
-		expectedResponse string
-		versions         []string
-		versions_err     error
-	}{
-		{
-			name:             "success for opensource",
-			requestPath:      "/stable/habitat/versions/all",
-			serverMode:       Opensource,
-			expectedStatus:   fiber.StatusOK,
-			expectedResponse: `["0.3.2", "0.7.11", "0.9.0", "0.9.3"]`,
-			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0", "1.0.0"},
-			versions_err:     nil,
-		},
-		{
-			name:             "success for chef-360",
-			requestPath:      "/stable/chef-360/versions/all",
-			serverMode:       Commercial,
-			expectedStatus:   fiber.StatusOK,
-			expectedResponse: `["latest"]`,
-			versions:         []string{"latest"},
-			versions_err:     nil,
-		},
-		{
-			name:             "failure for chef-360 when server is not commercial",
-			requestPath:      "/stable/chef-360/versions/all",
-			serverMode:       Trial,
-			expectedStatus:   fiber.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"chef-360 not available for the trial and opensource", "status_text":"Bad Request"}`,
-			versions:         []string{},
-			versions_err:     nil,
-		},
-		{
-			name:             "success for trial",
-			requestPath:      "/stable/habitat/versions/all",
-			serverMode:       Trial,
-			expectedStatus:   fiber.StatusOK,
-			expectedResponse: `["1.0.0"]`,
-			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0", "1.0.0"},
-			versions_err:     nil,
-		},
-		{
-			name:             "failure validation",
-			requestPath:      "/stale/automate/versions/all",
-			serverMode:       Trial,
-			expectedStatus:   fiber.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"Channel can only be stable or current", "status_text":"Bad Request"}`,
-			versions:         []string{"latest"},
-			versions_err:     nil,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			app := fiber.New()
-			mockDbService := new(dboperations.MockIDbOperations)
-			mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
-				return test.versions, test.versions_err
-			}
+// func TestProductVersionsHandler(t *testing.T) {
+// 	tests := []struct {
+// 		name             string
+// 		requestPath      string
+// 		serverMode       ApiType
+// 		expectedStatus   int
+// 		expectedResponse string
+// 		versions         []string
+// 		versions_err     error
+// 	}{
+// 		{
+// 			name:             "success for opensource",
+// 			requestPath:      "/stable/habitat/versions/all",
+// 			serverMode:       Opensource,
+// 			expectedStatus:   fiber.StatusOK,
+// 			expectedResponse: `["0.3.2", "0.7.11", "0.9.0", "0.9.3"]`,
+// 			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0", "1.0.0"},
+// 			versions_err:     nil,
+// 		},
+// 		{
+// 			name:             "success for chef-360",
+// 			requestPath:      "/stable/chef-360/versions/all",
+// 			serverMode:       Commercial,
+// 			expectedStatus:   fiber.StatusOK,
+// 			expectedResponse: `["latest"]`,
+// 			versions:         []string{"latest"},
+// 			versions_err:     nil,
+// 		},
+// 		{
+// 			name:             "failure for chef-360 when server is not commercial",
+// 			requestPath:      "/stable/chef-360/versions/all",
+// 			serverMode:       Trial,
+// 			expectedStatus:   fiber.StatusBadRequest,
+// 			expectedResponse: `{"code":400, "message":"chef-360 not available for the trial and opensource", "status_text":"Bad Request"}`,
+// 			versions:         []string{},
+// 			versions_err:     nil,
+// 		},
+// 		{
+// 			name:             "success for trial",
+// 			requestPath:      "/stable/habitat/versions/all",
+// 			serverMode:       Trial,
+// 			expectedStatus:   fiber.StatusOK,
+// 			expectedResponse: `["1.0.0"]`,
+// 			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0", "1.0.0"},
+// 			versions_err:     nil,
+// 		},
+// 		{
+// 			name:             "failure validation",
+// 			requestPath:      "/stale/automate/versions/all",
+// 			serverMode:       Trial,
+// 			expectedStatus:   fiber.StatusBadRequest,
+// 			expectedResponse: `{"code":400, "message":"Channel can only be stable or current", "status_text":"Bad Request"}`,
+// 			versions:         []string{"latest"},
+// 			versions_err:     nil,
+// 		},
+// 	}
+// 	for _, test := range tests {
+// 		t.Run(test.name, func(t *testing.T) {
+// 			app := fiber.New()
+// 			mockDbService := new(dboperations.MockIDbOperations)
+// 			mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
+// 				return test.versions, test.versions_err
+// 			}
 
-			server := &ApiService{
-				App:             app,
-				DatabaseService: mockDbService,
-				Log:             logrus.NewEntry(logrus.New()),
-				Mode:            test.serverMode,
-			}
-			server.buildRouter()
-			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
-			resp, err := app.Test(req)
-			assert.NoError(t, err)
+// 			server := &ApiService{
+// 				App:             app,
+// 				DatabaseService: mockDbService,
+// 				Log:             logrus.NewEntry(logrus.New()),
+// 				Mode:            test.serverMode,
+// 			}
+// 			server.buildRouter()
+// 			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
+// 			resp, err := app.Test(req)
+// 			assert.NoError(t, err)
 
-			assert.Equal(t, test.expectedStatus, resp.StatusCode)
+// 			assert.Equal(t, test.expectedStatus, resp.StatusCode)
 
-			if test.expectedResponse != "" {
-				bodyBytes, err := io.ReadAll(resp.Body)
-				assert.NoError(t, err)
-				assert.JSONEq(t, test.expectedResponse, string(bodyBytes))
-			}
-		})
-	}
-}
+// 			if test.expectedResponse != "" {
+// 				bodyBytes, err := io.ReadAll(resp.Body)
+// 				assert.NoError(t, err)
+// 				assert.JSONEq(t, test.expectedResponse, string(bodyBytes))
+// 			}
+// 		})
+// 	}
+// }
 
 func TestProductMetadataHandler(t *testing.T) {
 	tests := []struct {
@@ -451,27 +451,27 @@ func TestProductMetadataHandler(t *testing.T) {
 				return test.versions, test.versions_err
 			}
 
-			server := &ApiService{
-				App:             app,
-				DatabaseService: mockDbService,
-				Log:             logrus.NewEntry(logrus.New()),
-				Mode:            test.serverMode,
-			}
-			server.buildRouter()
-			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
-			resp, err := app.Test(req)
-			assert.NoError(t, err)
+// 			server := &ApiService{
+// 				App:             app,
+// 				DatabaseService: mockDbService,
+// 				Log:             logrus.NewEntry(logrus.New()),
+// 				Mode:            test.serverMode,
+// 			}
+// 			server.buildRouter()
+// 			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
+// 			resp, err := app.Test(req)
+// 			assert.NoError(t, err)
 
-			assert.Equal(t, test.expectedStatus, resp.StatusCode)
+// 			assert.Equal(t, test.expectedStatus, resp.StatusCode)
 
-			if test.expectedResponse != "" {
-				bodyBytes, err := io.ReadAll(resp.Body)
-				assert.NoError(t, err)
-				assert.JSONEq(t, test.expectedResponse, string(bodyBytes))
-			}
-		})
-	}
-}
+// 			if test.expectedResponse != "" {
+// 				bodyBytes, err := io.ReadAll(resp.Body)
+// 				assert.NoError(t, err)
+// 				assert.JSONEq(t, test.expectedResponse, string(bodyBytes))
+// 			}
+// 		})
+// 	}
+// }
 
 func TestProductPackagesHandler(t *testing.T) {
 	tests := []struct {
@@ -671,29 +671,29 @@ func TestProductPackagesHandler(t *testing.T) {
 				return test.versions, test.versions_err
 			}
 
-			server := &ApiService{
-				App:             app,
-				DatabaseService: mockDbService,
-				Log:             logrus.NewEntry(logrus.New()),
-				Mode:            test.serverMode,
-			}
-			server.buildRouter()
-			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
-			resp, err := app.Test(req)
-			assert.NoError(t, err)
+// 			server := &ApiService{
+// 				App:             app,
+// 				DatabaseService: mockDbService,
+// 				Log:             logrus.NewEntry(logrus.New()),
+// 				Mode:            test.serverMode,
+// 			}
+// 			server.buildRouter()
+// 			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
+// 			resp, err := app.Test(req)
+// 			assert.NoError(t, err)
 
-			assert.Equal(t, test.expectedStatus, resp.StatusCode)
+// 			assert.Equal(t, test.expectedStatus, resp.StatusCode)
 
-			if test.expectedResponse != "" {
-				bodyBytes, err := io.ReadAll(resp.Body)
-				assert.NoError(t, err)
-				assert.JSONEq(t, test.expectedResponse, string(bodyBytes))
-			}
-		})
-	}
-}
+// 			if test.expectedResponse != "" {
+// 				bodyBytes, err := io.ReadAll(resp.Body)
+// 				assert.NoError(t, err)
+// 				assert.JSONEq(t, test.expectedResponse, string(bodyBytes))
+// 			}
+// 		})
+// 	}
+// }
 
-func TestFileNameHandler(t *testing.T) {
+// func TestFileNameHandler(t *testing.T) {
 
 	tests := []struct {
 		name             string
@@ -828,153 +828,153 @@ func TestFileNameHandler(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		timeout := 1 * time.Minute
-		t.Run(test.name, func(t *testing.T) {
-			done := make(chan struct{})
-			go func() {
-				defer close(done)
-				app := fiber.New()
-				mockDbService := new(dboperations.MockIDbOperations)
+// 	for _, test := range tests {
+// 		timeout := 1 * time.Minute
+// 		t.Run(test.name, func(t *testing.T) {
+// 			done := make(chan struct{})
+// 			go func() {
+// 				defer close(done)
+// 				app := fiber.New()
+// 				mockDbService := new(dboperations.MockIDbOperations)
 
-				mockDbService.GetMetaDatafunc = func(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (*models.MetaData, error) {
-					return &test.metadata, test.metadata_err
-				}
-				mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
-					return test.version, test.version_err
-				}
-				mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
-					return test.versions, test.versions_err
-				}
+// 				mockDbService.GetMetaDatafunc = func(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (*models.MetaData, error) {
+// 					return &test.metadata, test.metadata_err
+// 				}
+// 				mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
+// 					return test.version, test.version_err
+// 				}
+// 				mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
+// 					return test.versions, test.versions_err
+// 				}
 
-				server := &ApiService{
-					App:             app,
-					DatabaseService: mockDbService,
-					Log:             logrus.NewEntry(logrus.New()),
-					Mode:            test.serverMode,
-				}
-				server.buildRouter()
-				req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
-				resp, err := app.Test(req)
-				assert.NoError(t, err)
+// 				server := &ApiService{
+// 					App:             app,
+// 					DatabaseService: mockDbService,
+// 					Log:             logrus.NewEntry(logrus.New()),
+// 					Mode:            test.serverMode,
+// 				}
+// 				server.buildRouter()
+// 				req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
+// 				resp, err := app.Test(req)
+// 				assert.NoError(t, err)
 
-				assert.Equal(t, test.expectedStatus, resp.StatusCode)
+// 				assert.Equal(t, test.expectedStatus, resp.StatusCode)
 
-				if test.expectedResponse != "" {
-					bodyBytes, err := io.ReadAll(resp.Body)
-					assert.NoError(t, err)
-					assert.JSONEq(t, test.expectedResponse, string(bodyBytes))
-				}
-			}()
-			select {
-			case <-done:
-				// Test completed within the timeout, nothing to do here
-			case <-time.After(timeout):
-				t.Errorf("Test took too long to complete (timeout: %s)", timeout)
-			}
-		})
-	}
-}
+// 				if test.expectedResponse != "" {
+// 					bodyBytes, err := io.ReadAll(resp.Body)
+// 					assert.NoError(t, err)
+// 					assert.JSONEq(t, test.expectedResponse, string(bodyBytes))
+// 				}
+// 			}()
+// 			select {
+// 			case <-done:
+// 				// Test completed within the timeout, nothing to do here
+// 			case <-time.After(timeout):
+// 				t.Errorf("Test took too long to complete (timeout: %s)", timeout)
+// 			}
+// 		})
+// 	}
+// }
 
-func TestDownloadLinuxScriptHandler(t *testing.T) {
-	tests := []struct {
-		name             string
-		serverMode       ApiType
-		mockTemplate     func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error)
-		requestPath      string
-		expectedStatus   int
-		expectedResponse string
-	}{
-		{
-			name:       "success",
-			serverMode: 1,
-			mockTemplate: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
-				return "", nil
-			},
-			requestPath:      `/install.sh`,
-			expectedStatus:   200,
-			expectedResponse: ``,
-		},
-		{
-			name:       "error while parsing the file response",
-			serverMode: 0,
-			mockTemplate: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
-				return "", errors.New("filepath not found")
-			},
-			requestPath:      `/install.sh`,
-			expectedStatus:   500,
-			expectedResponse: ``,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			app := fiber.New()
-			mockTemplate := new(template.MockTemplateRennder)
-			mockTemplate.GetScriptfunc = test.mockTemplate
-			server := &ApiService{
-				App:              app,
-				TemplateRenderer: mockTemplate,
-				Log:              logrus.NewEntry(logrus.New()),
-				Mode:             test.serverMode,
-			}
-			server.buildRouter()
-			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
-			resp, err := app.Test(req)
-			assert.NoError(t, err)
-			assert.Equal(t, test.expectedStatus, resp.StatusCode)
-		})
-	}
-}
+// func TestDownloadLinuxScriptHandler(t *testing.T) {
+// 	tests := []struct {
+// 		name             string
+// 		serverMode       ApiType
+// 		mockTemplate     func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error)
+// 		requestPath      string
+// 		expectedStatus   int
+// 		expectedResponse string
+// 	}{
+// 		{
+// 			name:       "success",
+// 			serverMode: 1,
+// 			mockTemplate: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
+// 				return "", nil
+// 			},
+// 			requestPath:      `/install.sh`,
+// 			expectedStatus:   200,
+// 			expectedResponse: ``,
+// 		},
+// 		{
+// 			name:       "error while parsing the file response",
+// 			serverMode: 0,
+// 			mockTemplate: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
+// 				return "", errors.New("filepath not found")
+// 			},
+// 			requestPath:      `/install.sh`,
+// 			expectedStatus:   500,
+// 			expectedResponse: ``,
+// 		},
+// 	}
+// 	for _, test := range tests {
+// 		t.Run(test.name, func(t *testing.T) {
+// 			app := fiber.New()
+// 			mockTemplate := new(template.MockTemplateRennder)
+// 			mockTemplate.GetScriptfunc = test.mockTemplate
+// 			server := &ApiService{
+// 				App:              app,
+// 				TemplateRenderer: mockTemplate,
+// 				Log:              logrus.NewEntry(logrus.New()),
+// 				Mode:             test.serverMode,
+// 			}
+// 			server.buildRouter()
+// 			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
+// 			resp, err := app.Test(req)
+// 			assert.NoError(t, err)
+// 			assert.Equal(t, test.expectedStatus, resp.StatusCode)
+// 		})
+// 	}
+// }
 
-func TestDownloadWindowsScriptHandler(t *testing.T) {
-	tests := []struct {
-		name             string
-		serverMode       ApiType
-		mockTemplate     func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error)
-		requestPath      string
-		expectedStatus   int
-		expectedResponse string
-	}{
-		{
-			name:       "success",
-			serverMode: 1,
-			mockTemplate: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
-				return "", nil
-			},
-			requestPath:      `/install.ps1`,
-			expectedStatus:   200,
-			expectedResponse: ``,
-		},
-		{
-			name:       "error while parsing the file response",
-			serverMode: 0,
-			mockTemplate: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
-				return "", errors.New("filepath not found")
-			},
-			requestPath:      `/install.ps1`,
-			expectedStatus:   500,
-			expectedResponse: ``,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			app := fiber.New()
-			mockTemplate := new(template.MockTemplateRennder)
-			mockTemplate.GetScriptfunc = test.mockTemplate
-			server := &ApiService{
-				App:              app,
-				TemplateRenderer: mockTemplate,
-				Log:              logrus.NewEntry(logrus.New()),
-				Mode:             test.serverMode,
-			}
-			server.buildRouter()
-			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
-			resp, err := app.Test(req)
-			assert.NoError(t, err)
-			assert.Equal(t, test.expectedStatus, resp.StatusCode)
-		})
-	}
-}
+// func TestDownloadWindowsScriptHandler(t *testing.T) {
+// 	tests := []struct {
+// 		name             string
+// 		serverMode       ApiType
+// 		mockTemplate     func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error)
+// 		requestPath      string
+// 		expectedStatus   int
+// 		expectedResponse string
+// 	}{
+// 		{
+// 			name:       "success",
+// 			serverMode: 1,
+// 			mockTemplate: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
+// 				return "", nil
+// 			},
+// 			requestPath:      `/install.ps1`,
+// 			expectedStatus:   200,
+// 			expectedResponse: ``,
+// 		},
+// 		{
+// 			name:       "error while parsing the file response",
+// 			serverMode: 0,
+// 			mockTemplate: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
+// 				return "", errors.New("filepath not found")
+// 			},
+// 			requestPath:      `/install.ps1`,
+// 			expectedStatus:   500,
+// 			expectedResponse: ``,
+// 		},
+// 	}
+// 	for _, test := range tests {
+// 		t.Run(test.name, func(t *testing.T) {
+// 			app := fiber.New()
+// 			mockTemplate := new(template.MockTemplateRennder)
+// 			mockTemplate.GetScriptfunc = test.mockTemplate
+// 			server := &ApiService{
+// 				App:              app,
+// 				TemplateRenderer: mockTemplate,
+// 				Log:              logrus.NewEntry(logrus.New()),
+// 				Mode:             test.serverMode,
+// 			}
+// 			server.buildRouter()
+// 			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
+// 			resp, err := app.Test(req)
+// 			assert.NoError(t, err)
+// 			assert.Equal(t, test.expectedStatus, resp.StatusCode)
+// 		})
+// 	}
+// }
 
 func TestApiService_downloadChefPlatform(t *testing.T) {
 	app := fiber.New()

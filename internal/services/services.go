@@ -1,6 +1,9 @@
 package services
 
 import (
+	"io"
+	"net/http"
+
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
 	"github.com/chef/omnitruck-service/clients/omnitruck/replicated"
@@ -13,6 +16,7 @@ import (
 	"github.com/chef/omnitruck-service/models"
 	"github.com/chef/omnitruck-service/utils/template"
 	"github.com/gofiber/fiber/v2"
+	"github.com/samber/do"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -27,20 +31,55 @@ type DownloadService struct {
 	locals           map[string]interface{}
 }
 
-func NewDownloadService(c *fiber.Ctx) *DownloadService {
+func NewDownloadService(c *fiber.Ctx, log *log.Entry) (*DownloadService, error) {
 	service := DownloadService{}
 	service.SetLocals(c)
-	return &service
+	service.Log = log
+	// Retrieve the injector from the Fiber context
+	reqInjectorI := c.Locals("reqinjector")
+	reqInjector, ok := reqInjectorI.(*do.Injector)
+	if !ok {
+		return nil, fiber.NewError(fiber.StatusInternalServerError, "Failed to retrieve request injector")
+	}
+
+	validator := do.MustInvokeNamed[omnitruck.RequestValidator](reqInjector, "validator")
+	databaseService := do.MustInvokeNamed[dboperations.IDbOperations](reqInjector, "dbService")
+	templateRenderer := do.MustInvokeNamed[template.TemplateRender](reqInjector, "templateRenderer")
+	replicatedService := do.MustInvokeNamed[replicated.IReplicated](reqInjector, "replicated")
+	licenseClient := do.MustInvokeNamed[clients.ILicense](reqInjector, "licenseClient")
+	mode := do.MustInvokeNamed[models.ApiType](reqInjector, "mode")
+	service.Validator = validator
+	service.DatabaseService = databaseService
+	service.TemplateRenderer = templateRenderer
+	service.Replicated = replicatedService
+	service.LicenseClient = licenseClient
+	service.Mode = mode
+	return &service, nil
 }
 func (server *DownloadService) SetLocals(c *fiber.Ctx) {
-	licenseId := c.Locals("license_id").(string)
+	locals := map[string]interface{}{}
 	validLicense := c.Locals("valid_license").(bool)
+	//check if c.Locals("request_id") is present
+	if c.Locals("request_id") != nil {
+		requestId := c.Locals("request_id").(string)
+		locals["request_id"] = requestId
 
-	locals := map[string]interface{}{
-		"license_id":    licenseId,
-		"valid_license": validLicense,
-		"base_url":      c.BaseURL(),
+	} else {
+		locals["request_id"] = ""
 	}
+	if c.Locals("base_url") != nil {
+		baseUrl := c.Locals("base_url").(string)
+		locals["base_url"] = baseUrl
+	} else {
+		locals["base_url"] = ""
+	}
+	if c.Locals("license_id") != nil {
+		licenseId := c.Locals("license_id").(string)
+		locals["license_id"] = licenseId
+	} else {
+		locals["license_id"] = ""
+	}
+	locals["valid_license"] = validLicense
 	server.locals = locals
 }
 
@@ -148,7 +187,12 @@ func (server *DownloadService) LatestVersion(params *omnitruck.RequestParams) (d
 	// Filter versions using mode strategy
 	// Return the latest version (assume last in filtered list is latest)
 
-	productStrategyDeps := &strategy.ProductStrategyDeps{}
+	productStrategyDeps := &strategy.ProductStrategyDeps{
+		DynamoService:    server.DynamoServices(server.DatabaseService),
+		PlatformService:  server.PlatformServices(),
+		OmnitruckService: server.Omnitruck(),
+		Log:              server.logCtx(),
+	}
 	productStrategy := strategy.SelectProductStrategy(params.Product, productStrategyDeps)
 	modeStrategy := strategy.SelectModeStrategy(server.Mode)
 
@@ -180,7 +224,12 @@ func (server *DownloadService) ProductVersions(params *omnitruck.RequestParams) 
 	// Get all versions using product strategy
 	// Filter versions using mode strategy
 
-	productStrategyDeps := &strategy.ProductStrategyDeps{}
+	productStrategyDeps := &strategy.ProductStrategyDeps{
+		DynamoService:    server.DynamoServices(server.DatabaseService),
+		PlatformService:  server.PlatformServices(),
+		OmnitruckService: server.Omnitruck(),
+		Log:              server.logCtx(),
+	}
 	productStrategy := strategy.SelectProductStrategy(params.Product, productStrategyDeps)
 	modeStrategy := strategy.SelectModeStrategy(server.Mode)
 
@@ -208,7 +257,12 @@ func (server *DownloadService) ProductPackages(params *omnitruck.RequestParams) 
 		}
 	}
 
-	productStrategyDeps := &strategy.ProductStrategyDeps{}
+	productStrategyDeps := &strategy.ProductStrategyDeps{
+		DynamoService:    server.DynamoServices(server.DatabaseService),
+		PlatformService:  server.PlatformServices(),
+		OmnitruckService: server.Omnitruck(),
+		Log:              server.logCtx(),
+	}
 	productStrategy := strategy.SelectProductStrategy(params.Product, productStrategyDeps)
 	modeStrategy := strategy.SelectModeStrategy(server.Mode)
 
@@ -265,7 +319,12 @@ func (server *DownloadService) ProductMetadata(params *omnitruck.RequestParams) 
 		}
 	}
 
-	productStrategyDeps := &strategy.ProductStrategyDeps{}
+	productStrategyDeps := &strategy.ProductStrategyDeps{
+		DynamoService:    server.DynamoServices(server.DatabaseService),
+		PlatformService:  server.PlatformServices(),
+		OmnitruckService: server.Omnitruck(),
+		Log:              server.logCtx(),
+	}
 	productStrategy := strategy.SelectProductStrategy(params.Product, productStrategyDeps)
 	modeStrategy := strategy.SelectModeStrategy(server.Mode)
 
@@ -309,41 +368,6 @@ func (server *DownloadService) ProductMetadata(params *omnitruck.RequestParams) 
 	} else {
 		return omnitruck.PackageMetadata{}, req
 	}
-}
-
-func (server *DownloadService) ProductDownload(params *omnitruck.RequestParams) error {
-	// msg, code, ok := server.ValidateRequest(params)
-	// if !ok {
-	// 	return err
-	// }
-	// server.logCtx().Infof("Recieved product download request for %s", params.Product)
-
-	// // Two-Level Strategy: select both product and mode strategies
-	// productStrategyDeps := &strategy.ProductStrategyDeps{}
-	// productStrategy := strategy.SelectProductStrategy(params.Product, productStrategyDeps)
-	// modeStrategy := strategy.SelectModeStrategy(server.Mode)
-
-	// // Get all versions using product strategy
-	// versions, req := productStrategy.GetAllVersions(params)
-	// if !req.Ok || len(versions) == 0 {
-	// 	return server.SendError(c, req)
-	// }
-
-	// // Filter versions using mode strategy
-	// filtered := modeStrategy.FilterVersions(versions, params.Product)
-	// if len(filtered) == 0 {
-	// 	return server.SendErrorResponse(c, fiber.StatusNotFound, "No versions found for this product/mode")
-	// }
-
-	// // Validate or set version
-	// if err := services.ValidateOrSetVersion(params, filtered); err != nil {
-	// 	return server.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
-	// }
-
-	// // Download using the product strategy
-	// return productStrategy.Download(params, c)
-	return nil
-
 }
 
 func (server *DownloadService) RelatedProducts(params *omnitruck.RequestParams) (data map[string]interface{}, request *clients.Request) {
@@ -394,7 +418,12 @@ func (server *DownloadService) GetFileName(params *omnitruck.RequestParams) (str
 	}
 
 	// Two-Level Strategy: select both product and mode strategies
-	productStrategyDeps := &strategy.ProductStrategyDeps{}
+	productStrategyDeps := &strategy.ProductStrategyDeps{
+		DynamoService:    server.DynamoServices(server.DatabaseService),
+		PlatformService:  server.PlatformServices(),
+		OmnitruckService: server.Omnitruck(),
+		Log:              server.logCtx(),
+	}
 	productStrategy := strategy.SelectProductStrategy(params.Product, productStrategyDeps)
 	modeStrategy := strategy.SelectModeStrategy(server.Mode)
 
@@ -497,6 +526,47 @@ func (server *DownloadService) GetWindowsScript(params *omnitruck.RequestParams)
 		Code:    fiber.StatusOK,
 		Message: "Windows script generated successfully",
 	}
+}
+
+func (server *DownloadService) ProductDownload(params *omnitruck.RequestParams, c *fiber.Ctx) (string, io.ReadCloser, http.Header, string, int, error) {
+	msg, code, ok := server.ValidateRequest(params)
+	if !ok {
+		return "", nil, nil, msg, code, fiber.NewError(code, msg)
+	}
+	server.logCtx().Infof("Recieved product download request for %s", params.Product)
+
+	// Two-Level Strategy: select both product and mode strategies
+	productStrategyDeps := &strategy.ProductStrategyDeps{
+		DynamoService:    server.DynamoServices(server.DatabaseService),
+		PlatformService:  server.PlatformServices(),
+		OmnitruckService: server.Omnitruck(),
+		Log:              server.logCtx(),
+	}
+	productStrategy := strategy.SelectProductStrategy(params.Product, productStrategyDeps)
+	modeStrategy := strategy.SelectModeStrategy(server.Mode)
+
+	// Get all versions using product strategy
+	versions, req := productStrategy.GetAllVersions(params)
+	if !req.Ok || len(versions) == 0 {
+		return "", nil, nil, req.Message, req.Code, fiber.NewError(req.Code, req.Message)
+		//return server.SendError(c, req)
+	}
+
+	// Filter versions using mode strategy
+	filtered := modeStrategy.FilterVersions(versions, params.Product)
+	if len(filtered) == 0 {
+		return "", nil, nil, "No versions found for this product/mode", fiber.StatusNotFound, fiber.NewError(fiber.StatusNotFound, "No versions found for this product/mode")
+		//return server.SendErrorResponse(c, fiber.StatusNotFound, "No versions found for this product/mode")
+	}
+
+	// Validate or set version
+	if err := helpers.ValidateOrSetVersion(params, filtered); err != nil {
+		return "", nil, nil, err.Error(), fiber.StatusBadRequest, err
+		//return server.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
+	}
+
+	// Download using the product strategy
+	return productStrategy.Download(params, c)
 }
 
 func isLatest(v string) bool {
