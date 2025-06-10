@@ -7,7 +7,6 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-METADATA_TABLE = 'package-details-dev'
 PACKAGE_MANAGER_TABLE = 'package-manager-dev'
 
 ARCH_LIST = ["aarch64", "armv7l", "i386", "powerpc", "ppc64", "ppc64le", "s390x", "sparc", "universal", "x86_64"]
@@ -17,21 +16,10 @@ def convert_to_dynamodb_format(data):
         return {k: {"M": convert_to_dynamodb_format(v)} if isinstance(v, dict) else {"S": str(v)} for k, v in data.items()}
     return {'S': str(data)}
 
-def check_if_exists(dynamodb_client, product_name, product_version):
-    logging.info(f"Checking if product {product_name} with version {product_version} exists in DynamoDB.")
-    response = dynamodb_client.get_item(
-        TableName=METADATA_TABLE,
-        Key={
-            'product': {'S': product_name},
-            'version': {'S': product_version}
-        }
-    )
-    return response.get('Item')
-
 def lambda_handler(event, context):
     s3_client = boto3.client('s3')
     dynamodb_client = boto3.client('dynamodb')
-    print("Lambda function started processing S3 bucket objects.")
+    logging.info("Lambda function started processing S3 bucket objects.")
     
     try:
         logging.info("Received event: %s", json.dumps(event, indent=2))
@@ -45,6 +33,8 @@ def lambda_handler(event, context):
         
         logging.info(f"Bucket Name: {bucket_name}")
         logging.info(f"Channel: {channel}")
+
+        METADATA_TABLE = f"package-details-{channel}-dev"
         
         # List objects in the bucket
         objects = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=f"{channel}/")
@@ -70,35 +60,16 @@ def lambda_handler(event, context):
                 for product_name, product_versions in channel_data.items():
                     for version, version_data in product_versions.items():
                         filtered_metadata = {key: value for key, value in version_data.items() if key != 'product-version-metadata'}
-                        existing_product = check_if_exists(dynamodb_client, product_name, version)
-                        if existing_product:
-                            logging.info(f"Product {product_name} with version {version} already exists in DynamoDB. Updating metadata.")
-                            existing_metadata = existing_product['metadata']['M']
-                            existing_metadata[channel] = {"M": convert_to_dynamodb_format(filtered_metadata)}
-                            dynamodb_client.put_item(
-                                TableName=METADATA_TABLE,
-                                Item={
-                                    'product': {'S': product_name},
-                                    'version': {'S': version},
-                                    'metadata': {'M': existing_metadata}
-                                }
-                            )
-                            
-                        else:
-                            filtered_metadata = {key: value for key, value in version_data.items() if key != 'product-version-metadata'}
-                            metadata = {
-                                channel: filtered_metadata
+                        dynamodb_client.put_item(
+                            TableName=METADATA_TABLE,
+                            Item={
+                                'product': {'S': product_name},
+                                'version': {'S': version},
+                                'metadata': {'M': convert_to_dynamodb_format(filtered_metadata)}
                             }
-                            dynamodb_client.put_item(
-                                TableName=METADATA_TABLE,
-                                Item={
-                                    'product': {'S': product_name},
-                                    'version': {'S': version},
-                                    'metadata': {'M': convert_to_dynamodb_format(metadata)}
-                                }
-                            )
+                        )
                 
-                logging.info(f"Processing package manager data")
+                logging.info("Processing package manager data")
                 for platform, platform_data in version_data.items():
                     if isinstance(platform_data, dict):
                         for arch, arch_data in platform_data.items():
