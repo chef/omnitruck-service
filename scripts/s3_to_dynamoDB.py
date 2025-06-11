@@ -7,9 +7,10 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
+sts_client = boto3.client('sts')
 PACKAGE_MANAGER_TABLE = 'package-manager-dev'
-
 ARCH_LIST = ["aarch64", "armv7l", "i386", "powerpc", "ppc64", "ppc64le", "s390x", "sparc", "universal", "x86_64"]
+ASSUME_ROLE_ARN = "arn:aws:iam::712624343120:role/cross-account-s3-role"  
 
 def convert_to_dynamodb_format(data):
     if isinstance(data, dict):
@@ -17,11 +18,25 @@ def convert_to_dynamodb_format(data):
     return {'S': str(data)}
 
 def lambda_handler(event, context):
-    s3_client = boto3.client('s3')
-    dynamodb_client = boto3.client('dynamodb')
-    logging.info("Lambda function started processing S3 bucket objects.")
-    
     try:
+        
+        assumed_role = sts_client.assume_role(
+            RoleArn="arn:aws:iam::712624343120:role/cross-account-s3-role",
+            RoleSessionName="CrossAccountAccessSession"
+        )
+
+        logging.info("Assumed role successfully.")
+    
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=assumed_role['Credentials']['AccessKeyId'],
+            aws_secret_access_key=assumed_role['Credentials']['SecretAccessKey'],
+            aws_session_token=assumed_role['Credentials']['SessionToken']
+        )
+        
+        dynamodb_client = boto3.client('dynamodb')
+        logging.info("Lambda function started processing S3 bucket objects.")
+        
         logging.info("Received event: %s", json.dumps(event, indent=2))
         bucket_name = event['Records'][0]['s3']['bucket']['name']
         object_key = event['Records'][0]['s3']['object']['key']
@@ -98,7 +113,7 @@ def lambda_handler(event, context):
         }
     
     except Exception as e:
-        print(f"Error: {str(e)}")
+        logging.error(f"Error: {str(e)}")
         return {
             'statusCode': 500,
             'body': json.dumps(f"Error: {str(e)}")
