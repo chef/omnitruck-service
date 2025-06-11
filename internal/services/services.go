@@ -58,8 +58,14 @@ func NewDownloadService(c *fiber.Ctx, log *log.Entry) (*DownloadService, error) 
 }
 func (server *DownloadService) SetLocals(c *fiber.Ctx) {
 	locals := map[string]interface{}{}
-	validLicense := c.Locals("valid_license").(bool)
-	//check if c.Locals("request_id") is present
+	if c.Locals("valid_license") != nil {
+		requestId := c.Locals("valid_license").(bool)
+		locals["valid_license"] = requestId
+
+	} else {
+		locals["valid_license"] = false
+	}
+
 	if c.Locals("request_id") != nil {
 		requestId := c.Locals("request_id").(string)
 		locals["request_id"] = requestId
@@ -79,7 +85,6 @@ func (server *DownloadService) SetLocals(c *fiber.Ctx) {
 	} else {
 		locals["license_id"] = ""
 	}
-	locals["valid_license"] = validLicense
 	server.locals = locals
 }
 
@@ -188,10 +193,14 @@ func (server *DownloadService) LatestVersion(params *omnitruck.RequestParams) (d
 	// Return the latest version (assume last in filtered list is latest)
 
 	productStrategyDeps := &strategy.ProductStrategyDeps{
-		DynamoService:    server.DynamoServices(server.DatabaseService),
-		PlatformService:  server.PlatformServices(),
-		OmnitruckService: server.Omnitruck(),
-		Log:              server.logCtx(),
+		DynamoService:     server.DynamoServices(server.DatabaseService),
+		PlatformService:   server.PlatformServices(),
+		OmnitruckService:  server.Omnitruck(),
+		Log:               server.logCtx(),
+		Replicated:        server.Replicated,
+		LicenseClient:     server.LicenseClient,
+		LicenseServiceUrl: "", //TODO: set this from config or environment
+		Mode:              server.Mode,
 	}
 	productStrategy := strategy.SelectProductStrategy(params.Product, productStrategyDeps)
 	modeStrategy := strategy.SelectModeStrategy(server.Mode)

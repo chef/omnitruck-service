@@ -6,7 +6,9 @@ import (
 
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
+	"github.com/chef/omnitruck-service/clients/omnitruck/replicated"
 	"github.com/chef/omnitruck-service/constants"
+	"github.com/chef/omnitruck-service/models"
 	"github.com/gofiber/fiber/v2"
 	log "github.com/sirupsen/logrus"
 )
@@ -22,19 +24,30 @@ type ProductStrategy interface {
 }
 
 type ProductStrategyDeps struct {
-	DynamoService    *omnitruck.DynamoServices
-	PlatformService  *omnitruck.PlatformServices
-	OmnitruckService *omnitruck.Omnitruck
-	Log              *log.Entry
+	DynamoService     *omnitruck.DynamoServices
+	PlatformService   *omnitruck.PlatformServices
+	OmnitruckService  *omnitruck.Omnitruck
+	Log               *log.Entry
+	Replicated        replicated.IReplicated
+	LicenseClient     clients.ILicense
+	LicenseServiceUrl string
+	Mode              models.ApiType
 }
 
 // SelectProductStrategy returns the appropriate ProductStrategy based on the product.
 func SelectProductStrategy(product string, deps *ProductStrategyDeps) ProductStrategy {
 	switch product {
 	case constants.AUTOMATE_PRODUCT, constants.HABITAT_PRODUCT:
-		return &ProductDynamoStrategy{DynamoService: deps.DynamoService}
+		return &ProductDynamoStrategy{DynamoService: deps.DynamoService, Log: deps.Log}
 	case constants.PLATFORM_SERVICE_PRODUCT:
-		return &PlatformServiceStrategy{PlatformService: deps.PlatformService}
+		return &PlatformServiceStrategy{
+			PlatformService:   deps.PlatformService,
+			Log:               deps.Log,
+			Replicated:        deps.Replicated,
+			LicenseClient:     deps.LicenseClient,
+			LicenseServiceUrl: deps.LicenseServiceUrl,
+			Mode:              deps.Mode,
+		}
 	default:
 		return &DefaultProductStrategy{OmnitruckService: deps.OmnitruckService}
 	}
