@@ -11,7 +11,8 @@ import (
 	"sync"
 
 	"github.com/chef/omnitruck-service/config"
-	"github.com/chef/omnitruck-service/services"
+	"github.com/chef/omnitruck-service/httpserver"
+	"github.com/chef/omnitruck-service/models"
 	"github.com/chef/omnitruck-service/utils/awsutils"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -61,31 +62,31 @@ to quickly create a Cobra application.`,
 			logger.Fatal(err)
 		}
 		if cliConfig.Opensource.Enabled {
-			os_api := services.New(services.Config{
+			os_api := httpserver.New(httpserver.Config{
 				Name:          cliConfig.Opensource.Name,
 				Listen:        cliConfig.Opensource.Listen,
 				Log:           logger.WithField("pkg", cliConfig.Opensource.Name),
-				Mode:          services.Opensource,
+				Mode:          models.Opensource,
 				ServiceConfig: serviceConfig,
 			})
 			os_api.Start(&wg)
 		}
 		if cliConfig.Trial.Enabled {
-			trial_api := services.New(services.Config{
+			trial_api := httpserver.New(httpserver.Config{
 				Name:          cliConfig.Trial.Name,
 				Listen:        cliConfig.Trial.Listen,
 				Log:           logger.WithField("pkg", cliConfig.Trial.Name),
-				Mode:          services.Trial,
+				Mode:          models.Trial,
 				ServiceConfig: serviceConfig,
 			})
 			trial_api.Start(&wg)
 		}
 		if cliConfig.Commercial.Enabled {
-			commercial_api := services.New(services.Config{
+			commercial_api := httpserver.New(httpserver.Config{
 				Name:          cliConfig.Commercial.Name,
 				Listen:        cliConfig.Commercial.Listen,
 				Log:           logger.WithField("pkg", cliConfig.Commercial.Name),
-				Mode:          services.Commercial,
+				Mode:          models.Commercial,
 				ServiceConfig: serviceConfig,
 			})
 			commercial_api.Start(&wg)
