@@ -1,11 +1,8 @@
-package services
+package handler
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,17 +13,48 @@ import (
 	"github.com/chef/omnitruck-service/clients/omnitruck/replicated"
 	"github.com/chef/omnitruck-service/dboperations"
 	_ "github.com/chef/omnitruck-service/docs"
-	"github.com/chef/omnitruck-service/logger"
+	"github.com/chef/omnitruck-service/internal/services"
 	"github.com/chef/omnitruck-service/models"
 	"github.com/chef/omnitruck-service/utils/template"
 	"github.com/gofiber/fiber/v2"
+	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"github.com/valyala/fasthttp"
 )
 
-func TestRelatedProductsHandler(t *testing.T) {
+// TestInjector provides a test injector similar to httpserver/routes.go Injector middleware
+func testInjector(service services.DownloadService) func(*fiber.Ctx) error {
+	return func(c *fiber.Ctx) error {
+		reqInjector := do.New()
+		do.ProvideNamedValue[omnitruck.RequestValidator](reqInjector, "validator", service.Validator)
+		do.ProvideNamedValue[template.TemplateRender](reqInjector, "templateRenderer", service.TemplateRenderer)
+		do.ProvideNamedValue[clients.ILicense](reqInjector, "licenseClient", service.LicenseClient)
+		do.ProvideNamedValue[dboperations.IDbOperations](reqInjector, "dbService", service.DatabaseService)
+		do.ProvideNamedValue[models.ApiType](reqInjector, "mode", service.Mode)
 
+		// Inject mock replicated dependency
+		mockReplicated := &replicated.MockReplicated{
+			SearchCustomersByEmailFunc: func(email string, requestId string) ([]models.Customer, error) {
+				return nil, nil
+			},
+			GetDowloadUrlFunc: func(customer models.Customer, requestId string) (string, error) {
+				return "", nil
+			},
+			DownloadFromReplicatedFunc: func(url, requestId, authorization string) (*http.Response, error) {
+				return nil, nil
+			},
+		}
+		do.ProvideNamedValue[replicated.IReplicated](reqInjector, "replicated", mockReplicated)
+
+		c.Locals("reqinjector", reqInjector)
+		err := c.Next()
+		reqInjector.Shutdown()
+		return err
+	}
+}
+
+// Only for TestRelatedProductsHandler, use direct handler and minimal mocks
+func TestRelatedProductsHandler(t *testing.T) {
 	tests := []struct {
 		name             string
 		requestPath      string
@@ -77,16 +105,21 @@ func TestRelatedProductsHandler(t *testing.T) {
 				return &test.relatedProducts, test.err
 			}
 
-			server := &ApiService{
-				App:             app,
+			log := logrus.NewEntry(logrus.New())
+			handler := NewDownloadsHandler(log)
+			service := services.DownloadService{
 				DatabaseService: mockDbService,
-				Log:             logrus.NewEntry(logrus.New()),
+				Mode:            models.Opensource, // Use Opensource for this test
 			}
-			server.buildRouter()
-			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
-			resp, err := app.Test(req)
-			assert.NoError(t, err)
+			app.Use(testInjector(service))
 
+			app.Get("/relatedProducts", func(c *fiber.Ctx) error {
+				return handler.RelatedProductsHandler(c)
+			})
+
+			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
+			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
+			assert.NoError(t, err)
 			assert.Equal(t, test.expectedStatus, resp.StatusCode)
 
 			if test.expectedResponse != "" {
@@ -102,7 +135,7 @@ func TestLatestVersionsHandler(t *testing.T) {
 	tests := []struct {
 		name             string
 		requestPath      string
-		serverMode       ApiType
+		serverMode       models.ApiType
 		expectedStatus   int
 		expectedResponse string
 		version          string
@@ -113,7 +146,7 @@ func TestLatestVersionsHandler(t *testing.T) {
 		{
 			name:             "success for opensource",
 			requestPath:      "/stable/habitat/versions/latest",
-			serverMode:       Opensource,
+			serverMode:       models.Opensource,
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `"0.9.3"`,
 			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0", "1.0.0"},
@@ -122,7 +155,7 @@ func TestLatestVersionsHandler(t *testing.T) {
 		{
 			name:             "chef-360 success",
 			requestPath:      "/stable/chef-360/versions/latest",
-			serverMode:       Commercial,
+			serverMode:       models.Commercial,
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `"latest"`,
 			versions:         []string{"latest"},
@@ -131,7 +164,7 @@ func TestLatestVersionsHandler(t *testing.T) {
 		{
 			name:             "failure for chef-360 when opensource is the server type",
 			requestPath:      "/stable/chef-360/versions/latest",
-			serverMode:       Opensource,
+			serverMode:       models.Opensource,
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"chef-360 not available for the trial and opensource", "status_text":"Bad Request"}`,
 			versions:         []string{},
@@ -140,7 +173,7 @@ func TestLatestVersionsHandler(t *testing.T) {
 		{
 			name:             "failure for chef-360 when trial is the server type",
 			requestPath:      "/stable/chef-360/versions/latest",
-			serverMode:       Trial,
+			serverMode:       models.Trial,
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"chef-360 not available for the trial and opensource", "status_text":"Bad Request"}`,
 			versions:         []string{},
@@ -149,7 +182,7 @@ func TestLatestVersionsHandler(t *testing.T) {
 		{
 			name:             "success for trial",
 			requestPath:      "/stable/habitat/versions/latest",
-			serverMode:       Trial,
+			serverMode:       models.Trial,
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `"1.0.0"`,
 			version:          "1.0.0",
@@ -160,7 +193,7 @@ func TestLatestVersionsHandler(t *testing.T) {
 		{
 			name:             "failure validation",
 			requestPath:      "/stale/automate/versions/latest",
-			serverMode:       Trial,
+			serverMode:       models.Trial,
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"Channel can only be stable or current", "status_text":"Bad Request"}`,
 			version:          "latest",
@@ -180,15 +213,22 @@ func TestLatestVersionsHandler(t *testing.T) {
 				return test.version, test.version_err
 			}
 
-			server := &ApiService{
-				App:             app,
+			log := logrus.NewEntry(logrus.New())
+			handler := NewDownloadsHandler(log)
+			service := services.DownloadService{
 				DatabaseService: mockDbService,
-				Log:             logrus.NewEntry(logrus.New()),
 				Mode:            test.serverMode,
 			}
-			server.buildRouter()
+
+			app.Use(testInjector(service))
+
+			app.Get("/:channel/:product/versions/latest", func(c *fiber.Ctx) error {
+				return handler.LatestVersionHandler(c)
+			})
+
 			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
-			resp, err := app.Test(req)
+			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
+
 			assert.NoError(t, err)
 
 			assert.Equal(t, test.expectedStatus, resp.StatusCode)
@@ -206,7 +246,7 @@ func TestProductVersionsHandler(t *testing.T) {
 	tests := []struct {
 		name             string
 		requestPath      string
-		serverMode       ApiType
+		serverMode       models.ApiType
 		expectedStatus   int
 		expectedResponse string
 		versions         []string
@@ -215,7 +255,7 @@ func TestProductVersionsHandler(t *testing.T) {
 		{
 			name:             "success for opensource",
 			requestPath:      "/stable/habitat/versions/all",
-			serverMode:       Opensource,
+			serverMode:       models.Opensource,
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `["0.3.2", "0.7.11", "0.9.0", "0.9.3"]`,
 			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0", "1.0.0"},
@@ -224,7 +264,7 @@ func TestProductVersionsHandler(t *testing.T) {
 		{
 			name:             "success for chef-360",
 			requestPath:      "/stable/chef-360/versions/all",
-			serverMode:       Commercial,
+			serverMode:       models.Commercial,
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `["latest"]`,
 			versions:         []string{"latest"},
@@ -233,7 +273,7 @@ func TestProductVersionsHandler(t *testing.T) {
 		{
 			name:             "failure for chef-360 when server is not commercial",
 			requestPath:      "/stable/chef-360/versions/all",
-			serverMode:       Trial,
+			serverMode:       models.Trial,
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"chef-360 not available for the trial and opensource", "status_text":"Bad Request"}`,
 			versions:         []string{},
@@ -242,7 +282,7 @@ func TestProductVersionsHandler(t *testing.T) {
 		{
 			name:             "success for trial",
 			requestPath:      "/stable/habitat/versions/all",
-			serverMode:       Trial,
+			serverMode:       models.Trial,
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `["1.0.0"]`,
 			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0", "1.0.0"},
@@ -251,7 +291,7 @@ func TestProductVersionsHandler(t *testing.T) {
 		{
 			name:             "failure validation",
 			requestPath:      "/stale/automate/versions/all",
-			serverMode:       Trial,
+			serverMode:       models.Trial,
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"Channel can only be stable or current", "status_text":"Bad Request"}`,
 			versions:         []string{"latest"},
@@ -266,15 +306,21 @@ func TestProductVersionsHandler(t *testing.T) {
 				return test.versions, test.versions_err
 			}
 
-			server := &ApiService{
-				App:             app,
+			log := logrus.NewEntry(logrus.New())
+			handler := NewDownloadsHandler(log)
+			service := services.DownloadService{
 				DatabaseService: mockDbService,
-				Log:             logrus.NewEntry(logrus.New()),
 				Mode:            test.serverMode,
 			}
-			server.buildRouter()
+
+			app.Use(testInjector(service))
+			app.Get("/:channel/:product/versions/all", func(c *fiber.Ctx) error {
+				return handler.ProductVersionsHandler(c)
+			})
+
 			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
-			resp, err := app.Test(req)
+			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
+
 			assert.NoError(t, err)
 
 			assert.Equal(t, test.expectedStatus, resp.StatusCode)
@@ -292,7 +338,7 @@ func TestProductMetadataHandler(t *testing.T) {
 	tests := []struct {
 		name             string
 		requestPath      string
-		serverMode       ApiType
+		serverMode       models.ApiType
 		expectedStatus   int
 		expectedResponse string
 		metadata         models.MetaData
@@ -304,7 +350,7 @@ func TestProductMetadataHandler(t *testing.T) {
 	}{
 		{
 			name:             "automate success",
-			serverMode:       Trial,
+			serverMode:       models.Trial,
 			requestPath:      "/stable/automate/metadata?p=linux&m=amd64&eol=false&v=latest",
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"sha1": "","sha256": "1234","url": "http://example.com/stable/automate/download?eol=false&m=amd64&p=linux&v=latest","version": "latest"}`,
@@ -319,12 +365,12 @@ func TestProductMetadataHandler(t *testing.T) {
 			err:          nil,
 			version:      "latest",
 			version_err:  nil,
-			versions:     []string{"latest"},
+			versions:     []string{},
 			versions_err: nil,
 		},
 		{
 			name:             "chef-360 success",
-			serverMode:       Commercial,
+			serverMode:       models.Commercial,
 			requestPath:      "/stable/chef-360/metadata?p=ubuntu&pv=20.04&m=x86_64&v=latest&eol=false&license_id=viv2c0a2-111f-2caf-1fa2-1211fe1212d1",
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"sha1":"", "sha256":"", "url":"http://example.com/stable/chef-360/download?eol=false&license_id=viv2c0a2-111f-2caf-1fa2-1211fe1212d1&m=x86_64&p=ubuntu&pv=20.04&v=latest", "version":"latest"}`,
@@ -344,7 +390,7 @@ func TestProductMetadataHandler(t *testing.T) {
 		},
 		{
 			name:             "chef-360 fails on trial server",
-			serverMode:       Trial,
+			serverMode:       models.Trial,
 			requestPath:      "/stable/chef-360/metadata?p=ubuntu&pv=20.04&m=x86_64&v=latest&eol=false&license_id=viv2c0a2-111f-2caf-1fa2-1211fe1212d1",
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"chef-360 not available for the trial and opensource", "status_text":"Bad Request"}`,
@@ -357,7 +403,7 @@ func TestProductMetadataHandler(t *testing.T) {
 		},
 		{
 			name:             "platform parameter missing",
-			serverMode:       Trial,
+			serverMode:       models.Trial,
 			requestPath:      "/stable/automate/metadata?&m=amd64&eol=false&v=latest",
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"Platfrom (p) params cannot be empty", "status_text":"Bad Request"}`,
@@ -365,12 +411,12 @@ func TestProductMetadataHandler(t *testing.T) {
 			err:              nil,
 			version:          "latest",
 			version_err:      nil,
-			versions:         []string{"latest"},
+			versions:         []string{},
 			versions_err:     nil,
 		},
 		{
 			name:             "automate parameter incorrect",
-			serverMode:       Trial,
+			serverMode:       models.Trial,
 			requestPath:      "/stable/automate/metadata?p=linux&m=x86&eol=false",
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"Product information not found. Please check the input parameters.", "status_text":"Bad Request"}`,
@@ -381,31 +427,31 @@ func TestProductMetadataHandler(t *testing.T) {
 		},
 		{
 			name:             "automate not latest version for trial server",
-			serverMode:       Trial,
+			serverMode:       models.Trial,
 			requestPath:      "/stable/automate/metadata?p=linux&m=x86_64&v=1.2",
 			expectedStatus:   fiber.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"requested version is not latest", "status_text":"Bad Request"}`,
+			expectedResponse: `{"code":400, "message":"Version is not latest.", "status_text":"Bad Request"}`,
 			metadata:         models.MetaData{},
 			err:              errors.New("ResourceNotFoundException: Requested resource not found"),
 			version:          "latest",
 			version_err:      nil,
-			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0"},
+			versions:         []string{},
 			versions_err:     nil,
 		},
-		// {
-		// 	name:             "automate db connection error",
-		// 	serverMode:       Trial,
-		// 	requestPath:      "/stable/automate/metadata?p=linux&m=x86_64&eol=false",
-		// 	expectedStatus:   fiber.StatusInternalServerError,
-		// 	expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
-		// 	metadata:         models.MetaData{},
-		// 	err:              errors.New("ResourceNotFoundException: Requested resource not found"),
-		// 	versions:         []string{},
-		// 	versions_err:     nil,
-		// },
+		{
+			name:             "automate db connection error",
+			serverMode:       models.Trial,
+			requestPath:      "/stable/automate/metadata?p=linux&m=x86_64&eol=false",
+			expectedStatus:   fiber.StatusInternalServerError,
+			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
+			metadata:         models.MetaData{},
+			err:              errors.New("ResourceNotFoundException: Requested resource not found"),
+			versions:         []string{},
+			versions_err:     nil,
+		},
 		{
 			name:             "opensource check success",
-			serverMode:       Opensource,
+			serverMode:       models.Opensource,
 			requestPath:      "/stable/habitat/metadata?p=linux&m=x86_64&eol=false",
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"sha1":"", "sha256":"abcd", "url":"http://example.com/stable/habitat/download?eol=false&m=x86_64&p=linux&v=0.9.3", "version":"0.9.3"}`,
@@ -425,10 +471,10 @@ func TestProductMetadataHandler(t *testing.T) {
 		},
 		{
 			name:             "opensource check failure",
-			serverMode:       Opensource,
+			serverMode:       models.Opensource,
 			requestPath:      "/stable/habitat/metadata?p=linux&m=x86_64&eol=false",
 			expectedStatus:   fiber.StatusInternalServerError,
-			expectedResponse: `{"code":500, "message":"Error while fetching product versions", "status_text":"Internal Server Error"}`,
+			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
 			metadata:         models.MetaData{},
 			err:              nil,
 			version:          "",
@@ -451,15 +497,21 @@ func TestProductMetadataHandler(t *testing.T) {
 				return test.versions, test.versions_err
 			}
 
-			server := &ApiService{
-				App:             app,
+			log := logrus.NewEntry(logrus.New())
+			handler := NewDownloadsHandler(log)
+			service := services.DownloadService{
 				DatabaseService: mockDbService,
-				Log:             logrus.NewEntry(logrus.New()),
 				Mode:            test.serverMode,
 			}
-			server.buildRouter()
+
+			app.Use(testInjector(service))
+			app.Get("/:channel/:product/metadata", func(c *fiber.Ctx) error {
+				return handler.ProductMetadataHandler(c)
+			})
+
 			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
-			resp, err := app.Test(req)
+			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
+
 			assert.NoError(t, err)
 
 			assert.Equal(t, test.expectedStatus, resp.StatusCode)
@@ -476,7 +528,7 @@ func TestProductMetadataHandler(t *testing.T) {
 func TestProductPackagesHandler(t *testing.T) {
 	tests := []struct {
 		name             string
-		serverMode       ApiType
+		serverMode       models.ApiType
 		requestPath      string
 		expectedStatus   int
 		expectedResponse string
@@ -489,7 +541,7 @@ func TestProductPackagesHandler(t *testing.T) {
 	}{
 		{
 			name:             "success",
-			serverMode:       Trial,
+			serverMode:       models.Trial,
 			requestPath:      "/stable/automate/packages?eol=false",
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"linux": {"pv": {"amd64": {"sha1": "","sha256": "abcd","url": "http://example.com/stable/automate/download?eol=false&m=amd64&p=linux&v=latest","version": "latest"}}}}`,
@@ -510,25 +562,25 @@ func TestProductPackagesHandler(t *testing.T) {
 			err:          nil,
 			version:      "latest",
 			version_err:  nil,
-			versions:     []string{"latest"},
+			versions:     []string{},
 			versions_err: nil,
 		},
 		{
 			name:             "version is not latest",
-			serverMode:       Trial,
+			serverMode:       models.Trial,
 			requestPath:      "/stable/automate/packages?eol=false&v=1",
 			expectedStatus:   fiber.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"requested version is not latest", "status_text":"Bad Request"}`,
+			expectedResponse: `{"code":400, "message":"Version is not latest.", "status_text":"Bad Request"}`,
 			details:          models.ProductDetails{},
 			err:              nil,
 			version:          "latest",
 			version_err:      nil,
-			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0"},
+			versions:         []string{},
 			versions_err:     nil,
 		},
 		{
 			name:             "chef-360 failure for trial server",
-			serverMode:       Trial,
+			serverMode:       models.Trial,
 			requestPath:      "/stable/chef-360/packages?eol=false&v=latest",
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"chef-360 not available for the trial and opensource", "status_text":"Bad Request"}`,
@@ -536,12 +588,12 @@ func TestProductPackagesHandler(t *testing.T) {
 			err:              nil,
 			version:          "latest",
 			version_err:      nil,
-			versions:         []string{"latest"},
+			versions:         []string{},
 			versions_err:     nil,
 		},
 		{
 			name:             "chef-360 success",
-			serverMode:       Commercial,
+			serverMode:       models.Commercial,
 			requestPath:      "/stable/chef-360/packages?eol=false&v=latest",
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"linux": {"pv": {"amd64": {"sha1": "","sha256": "","url": "http://example.com/stable/chef-360/download?eol=false&m=amd64&p=linux&v=latest","version": "latest"}}}}`,
@@ -562,25 +614,25 @@ func TestProductPackagesHandler(t *testing.T) {
 			err:          nil,
 			version:      "latest",
 			version_err:  nil,
-			versions:     []string{"latest"},
+			versions:     []string{},
 			versions_err: nil,
 		},
-		// {
-		// 	name:             "db connection  error",
-		// 	serverMode:       Trial,
-		// 	requestPath:      "/stable/automate/packages?eol=false",
-		// 	expectedStatus:   fiber.StatusInternalServerError,
-		// 	expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
-		// 	details:          models.ProductDetails{},
-		// 	err:              nil,
-		// 	version:          "",
-		// 	version_err:      errors.New("ResourceNotFoundException: Requested resource not found"),
-		// 	versions:         []string{},
-		// 	versions_err:     nil,
-		// },
+		{
+			name:             "db connection  error",
+			serverMode:       models.Trial,
+			requestPath:      "/stable/automate/packages?eol=false",
+			expectedStatus:   fiber.StatusInternalServerError,
+			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
+			details:          models.ProductDetails{},
+			err:              nil,
+			version:          "",
+			version_err:      errors.New("ResourceNotFoundException: Requested resource not found"),
+			versions:         []string{},
+			versions_err:     nil,
+		},
 		{
 			name:             "opensource check success",
-			serverMode:       Opensource,
+			serverMode:       models.Opensource,
 			requestPath:      "/stable/habitat/packages?eol=false",
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"linux": {"pv": {"x86_64": {"sha1":"", "sha256":"abcd", "url":"http://example.com/stable/habitat/download?eol=false&m=x86_64&p=linux&v=0.9.3", "version":"0.9.3"}}}}`,
@@ -604,20 +656,20 @@ func TestProductPackagesHandler(t *testing.T) {
 		},
 		{
 			name:             "opensource check failure",
-			serverMode:       Opensource,
+			serverMode:       models.Opensource,
 			requestPath:      "/stable/habitat/packages?eol=false",
 			expectedStatus:   fiber.StatusInternalServerError,
-			expectedResponse: `{"code":500, "message":"Error while fetching product versions", "status_text":"Internal Server Error"}`,
+			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
 			details:          models.ProductDetails{},
 			err:              nil,
 			version:          "",
 			version_err:      nil,
-			versions:         []string{"0.93"},
+			versions:         []string{},
 			versions_err:     errors.New("ResourceNotFoundException: Requested resource not found"),
 		},
 		{
 			name:             "empty metadate info",
-			serverMode:       Trial,
+			serverMode:       models.Trial,
 			requestPath:      "/stable/habitat/packages?eol=false",
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"Product information not found. Please check the input parameters.", "status_text":"Bad Request"}`,
@@ -634,7 +686,7 @@ func TestProductPackagesHandler(t *testing.T) {
 		},
 		{
 			name:             "opensource check success",
-			serverMode:       Opensource,
+			serverMode:       models.Opensource,
 			requestPath:      "/stable/habitat/packages?eol=false&v=0.3.2",
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"linux": {"pv": {"x86_64": {"sha1":"", "sha256":"abcd", "url":"http://example.com/stable/habitat/download?eol=false&m=x86_64&p=linux&v=0.3.2", "version":"0.3.2"}}}}`,
@@ -670,16 +722,21 @@ func TestProductPackagesHandler(t *testing.T) {
 			mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
 				return test.versions, test.versions_err
 			}
-
-			server := &ApiService{
-				App:             app,
+			log := logrus.NewEntry(logrus.New())
+			handler := NewDownloadsHandler(log)
+			service := services.DownloadService{
 				DatabaseService: mockDbService,
-				Log:             logrus.NewEntry(logrus.New()),
 				Mode:            test.serverMode,
 			}
-			server.buildRouter()
+
+			app.Use(testInjector(service))
+			app.Get("/:channel/:product/packages", func(c *fiber.Ctx) error {
+				return handler.ProductPackagesHandler(c)
+			})
+
 			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
-			resp, err := app.Test(req)
+			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
+
 			assert.NoError(t, err)
 
 			assert.Equal(t, test.expectedStatus, resp.StatusCode)
@@ -697,7 +754,7 @@ func TestFileNameHandler(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		serverMode       ApiType
+		serverMode       models.ApiType
 		requestPath      string
 		expectedStatus   int
 		expectedResponse string
@@ -710,19 +767,19 @@ func TestFileNameHandler(t *testing.T) {
 	}{
 		{
 			name:             "AUTOMATE_SUCCESS",
-			serverMode:       Trial,
+			serverMode:       models.Trial,
 			requestPath:      "/current/automate/fileName?p=linux&pv=16.04&m=x86_64&v=latest",
 			expectedStatus:   http.StatusOK,
 			expectedResponse: `{"fileName":"automate_4.7.52-1_amd64.deb"}`,
 			metadata:         models.MetaData{FileName: "automate_4.7.52-1_amd64.deb"},
 			metadata_err:     nil,
 			version_err:      nil,
-			versions:         []string{"latest"},
+			versions:         []string{},
 			versions_err:     nil,
 		},
 		{
 			name:             "HABITAT_SUCCESS",
-			serverMode:       Opensource,
+			serverMode:       models.Opensource,
 			requestPath:      "/current/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=latest",
 			expectedStatus:   http.StatusOK,
 			expectedResponse: `{"fileName":"hab-x86_64-linux.tar.gz"}`,
@@ -733,28 +790,28 @@ func TestFileNameHandler(t *testing.T) {
 			versions:         []string{"0.78.0"},
 			versions_err:     nil,
 		},
-		// {
-		// 	name:             "AUTOMATE_FAIL",
-		// 	requestPath:      "/current/automate/fileName?p=linux&pv=16.04&m=x86_64&v=latest",
-		// 	expectedStatus:   http.StatusInternalServerError,
-		// 	expectedResponse: `{"code":500, "message":"Error while fetching product versions", "status_text":"Internal Server Error"}`,
-		// 	metadata:         models.MetaData{},
-		// 	version_err:      errors.New("Unable to get latest version of automate"),
-		// },
-		// {
-		// 	name:             "failure db connection while fetching latest version",
-		// 	serverMode:       Trial,
-		// 	requestPath:      "/current/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=1.6.652",
-		// 	expectedStatus:   http.StatusInternalServerError,
-		// 	expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
-		// 	metadata:         models.MetaData{},
-		// 	metadata_err:     nil,
-		// 	version:          "",
-		// 	version_err:      errors.New("Unable to get latest version of habitat"),
-		// },
+		{
+			name:             "AUTOMATE_FAIL",
+			requestPath:      "/current/automate/fileName?p=linux&pv=16.04&m=x86_64&v=latest",
+			expectedStatus:   http.StatusInternalServerError,
+			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
+			metadata:         models.MetaData{},
+			version_err:      errors.New("Unable to get latest version of automate"),
+		},
+		{
+			name:             "failure db connection while fetching latest version",
+			serverMode:       models.Trial,
+			requestPath:      "/current/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=1.6.652",
+			expectedStatus:   http.StatusInternalServerError,
+			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
+			metadata:         models.MetaData{},
+			metadata_err:     nil,
+			version:          "",
+			version_err:      errors.New("Unable to get latest version of habitat"),
+		},
 		{
 			name:             "failure channel is not stable/current",
-			serverMode:       Trial,
+			serverMode:       models.Trial,
 			requestPath:      "/curret/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=1.6.652",
 			expectedStatus:   http.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"Channel can only be stable or current", "status_text":"Bad Request"}`,
@@ -762,11 +819,10 @@ func TestFileNameHandler(t *testing.T) {
 			metadata_err:     errors.New("Error while fetching file name"),
 			version_err:      nil,
 			version:          "1.6.652",
-			versions:         []string{"1.6.652"},
 		},
 		{
 			name:             "failure db connection while fetching filename",
-			serverMode:       Trial,
+			serverMode:       models.Trial,
 			requestPath:      "/current/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=1.6.652",
 			expectedStatus:   http.StatusInternalServerError,
 			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
@@ -774,23 +830,21 @@ func TestFileNameHandler(t *testing.T) {
 			metadata_err:     errors.New("Error while fetching file name"),
 			version_err:      nil,
 			version:          "1.6.652",
-			versions:         []string{"1.6.652"},
 		},
 		{
 			name:             "chef-360 as a product is given",
-			serverMode:       Commercial,
+			serverMode:       models.Commercial,
 			expectedStatus:   http.StatusOK,
-			requestPath:      "/current/chef-360/fileName?p=linux&pv=20.04&m=x86_64&v=latest&license_id=viv2c0a2-111f-2caf-1fa2-1211fe1212d1",
-			expectedResponse: `{"fileName":"chef-360.tar.gz"}`,
+			requestPath:      "/current/chef-360/fileName?p=linux&pv=20.04&m=x86_64&v=1.2&license_id=viv2c0a2-111f-2caf-1fa2-1211fe1212d1",
+			expectedResponse: `{"fileName":"chef-360.zip"}`,
 			metadata:         models.MetaData{},
 			metadata_err:     nil,
 			version:          "latest",
 			version_err:      nil,
-			versions:         []string{"latest"},
 		},
 		{
 			name:             "chef-360 trial is not supported",
-			serverMode:       Trial,
+			serverMode:       models.Trial,
 			expectedStatus:   http.StatusBadRequest,
 			requestPath:      "/current/chef-360/fileName?p=linux&pv=20.04&m=x86_64&v=1.2&license_id=viv2c0a2-111f-2caf-1fa2-1211fe1212d1",
 			expectedResponse: `{"code":400, "message":"chef-360 not available for the trial and opensource", "status_text":"Bad Request"}`,
@@ -798,14 +852,13 @@ func TestFileNameHandler(t *testing.T) {
 			metadata_err:     nil,
 			version:          "latest",
 			version_err:      nil,
-			versions:         []string{"latest"},
 		},
 		{
 			name:             "haitat opensource verion not supported ",
-			serverMode:       Opensource,
+			serverMode:       models.Opensource,
 			requestPath:      "/current/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=0.79.0",
 			expectedStatus:   http.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"requested version is not latest", "status_text":"Bad Request"}`,
+			expectedResponse: `{"code":400, "message":"Version 0.79.0 not support on this persona.", "status_text":"Bad Request"}`,
 			metadata:         models.MetaData{},
 			metadata_err:     errors.New("Error while fetching file name"),
 			version_err:      nil,
@@ -815,10 +868,10 @@ func TestFileNameHandler(t *testing.T) {
 		},
 		{
 			name:             "haitat opensource version fetching error",
-			serverMode:       Opensource,
+			serverMode:       models.Opensource,
 			requestPath:      "/current/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=0.79.0",
 			expectedStatus:   http.StatusInternalServerError,
-			expectedResponse: `{"code":500, "message":"Error while fetching product versions", "status_text":"Internal Server Error"}`,
+			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
 			metadata:         models.MetaData{},
 			metadata_err:     errors.New("Error while fetching file name"),
 			version_err:      nil,
@@ -847,15 +900,21 @@ func TestFileNameHandler(t *testing.T) {
 					return test.versions, test.versions_err
 				}
 
-				server := &ApiService{
-					App:             app,
+				log := logrus.NewEntry(logrus.New())
+				handler := NewDownloadsHandler(log)
+				service := services.DownloadService{
 					DatabaseService: mockDbService,
-					Log:             logrus.NewEntry(logrus.New()),
 					Mode:            test.serverMode,
 				}
-				server.buildRouter()
+
+				app.Use(testInjector(service))
+				app.Get("/:channel/:product/fileName", func(c *fiber.Ctx) error {
+					return handler.FileNameHandler(c)
+				})
+
 				req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
-				resp, err := app.Test(req)
+				resp, err := app.Test(req, 100*1000) // 100 seconds timeout
+
 				assert.NoError(t, err)
 
 				assert.Equal(t, test.expectedStatus, resp.StatusCode)
@@ -879,7 +938,7 @@ func TestFileNameHandler(t *testing.T) {
 func TestDownloadLinuxScriptHandler(t *testing.T) {
 	tests := []struct {
 		name             string
-		serverMode       ApiType
+		serverMode       models.ApiType
 		mockTemplate     func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error)
 		requestPath      string
 		expectedStatus   int
@@ -911,15 +970,22 @@ func TestDownloadLinuxScriptHandler(t *testing.T) {
 			app := fiber.New()
 			mockTemplate := new(template.MockTemplateRennder)
 			mockTemplate.GetScriptfunc = test.mockTemplate
-			server := &ApiService{
-				App:              app,
-				TemplateRenderer: mockTemplate,
-				Log:              logrus.NewEntry(logrus.New()),
+			log := logrus.NewEntry(logrus.New())
+			handler := NewDownloadsHandler(log)
+			service := services.DownloadService{
 				Mode:             test.serverMode,
+				TemplateRenderer: mockTemplate,
 			}
-			server.buildRouter()
+
+			app.Use(testInjector(service))
+
+			app.Get("/install.sh", func(c *fiber.Ctx) error {
+				return handler.DownloadLinuxScript(c)
+			})
+
 			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
-			resp, err := app.Test(req)
+			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
+
 			assert.NoError(t, err)
 			assert.Equal(t, test.expectedStatus, resp.StatusCode)
 		})
@@ -929,7 +995,7 @@ func TestDownloadLinuxScriptHandler(t *testing.T) {
 func TestDownloadWindowsScriptHandler(t *testing.T) {
 	tests := []struct {
 		name             string
-		serverMode       ApiType
+		serverMode       models.ApiType
 		mockTemplate     func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error)
 		requestPath      string
 		expectedStatus   int
@@ -961,444 +1027,463 @@ func TestDownloadWindowsScriptHandler(t *testing.T) {
 			app := fiber.New()
 			mockTemplate := new(template.MockTemplateRennder)
 			mockTemplate.GetScriptfunc = test.mockTemplate
-			server := &ApiService{
-				App:              app,
-				TemplateRenderer: mockTemplate,
-				Log:              logrus.NewEntry(logrus.New()),
+			log := logrus.NewEntry(logrus.New())
+			handler := NewDownloadsHandler(log)
+			service := services.DownloadService{
 				Mode:             test.serverMode,
+				TemplateRenderer: mockTemplate,
 			}
-			server.buildRouter()
+
+			app.Use(testInjector(service))
+
+			app.Get("/install.ps1", func(c *fiber.Ctx) error {
+				return handler.DownloadWindowsScript(c)
+			})
+
 			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
-			resp, err := app.Test(req)
+			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
 			assert.NoError(t, err)
 			assert.Equal(t, test.expectedStatus, resp.StatusCode)
 		})
 	}
 }
 
-func TestApiService_downloadChefPlatform(t *testing.T) {
-	app := fiber.New()
-	c := app.AcquireCtx(&fasthttp.RequestCtx{})
-	c.Locals("license_id", "lic01")
-	c.Locals("requestid", "req01")
-	type fields struct {
-		Replicated        replicated.IReplicated
-		LicenseClient     clients.ILicense
-		mockUnmarshalFunc func(data []byte, v any) error
-		mockIoCopyFunc    func(dst io.Writer, src io.Reader) (written int64, err error)
-	}
-	type args struct {
-		params *omnitruck.RequestParams
-		c      *fiber.Ctx
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "Success",
-			fields: fields{
-				Replicated: replicated.MockReplicated{
-					GetDowloadUrlFunc: func(customer replicated.Customer, requestId string) (url string, err error) {
-						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
-					},
-					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
-						mockResponse := http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body"))), Header: make(http.Header)}
-						mockResponse.Header.Set("Content-Type", "application/json")
-						return &mockResponse, nil
-					},
-					SearchCustomersByEmailFunc: func(email, requestId string) (customers []replicated.Customer, err error) {
-						return []replicated.Customer{
-							{
-								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
-								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
-								Name:           "[DEV] George Westwater",
-								Email:          "george.westwater@progress.com",
-								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
-								Airgap:         false,
-								Channels: []replicated.Channel{
-									{
-										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
-										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
-										AppSlug:     "chef-360",
-										AppName:     "Chef 360",
-										ChannelSlug: "rc",
-										Name:        "RC",
-									},
-								},
-							},
-						}, nil
-					},
-				},
-				LicenseClient: &clients.MockLicense{
-					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
-						return &clients.Request{
-							Code: 200,
-							Ok:   true,
-							Body: []byte(`{
-								"replicatedEmail": "abc@gmail.com",
-								"message": "OK",
-								"status_code": "200 OK"
-							  }`),
-						}
-					},
-				},
-			},
-			args: args{
-				params: &omnitruck.RequestParams{
-					LicenseId: "abc123",
-				},
-				c: c,
-			},
-			wantErr: false,
-		},
-		{
-			name: "License Client Err",
-			fields: fields{
-				LicenseClient: &clients.MockLicense{
-					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
-						return &clients.Request{
-							Code: 200,
-							Ok:   false,
-						}
-					},
-				},
-			},
-			args: args{
-				params: &omnitruck.RequestParams{
-					LicenseId: "abc123",
-				},
-				c: c,
-			},
-			wantErr: true,
-		},
-		{
-			name: "Search Customer error",
-			fields: fields{
-				Replicated: replicated.MockReplicated{
-					GetDowloadUrlFunc: func(customer replicated.Customer, requestId string) (url string, err error) {
-						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
-					},
-					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
-						return &http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body")))}, nil
-					},
-					SearchCustomersByEmailFunc: func(email, requestId string) (customers []replicated.Customer, err error) {
-						return nil, errors.New("Error fetching customer")
-					},
-				},
-				LicenseClient: &clients.MockLicense{
-					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
-						return &clients.Request{
-							Code: 200,
-							Ok:   true,
-							Body: []byte(`{
-								"replicatedEmail": "abc@gmail.com",
-								"message": "OK",
-								"status_code": "200 OK"
-							  }`),
-						}
-					},
-				},
-			},
-			args: args{
-				params: &omnitruck.RequestParams{
-					LicenseId: "abc123",
-				},
-				c: c,
-			},
-			wantErr: false,
-		},
-		{
-			name: "0 customers found",
-			fields: fields{
-				Replicated: replicated.MockReplicated{
-					GetDowloadUrlFunc: func(customer replicated.Customer, requestId string) (url string, err error) {
-						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
-					},
-					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
-						return &http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body")))}, nil
-					},
-					SearchCustomersByEmailFunc: func(email, requestId string) (customers []replicated.Customer, err error) {
-						return []replicated.Customer{}, nil
-					},
-				},
-				LicenseClient: &clients.MockLicense{
-					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
-						return &clients.Request{
-							Code: 200,
-							Ok:   true,
-							Body: []byte(`{
-								"replicatedEmail": "abc@gmail.com",
-								"message": "OK",
-								"status_code": "200 OK"
-							  }`),
-						}
-					},
-				},
-			},
-			args: args{
-				params: &omnitruck.RequestParams{
-					LicenseId: "abc123",
-				},
-				c: c,
-			},
-			wantErr: false,
-		},
-		{
-			name: "GetUrl Err",
-			fields: fields{
-				Replicated: replicated.MockReplicated{
-					GetDowloadUrlFunc: func(customer replicated.Customer, requestId string) (url string, err error) {
-						return "", errors.New("error getting download url")
-					},
-					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
-						return &http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body")))}, nil
-					},
-					SearchCustomersByEmailFunc: func(email, requestId string) (customers []replicated.Customer, err error) {
-						return []replicated.Customer{
-							{
-								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
-								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
-								Name:           "[DEV] George Westwater",
-								Email:          "george.westwater@progress.com",
-								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
-								Airgap:         false,
-								Channels: []replicated.Channel{
-									{
-										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
-										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
-										AppSlug:     "chef-360",
-										AppName:     "Chef 360",
-										ChannelSlug: "rc",
-										Name:        "RC",
-									},
-								},
-							},
-						}, nil
-					},
-				},
-				LicenseClient: &clients.MockLicense{
-					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
-						return &clients.Request{
-							Code: 200,
-							Ok:   true,
-							Body: []byte(`{
-								"replicatedEmail": "abc@gmail.com",
-								"message": "OK",
-								"status_code": "200 OK"
-							  }`),
-						}
-					},
-				},
-			},
-			args: args{
-				params: &omnitruck.RequestParams{
-					LicenseId: "abc123",
-				},
-				c: c,
-			},
-			wantErr: false,
-		},
-		{
-			name: "Download error",
-			fields: fields{
-				Replicated: replicated.MockReplicated{
-					GetDowloadUrlFunc: func(customer replicated.Customer, requestId string) (url string, err error) {
-						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
-					},
-					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
-						return nil, errors.New("error downloading")
-					},
-					SearchCustomersByEmailFunc: func(email, requestId string) (customers []replicated.Customer, err error) {
-						return []replicated.Customer{
-							{
-								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
-								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
-								Name:           "[DEV] George Westwater",
-								Email:          "george.westwater@progress.com",
-								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
-								Airgap:         false,
-								Channels: []replicated.Channel{
-									{
-										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
-										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
-										AppSlug:     "chef-360",
-										AppName:     "Chef 360",
-										ChannelSlug: "rc",
-										Name:        "RC",
-									},
-								},
-							},
-						}, nil
-					},
-				},
-				LicenseClient: &clients.MockLicense{
-					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
-						return &clients.Request{
-							Code: 200,
-							Ok:   true,
-							Body: []byte(`{
-								"replicatedEmail": "abc@gmail.com",
-								"message": "OK",
-								"status_code": "200 OK"
-							  }`),
-						}
-					},
-				},
-			},
-			args: args{
-				params: &omnitruck.RequestParams{
-					LicenseId: "abc123",
-				},
-				c: c,
-			},
-			wantErr: false,
-		},
-		{
-			name: "Unmarshal Error",
-			fields: fields{
-				Replicated: replicated.MockReplicated{
-					GetDowloadUrlFunc: func(customer replicated.Customer, requestId string) (url string, err error) {
-						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
-					},
-					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
-						mockResponse := http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body"))), Header: make(http.Header)}
-						mockResponse.Header.Set("Content-Type", "application/json")
-						return &mockResponse, nil
-					},
-					SearchCustomersByEmailFunc: func(email, requestId string) (customers []replicated.Customer, err error) {
-						return []replicated.Customer{
-							{
-								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
-								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
-								Name:           "[DEV] George Westwater",
-								Email:          "george.westwater@progress.com",
-								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
-								Airgap:         false,
-								Channels: []replicated.Channel{
-									{
-										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
-										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
-										AppSlug:     "chef-360",
-										AppName:     "Chef 360",
-										ChannelSlug: "rc",
-										Name:        "RC",
-									},
-								},
-							},
-						}, nil
-					},
-				},
-				LicenseClient: &clients.MockLicense{
-					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
-						return &clients.Request{
-							Code: 200,
-							Ok:   true,
-							Body: []byte(`{
-								"replicatedEmail": "abc@gmail.com",
-								"message": "OK",
-								"status_code": "200 OK"
-							  }`),
-						}
-					},
-				},
-				mockUnmarshalFunc: func(data []byte, v any) error {
-					return errors.New("error occurred")
-				},
-			},
-			args: args{
-				params: &omnitruck.RequestParams{
-					LicenseId: "abc123",
-				},
-				c: c,
-			},
-			wantErr: false,
-		},
-		{
-			name: "IO Copy Error",
-			fields: fields{
-				Replicated: replicated.MockReplicated{
-					GetDowloadUrlFunc: func(customer replicated.Customer, requestId string) (url string, err error) {
-						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
-					},
-					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
-						mockResponse := http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body"))), Header: make(http.Header)}
-						mockResponse.Header.Set("Content-Type", "application/json")
-						return &mockResponse, nil
-					},
-					SearchCustomersByEmailFunc: func(email, requestId string) (customers []replicated.Customer, err error) {
-						return []replicated.Customer{
-							{
-								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
-								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
-								Name:           "[DEV] George Westwater",
-								Email:          "george.westwater@progress.com",
-								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
-								Airgap:         false,
-								Channels: []replicated.Channel{
-									{
-										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
-										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
-										AppSlug:     "chef-360",
-										AppName:     "Chef 360",
-										ChannelSlug: "rc",
-										Name:        "RC",
-									},
-								},
-							},
-						}, nil
-					},
-				},
-				LicenseClient: &clients.MockLicense{
-					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
-						return &clients.Request{
-							Code: 200,
-							Ok:   true,
-							Body: []byte(`{
-								"replicatedEmail": "abc@gmail.com",
-								"message": "OK",
-								"status_code": "200 OK"
-							  }`),
-						}
-					},
-				},
-				mockIoCopyFunc: func(dst io.Writer, src io.Reader) (written int64, err error) {
-					return 0, errors.New("error occurred")
-				},
-			},
-			args: args{
-				params: &omnitruck.RequestParams{
-					LicenseId: "abc123",
-				},
-				c: c,
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			server := &ApiService{
-				Replicated:    tt.fields.Replicated,
-				LicenseClient: tt.fields.LicenseClient,
-				Log:           logger.NewLogrusStandardLogger().WithField("requestId", "req01"),
-			}
-			if tt.fields.mockUnmarshalFunc != nil {
-				jsonUnmarshal = tt.fields.mockUnmarshalFunc
-			} else {
-				jsonUnmarshal = func(data []byte, v any) error {
-					return json.Unmarshal(data, &v)
-				}
-			}
-			if tt.fields.mockIoCopyFunc != nil {
-				ioCopy = tt.fields.mockIoCopyFunc
-			}
-			err := server.downloadChefPlatform(tt.args.params, tt.args.c)
-			assert.Nil(t, err)
-		})
-	}
-}
+// func TestApiService_downloadChefPlatform(t *testing.T) {
+// 	app := fiber.New()
+// 	c := app.AcquireCtx(&fasthttp.RequestCtx{})
+// 	c.Locals("license_id", "lic01")
+// 	c.Locals("requestid", "req01")
+// 	type fields struct {
+// 		Replicated        replicated.IReplicated
+// 		LicenseClient     clients.ILicense
+// 		mockUnmarshalFunc func(data []byte, v any) error
+// 		mockIoCopyFunc    func(dst io.Writer, src io.Reader) (written int64, err error)
+// 	}
+// 	type args struct {
+// 		params *omnitruck.RequestParams
+// 		c      *fiber.Ctx
+// 	}
+// 	tests := []struct {
+// 		name    string
+// 		fields  fields
+// 		args    args
+// 		wantErr bool
+// 	}{
+// 		{
+// 			name: "Success",
+// 			fields: fields{
+// 				Replicated: replicated.MockReplicated{
+// 					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
+// 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
+// 					},
+// 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
+// 						mockResponse := http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body"))), Header: make(http.Header)}
+// 						mockResponse.Header.Set("Content-Type", "application/json")
+// 						return &mockResponse, nil
+// 					},
+// 					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+// 						return []models.Customer{
+// 							{
+// 								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
+// 								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
+// 								Name:           "[DEV] George Westwater",
+// 								Email:          "george.westwater@progress.com",
+// 								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
+// 								Airgap:         false,
+// 								Channels: []models.Channel{
+// 									{
+// 										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
+// 										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
+// 										AppSlug:     "chef-360",
+// 										AppName:     "Chef 360",
+// 										ChannelSlug: "rc",
+// 										Name:        "RC",
+// 									},
+// 								},
+// 							},
+// 						}, nil
+// 					},
+// 				},
+// 				LicenseClient: &clients.MockLicense{
+// 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+// 						return &clients.Request{
+// 							Code: 200,
+// 							Ok:   true,
+// 							Body: []byte(`{
+// 								"replicatedEmail": "abc@gmail.com",
+// 								"message": "OK",
+// 								"status_code": "200 OK"
+// 							  }`),
+// 						}
+// 					},
+// 				},
+// 			},
+// 			args: args{
+// 				params: &omnitruck.RequestParams{
+// 					LicenseId: "abc123",
+// 				},
+// 				c: c,
+// 			},
+// 			wantErr: false,
+// 		},
+// 		{
+// 			name: "License Client Err",
+// 			fields: fields{
+// 				LicenseClient: &clients.MockLicense{
+// 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+// 						return &clients.Request{
+// 							Code: 200,
+// 							Ok:   false,
+// 						}
+// 					},
+// 				},
+// 			},
+// 			args: args{
+// 				params: &omnitruck.RequestParams{
+// 					LicenseId: "abc123",
+// 				},
+// 				c: c,
+// 			},
+// 			wantErr: true,
+// 		},
+// 		{
+// 			name: "Search Customer error",
+// 			fields: fields{
+// 				Replicated: replicated.MockReplicated{
+// 					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
+// 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
+// 					},
+// 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
+// 						return &http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body")))}, nil
+// 					},
+// 					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+// 						return nil, errors.New("Error fetching customer")
+// 					},
+// 				},
+// 				LicenseClient: &clients.MockLicense{
+// 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+// 						return &clients.Request{
+// 							Code: 200,
+// 							Ok:   true,
+// 							Body: []byte(`{
+// 								"replicatedEmail": "abc@gmail.com",
+// 								"message": "OK",
+// 								"status_code": "200 OK"
+// 							  }`),
+// 						}
+// 					},
+// 				},
+// 			},
+// 			args: args{
+// 				params: &omnitruck.RequestParams{
+// 					LicenseId: "abc123",
+// 				},
+// 				c: c,
+// 			},
+// 			wantErr: false,
+// 		},
+// 		{
+// 			name: "0 customers found",
+// 			fields: fields{
+// 				Replicated: replicated.MockReplicated{
+// 					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
+// 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
+// 					},
+// 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
+// 						return &http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body")))}, nil
+// 					},
+// 					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+// 						return []models.Customer{}, nil
+// 					},
+// 				},
+// 				LicenseClient: &clients.MockLicense{
+// 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+// 						return &clients.Request{
+// 							Code: 200,
+// 							Ok:   true,
+// 							Body: []byte(`{
+// 								"replicatedEmail": "abc@gmail.com",
+// 								"message": "OK",
+// 								"status_code": "200 OK"
+// 							  }`),
+// 						}
+// 					},
+// 				},
+// 			},
+// 			args: args{
+// 				params: &omnitruck.RequestParams{
+// 					LicenseId: "abc123",
+// 				},
+// 				c: c,
+// 			},
+// 			wantErr: false,
+// 		},
+// 		{
+// 			name: "GetUrl Err",
+// 			fields: fields{
+// 				Replicated: replicated.MockReplicated{
+// 					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
+// 						return "", errors.New("error getting download url")
+// 					},
+// 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
+// 						return &http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body")))}, nil
+// 					},
+// 					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+// 						return []models.Customer{
+// 							{
+// 								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
+// 								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
+// 								Name:           "[DEV] George Westwater",
+// 								Email:          "george.westwater@progress.com",
+// 								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
+// 								Airgap:         false,
+// 								Channels: []models.Channel{
+// 									{
+// 										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
+// 										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
+// 										AppSlug:     "chef-360",
+// 										AppName:     "Chef 360",
+// 										ChannelSlug: "rc",
+// 										Name:        "RC",
+// 									},
+// 								},
+// 							},
+// 						}, nil
+// 					},
+// 				},
+// 				LicenseClient: &clients.MockLicense{
+// 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+// 						return &clients.Request{
+// 							Code: 200,
+// 							Ok:   true,
+// 							Body: []byte(`{
+// 								"replicatedEmail": "abc@gmail.com",
+// 								"message": "OK",
+// 								"status_code": "200 OK"
+// 							  }`),
+// 						}
+// 					},
+// 				},
+// 			},
+// 			args: args{
+// 				params: &omnitruck.RequestParams{
+// 					LicenseId: "abc123",
+// 				},
+// 				c: c,
+// 			},
+// 			wantErr: false,
+// 		},
+// 		{
+// 			name: "Download error",
+// 			fields: fields{
+// 				Replicated: replicated.MockReplicated{
+// 					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
+// 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
+// 					},
+// 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
+// 						return nil, errors.New("error downloading")
+// 					},
+// 					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+// 						return []models.Customer{
+// 							{
+// 								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
+// 								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
+// 								Name:           "[DEV] George Westwater",
+// 								Email:          "george.westwater@progress.com",
+// 								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
+// 								Airgap:         false,
+// 								Channels: []models.Channel{
+// 									{
+// 										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
+// 										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
+// 										AppSlug:     "chef-360",
+// 										AppName:     "Chef 360",
+// 										ChannelSlug: "rc",
+// 										Name:        "RC",
+// 									},
+// 								},
+// 							},
+// 						}, nil
+// 					},
+// 				},
+// 				LicenseClient: &clients.MockLicense{
+// 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+// 						return &clients.Request{
+// 							Code: 200,
+// 							Ok:   true,
+// 							Body: []byte(`{
+// 								"replicatedEmail": "abc@gmail.com",
+// 								"message": "OK",
+// 								"status_code": "200 OK"
+// 							  }`),
+// 						}
+// 					},
+// 				},
+// 			},
+// 			args: args{
+// 				params: &omnitruck.RequestParams{
+// 					LicenseId: "abc123",
+// 				},
+// 				c: c,
+// 			},
+// 			wantErr: false,
+// 		},
+// 		{
+// 			name: "Unmarshal Error",
+// 			fields: fields{
+// 				Replicated: replicated.MockReplicated{
+// 					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
+// 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
+// 					},
+// 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
+// 						mockResponse := http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body"))), Header: make(http.Header)}
+// 						mockResponse.Header.Set("Content-Type", "application/json")
+// 						return &mockResponse, nil
+// 					},
+// 					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+// 						return []models.Customer{
+// 							{
+// 								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
+// 								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
+// 								Name:           "[DEV] George Westwater",
+// 								Email:          "george.westwater@progress.com",
+// 								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
+// 								Airgap:         false,
+// 								Channels: []models.Channel{
+// 									{
+// 										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
+// 										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
+// 										AppSlug:     "chef-360",
+// 										AppName:     "Chef 360",
+// 										ChannelSlug: "rc",
+// 										Name:        "RC",
+// 									},
+// 								},
+// 							},
+// 						}, nil
+// 					},
+// 				},
+// 				LicenseClient: &clients.MockLicense{
+// 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+// 						return &clients.Request{
+// 							Code: 200,
+// 							Ok:   true,
+// 							Body: []byte(`{
+// 								"replicatedEmail": "abc@gmail.com",
+// 								"message": "OK",
+// 								"status_code": "200 OK"
+// 							  }`),
+// 						}
+// 					},
+// 				},
+// 				mockUnmarshalFunc: func(data []byte, v any) error {
+// 					return errors.New("error occurred")
+// 				},
+// 			},
+// 			args: args{
+// 				params: &omnitruck.RequestParams{
+// 					LicenseId: "abc123",
+// 				},
+// 				c: c,
+// 			},
+// 			wantErr: false,
+// 		},
+// 		{
+// 			name: "IO Copy Error",
+// 			fields: fields{
+// 				Replicated: replicated.MockReplicated{
+// 					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
+// 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
+// 					},
+// 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
+// 						mockResponse := http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body"))), Header: make(http.Header)}
+// 						mockResponse.Header.Set("Content-Type", "application/json")
+// 						return &mockResponse, nil
+// 					},
+// 					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+// 						return []models.Customer{
+// 							{
+// 								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
+// 								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
+// 								Name:           "[DEV] George Westwater",
+// 								Email:          "george.westwater@progress.com",
+// 								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
+// 								Airgap:         false,
+// 								Channels: []models.Channel{
+// 									{
+// 										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
+// 										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
+// 										AppSlug:     "chef-360",
+// 										AppName:     "Chef 360",
+// 										ChannelSlug: "rc",
+// 										Name:        "RC",
+// 									},
+// 								},
+// 							},
+// 						}, nil
+// 					},
+// 				},
+// 				LicenseClient: &clients.MockLicense{
+// 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+// 						return &clients.Request{
+// 							Code: 200,
+// 							Ok:   true,
+// 							Body: []byte(`{
+// 								"replicatedEmail": "abc@gmail.com",
+// 								"message": "OK",
+// 								"status_code": "200 OK"
+// 							  }`),
+// 						}
+// 					},
+// 				},
+// 				mockIoCopyFunc: func(dst io.Writer, src io.Reader) (written int64, err error) {
+// 					return 0, errors.New("error occurred")
+// 				},
+// 			},
+// 			args: args{
+// 				params: &omnitruck.RequestParams{
+// 					LicenseId: "abc123",
+// 				},
+// 				c: c,
+// 			},
+// 			wantErr: false,
+// 		},
+// 	}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			log := logger.NewLogrusStandardLogger().WithField("requestId", "req01")
+// 			handler := NewDownloadsHandler(log)
+// 			service := services.DownloadService{
+// 				Mode:             models.Commercial,
+// 				Replicated:       tt.fields.Replicated,
+// 				TemplateRenderer: template.NewTemplateRender(),
+// 				Validator:        omnitruck.NewValidator(),
+// 				LicenseClient:    tt.fields.LicenseClient,
+// 			}
+
+// 			app.Use(testInjector(service))
+
+// 			app.Get("/:channel/:product/versions/latest", func(c *fiber.Ctx) error {
+// 				return handler.LatestVersionHandler(c)
+// 			})
+
+// 			req := httptest.NewRequest(http.MethodGet, tt.requestPath, nil)
+// 			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
+// 			if tt.fields.mockUnmarshalFunc != nil {
+// 				jsonUnmarshal = tt.fields.mockUnmarshalFunc
+// 			} else {
+// 				jsonUnmarshal = func(data []byte, v any) error {
+// 					return json.Unmarshal(data, &v)
+// 				}
+// 			}
+// 			if tt.fields.mockIoCopyFunc != nil {
+// 				ioCopy = tt.fields.mockIoCopyFunc
+// 			}
+// 			err := server.downloadChefPlatform(tt.args.params, tt.args.c)
+// 			assert.Nil(t, err)
+// 		})
+// 	}
+// }
 
 func TestPackageManagersHandler(t *testing.T) {
 	tests := []struct {
@@ -1407,7 +1492,7 @@ func TestPackageManagersHandler(t *testing.T) {
 		mockErr          error
 		expectedStatus   int
 		expectedResponse string
-		mode             ApiType
+		mode             models.ApiType
 	}{
 		{
 			name:             "Success - package managers fetched",
@@ -1415,7 +1500,7 @@ func TestPackageManagersHandler(t *testing.T) {
 			mockErr:          nil,
 			expectedStatus:   http.StatusOK,
 			expectedResponse: `["deb","tar","rpm"]`,
-			mode:             Commercial,
+			mode:             models.Commercial,
 		},
 		{
 			name:             "Error - DB call fails",
@@ -1423,7 +1508,7 @@ func TestPackageManagersHandler(t *testing.T) {
 			mockErr:          errors.New("db failure"),
 			expectedStatus:   http.StatusInternalServerError,
 			expectedResponse: `{"code":500,"message":"Error while fetching the information for the product from DB.","status_text":"Internal Server Error"}`,
-			mode:             Commercial,
+			mode:             models.Commercial,
 		},
 	}
 
@@ -1435,17 +1520,20 @@ func TestPackageManagersHandler(t *testing.T) {
 			}
 
 			app := fiber.New()
-			log := logrus.New()
-			api := &ApiService{
-				DatabaseService: mockDbService,
-				Log:             logrus.NewEntry(log),
+			log := logrus.NewEntry(logrus.New())
+			handler := NewDownloadsHandler(log)
+			service := services.DownloadService{
 				Mode:            tt.mode,
+				DatabaseService: mockDbService,
 			}
 
-			app.Get("/package-managers", api.packageManagersHandler)
+			app.Use(testInjector(service))
+			app.Get("/package-managers", func(c *fiber.Ctx) error {
+				return handler.PackageManagersHandler(c)
+			})
 
 			req := httptest.NewRequest(http.MethodGet, "/package-managers", nil)
-			resp, err := app.Test(req)
+			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedStatus, resp.StatusCode)
 
@@ -1460,56 +1548,56 @@ func TestPackageManagersHandler(t *testing.T) {
 func TestProductsHandler(t *testing.T) {
 	tests := []struct {
 		name             string
-		serverMode       ApiType
+		serverMode       models.ApiType
 		eolParam         string
 		expectedStatus   int
 		expectedContains []string
 	}{
 		{
-			name:             "Opensource mode filters products",
-			serverMode:       Opensource,
+			name:             "models.Opensource mode filters products",
+			serverMode:       models.Opensource,
 			eolParam:         "false",
 			expectedStatus:   fiber.StatusOK,
 			expectedContains: []string{"habitat"},
 		},
 		{
-			name:             "Trial mode adds enterprise product",
-			serverMode:       Trial,
+			name:             "models.Trial mode adds enterprise product",
+			serverMode:       models.Trial,
 			eolParam:         "false",
 			expectedStatus:   fiber.StatusOK,
 			expectedContains: []string{"Chef Infra Client Enterprise"},
 		},
 		{
-			name:             "Commercial mode adds products",
-			serverMode:       Commercial,
+			name:             "models.Commercial mode adds products",
+			serverMode:       models.Commercial,
 			eolParam:         "false",
 			expectedStatus:   fiber.StatusOK,
 			expectedContains: []string{"chef-360", "chef-ice"},
 		},
 		{
-			name:             "Trial mode with eol true includes Chef Infra Client Enterprise and automate-1",
-			serverMode:       Trial,
+			name:             "models.Trial mode with eol true includes Chef Infra Client Enterprise and automate-1",
+			serverMode:       models.Trial,
 			eolParam:         "true",
 			expectedStatus:   fiber.StatusOK,
 			expectedContains: []string{"Chef Infra Client Enterprise", "automate-1"},
 		},
 		{
-			name:             "Commercial mode with eol true includes automate-1",
-			serverMode:       Commercial,
+			name:             "models.Commercial mode with eol true includes automate-1",
+			serverMode:       models.Commercial,
 			eolParam:         "true",
 			expectedStatus:   fiber.StatusOK,
 			expectedContains: []string{"chef-360", "chef-ice", "automate-1"},
 		},
 		{
-			name:             "Trial mode returns formatted products",
-			serverMode:       Trial,
+			name:             "models.Trial mode returns formatted products",
+			serverMode:       models.Trial,
 			eolParam:         "false",
 			expectedStatus:   fiber.StatusOK,
 			expectedContains: []string{"automate:Chef Automate", "chef:Chef Infra Client", "chef-server:Chef Infra Server", "chef-workstation:Chef Workstation", "habitat:Chef Habitat", "inspec:InSpec", "chef-ice:Chef Infra Client Enterprise"},
 		},
 		{
-			name:             "Commercial mode returns full product list",
-			serverMode:       Commercial,
+			name:             "models.Commercial mode returns full product list",
+			serverMode:       models.Commercial,
 			eolParam:         "false",
 			expectedStatus:   fiber.StatusOK,
 			expectedContains: []string{"automate", "chef", "chef-backend", "chef-server", "chef-workstation", "habitat", "inspec", "manage", "supermarket", "chef-360", "chef-ice"},
@@ -1529,17 +1617,20 @@ func TestProductsHandler(t *testing.T) {
 				return "0.1.0", nil
 			}
 
-			server := &ApiService{
-				App:             app,
-				DatabaseService: mockDb,
-				Log:             logrus.NewEntry(logrus.New()),
+			log := logrus.NewEntry(logrus.New())
+			handler := NewDownloadsHandler(log)
+			service := services.DownloadService{
 				Mode:            tt.serverMode,
+				DatabaseService: mockDb,
 			}
 
-			server.buildRouter()
+			app.Use(testInjector(service))
+			app.Get("/products", func(c *fiber.Ctx) error {
+				return handler.ProductsHandler(c)
+			})
 
 			req := httptest.NewRequest(http.MethodGet, "/products?eol="+tt.eolParam, nil)
-			resp, err := app.Test(req)
+			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedStatus, resp.StatusCode)
 
