@@ -1,0 +1,904 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "description": "Licensed Omnitruck API",
+        "title": "Licensed Omnitruck API",
+        "contact": {},
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "1.0"
+    },
+    "paths": {
+        "/architectures": {
+            "get": {
+                "description": "Returns a valid list of valid platform keys along with friendly names.\nAny of these architecture keys can be used in the p query string value in various endpoints below.",
+                "summary": "Get architecture keys",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/install.ps1": {
+            "get": {
+                "description": "The `ACCEPT` HTTP header with a value of `text/plain` must be provided in the request for a text response to be returned",
+                "summary": "Download install script for Windows",
+                "parameters": [
+                    {
+                        "description": "License ID",
+                        "name": "license_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": true
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/install.sh": {
+            "get": {
+                "description": "The `ACCEPT` HTTP header with a value of `application/x-sh` must be provided in the request for a shell script response to be returned",
+                "summary": "Download install script for Linux",
+                "parameters": [
+                    {
+                        "description": "License ID",
+                        "name": "license_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": true
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/platforms": {
+            "get": {
+                "description": "Returns a valid list of valid platform keys along with full friendly names.\nAny of these platform keys can be used in the p query string value in various endpoints below.",
+                "summary": "Get platform keys",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/omnitruck.PlatformList"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/products": {
+            "get": {
+                "description": "Returns a valid list of valid product keys.\nAny of these product keys can be used in the <PRODUCT> value of other endpoints. Please note many of these products are used for internal tools only and many have been EOL'd.",
+                "summary": "Get list of available products",
+                "parameters": [
+                    {
+                        "description": "EOL Products",
+                        "name": "eol",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/relatedProducts": {
+            "get": {
+                "description": "The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned",
+                "summary": "Get related products from a BOM",
+                "parameters": [
+                    {
+                        "description": "bom",
+                        "name": "bom",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "License ID",
+                        "name": "license_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/{channel}/{product}/download": {
+            "get": {
+                "description": "Get details for a particular package.\nThe `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned",
+                "summary": "Download a product package",
+                "parameters": [
+                    {
+                        "description": "Channel",
+                        "name": "channel",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "current",
+                                "stable"
+                            ]
+                        }
+                    },
+                    {
+                        "example": "chef",
+                        "description": "Product",
+                        "name": "product",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "example": "ubuntu",
+                        "description": "Platform, valid values are returned from the `/platforms` endpoint.",
+                        "name": "p",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "example": "20.04",
+                        "description": "Platform Version, possible values depend on the platform. For example, Ubuntu: 16.04, or 18.04 or for macOS: 10.14 or 10.15.",
+                        "name": "pv",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "example": "x86_64",
+                        "description": "Machine architecture, valid values are returned by the `/architectures` endpoint.",
+                        "name": "m",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Version of the product to be installed. A version always takes the form `x.y.z`",
+                        "name": "v",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "default": "latest"
+                        }
+                    },
+                    {
+                        "description": "License ID",
+                        "name": "license_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "EOL Products",
+                        "name": "eol",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Found"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/{channel}/{product}/fileName": {
+            "get": {
+                "description": "The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned",
+                "summary": "Get filename for a product package",
+                "parameters": [
+                    {
+                        "description": "Channel",
+                        "name": "channel",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "current",
+                                "stable"
+                            ]
+                        }
+                    },
+                    {
+                        "example": "chef",
+                        "description": "Product",
+                        "name": "product",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "example": "ubuntu",
+                        "description": "Platform, valid values are returned from the `/platforms` endpoint.",
+                        "name": "p",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "example": "20.04",
+                        "description": "Platform Version, possible values depend on the platform. For example, Ubuntu: 16.04, or 18.04 or for macOS: 10.14 or 10.15.",
+                        "name": "pv",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "example": "x86_64",
+                        "description": "Machine architecture, valid values are returned by the `/architectures` endpoint.",
+                        "name": "m",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Version of the product to be installed. A version always takes the form `x.y.z`",
+                        "name": "v",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "default": "latest"
+                        }
+                    },
+                    {
+                        "description": "License ID",
+                        "name": "license_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": true
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/{channel}/{product}/metadata": {
+            "get": {
+                "description": "Get details for a particular package.\nThe `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned",
+                "summary": "Get metadata for a product",
+                "parameters": [
+                    {
+                        "description": "Channel",
+                        "name": "channel",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "current",
+                                "stable"
+                            ]
+                        }
+                    },
+                    {
+                        "example": "chef",
+                        "description": "Product",
+                        "name": "product",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "example": "ubuntu",
+                        "description": "Platform, valid values are returned from the `/platforms` endpoint.",
+                        "name": "p",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "example": "20.04",
+                        "description": "Platform Version, possible values depend on the platform. For example, Ubuntu: 16.04, or 18.04 or for macOS: 10.14 or 10.15.",
+                        "name": "pv",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "example": "x86_64",
+                        "description": "Machine architecture, valid values are returned by the `/architectures` endpoint.",
+                        "name": "m",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Version of the product to be installed. A version always takes the form `x.y.z`",
+                        "name": "v",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "default": "latest"
+                        }
+                    },
+                    {
+                        "description": "License ID",
+                        "name": "license_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "EOL Products",
+                        "name": "eol",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/omnitruck.PackageMetadata"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/{channel}/{product}/packages": {
+            "get": {
+                "description": "Get the full list of all packages for a particular channel and product combination.\nBy default all packages for the latest version are returned. If the v query string parameter is included the packages for the specified version are returned.",
+                "summary": "Get packages for a product version",
+                "parameters": [
+                    {
+                        "description": "Channel",
+                        "name": "channel",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "current",
+                                "stable"
+                            ]
+                        }
+                    },
+                    {
+                        "example": "chef",
+                        "description": "Product",
+                        "name": "product",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "Version",
+                        "name": "v",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "License ID",
+                        "name": "license_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "EOL Products",
+                        "name": "eol",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/omnitruck.PackageList"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/{channel}/{product}/versions/all": {
+            "get": {
+                "description": "Get a list of all available version numbers for a particular channel and product combination",
+                "summary": "Get all versions of a product in a channel",
+                "parameters": [
+                    {
+                        "description": "Channel",
+                        "name": "channel",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "current",
+                                "stable"
+                            ]
+                        }
+                    },
+                    {
+                        "description": "Product",
+                        "name": "product",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "License ID",
+                        "name": "license_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "EOL Products",
+                        "name": "eol",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/{channel}/{product}/versions/latest": {
+            "get": {
+                "description": "Get the latest version number for a particular channel and product combination.",
+                "summary": "Get latest version of a product in a channel",
+                "parameters": [
+                    {
+                        "description": "Channel",
+                        "name": "channel",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "current",
+                                "stable"
+                            ]
+                        }
+                    },
+                    {
+                        "description": "Product",
+                        "name": "product",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "description": "License ID",
+                        "name": "license_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ErrorResponse": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "integer"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "status_text": {
+                        "type": "string"
+                    }
+                }
+            },
+            "omnitruck.ArchList": {
+                "type": "object",
+                "additionalProperties": {
+                    "$ref": "#/components/schemas/omnitruck.PackageMetadata"
+                }
+            },
+            "omnitruck.PackageList": {
+                "type": "object",
+                "additionalProperties": {
+                    "$ref": "#/components/schemas/omnitruck.PlatformVersionList"
+                }
+            },
+            "omnitruck.PackageMetadata": {
+                "type": "object",
+                "properties": {
+                    "sha1": {
+                        "type": "string"
+                    },
+                    "sha256": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "string"
+                    }
+                }
+            },
+            "omnitruck.PlatformList": {
+                "type": "object",
+                "additionalProperties": {
+                    "type": "string"
+                }
+            },
+            "omnitruck.PlatformVersionList": {
+                "type": "object",
+                "additionalProperties": {
+                    "$ref": "#/components/schemas/omnitruck.ArchList"
+                }
+            }
+        }
+    }
+}

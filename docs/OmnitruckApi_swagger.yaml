@@ -46,6 +46,8 @@ info:
 paths:
   /{channel}/{product}/download:
     get:
+      consumes:
+      - application/json
       description: |-
         Get details for a particular package.
         The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned
@@ -99,6 +101,8 @@ paths:
         in: query
         name: eol
         type: boolean
+      produces:
+      - application/json
       responses:
         "302":
           description: Found
@@ -110,8 +114,11 @@ paths:
           description: Forbidden
           schema:
             $ref: '#/definitions/ErrorResponse'
+      summary: Download a product package
   /{channel}/{product}/fileName:
     get:
+      consumes:
+      - application/json
       description: The `ACCEPT` HTTP header with a value of `application/json` must
         be provided in the request for a JSON response to be returned
       parameters:
@@ -159,6 +166,8 @@ paths:
         in: query
         name: license_id
         type: string
+      produces:
+      - application/json
       responses:
         "200":
           description: OK
@@ -173,8 +182,11 @@ paths:
           description: Forbidden
           schema:
             $ref: '#/definitions/ErrorResponse'
+      summary: Get filename for a product package
   /{channel}/{product}/metadata:
     get:
+      consumes:
+      - application/json
       description: |-
         Get details for a particular package.
         The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned
@@ -228,6 +240,8 @@ paths:
         in: query
         name: eol
         type: boolean
+      produces:
+      - application/json
       responses:
         "200":
           description: OK
@@ -241,8 +255,11 @@ paths:
           description: Forbidden
           schema:
             $ref: '#/definitions/ErrorResponse'
+      summary: Get metadata for a product
   /{channel}/{product}/packages:
     get:
+      consumes:
+      - application/json
       description: |-
         Get the full list of all packages for a particular channel and product combination.
         By default all packages for the latest version are returned. If the v query string parameter is included the packages for the specified version are returned.
@@ -274,6 +291,8 @@ paths:
         in: query
         name: eol
         type: boolean
+      produces:
+      - application/json
       responses:
         "200":
           description: OK
@@ -287,8 +306,11 @@ paths:
           description: Forbidden
           schema:
             $ref: '#/definitions/ErrorResponse'
+      summary: Get packages for a product version
   /{channel}/{product}/versions/all:
     get:
+      consumes:
+      - application/json
       description: Get a list of all available version numbers for a particular channel
         and product combination
       parameters:
@@ -314,6 +336,8 @@ paths:
         in: query
         name: eol
         type: boolean
+      produces:
+      - application/json
       responses:
         "200":
           description: OK
@@ -329,8 +353,11 @@ paths:
           description: Forbidden
           schema:
             $ref: '#/definitions/ErrorResponse'
+      summary: Get all versions of a product in a channel
   /{channel}/{product}/versions/latest:
     get:
+      consumes:
+      - application/json
       description: Get the latest version number for a particular channel and product
         combination.
       parameters:
@@ -351,6 +378,8 @@ paths:
         in: query
         name: license_id
         type: string
+      produces:
+      - application/json
       responses:
         "200":
           description: OK
@@ -364,11 +393,16 @@ paths:
           description: Forbidden
           schema:
             $ref: '#/definitions/ErrorResponse'
+      summary: Get latest version of a product in a channel
   /architectures:
     get:
+      consumes:
+      - application/json
       description: |-
         Returns a valid list of valid platform keys along with friendly names.
         Any of these architecture keys can be used in the p query string value in various endpoints below.
+      produces:
+      - application/json
       responses:
         "200":
           description: OK
@@ -380,8 +414,11 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
+      summary: Get architecture keys
   /install.ps1:
     get:
+      consumes:
+      - application/json
       description: The `ACCEPT` HTTP header with a value of `text/plain` must be provided
         in the request for a text response to be returned
       parameters:
@@ -389,6 +426,8 @@ paths:
         in: query
         name: license_id
         type: string
+      produces:
+      - application/json
       responses:
         "200":
           description: OK
@@ -403,8 +442,11 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
+      summary: Download install script for Windows
   /install.sh:
     get:
+      consumes:
+      - application/json
       description: The `ACCEPT` HTTP header with a value of `application/x-sh` must
         be provided in the request for a shell script response to be returned
       parameters:
@@ -412,6 +454,8 @@ paths:
         in: query
         name: license_id
         type: string
+      produces:
+      - application/json
       responses:
         "200":
           description: OK
@@ -426,11 +470,16 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
+      summary: Download install script for Linux
   /platforms:
     get:
+      consumes:
+      - application/json
       description: |-
         Returns a valid list of valid platform keys along with full friendly names.
         Any of these platform keys can be used in the p query string value in various endpoints below.
+      produces:
+      - application/json
       responses:
         "200":
           description: OK
@@ -440,8 +489,11 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
+      summary: Get platform keys
   /products:
     get:
+      consumes:
+      - application/json
       description: |-
         Returns a valid list of valid product keys.
         Any of these product keys can be used in the <PRODUCT> value of other endpoints. Please note many of these products are used for internal tools only and many have been EOL'd.
@@ -450,6 +502,8 @@ paths:
         in: query
         name: eol
         type: boolean
+      produces:
+      - application/json
       responses:
         "200":
           description: OK
@@ -461,8 +515,11 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
+      summary: Get list of available products
   /relatedProducts:
     get:
+      consumes:
+      - application/json
       description: The `ACCEPT` HTTP header with a value of `application/json` must
         be provided in the request for a JSON response to be returned
       parameters:
@@ -475,6 +532,8 @@ paths:
         in: query
         name: license_id
         type: string
+      produces:
+      - application/json
       responses:
         "200":
           description: OK
@@ -486,4 +545,5 @@ paths:
           description: Forbidden
           schema:
             $ref: '#/definitions/ErrorResponse'
+      summary: Get related products from a BOM
 swagger: "2.0"
