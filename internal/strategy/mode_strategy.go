@@ -1,8 +1,9 @@
-package services
+package strategy
 
 import (
 	"github.com/chef/omnitruck-service/clients/omnitruck"
 	"github.com/chef/omnitruck-service/constants"
+	"github.com/chef/omnitruck-service/models"
 )
 
 type ModeStrategy interface {
@@ -51,11 +52,11 @@ func (s *TrialModeStrategy) FilterVersions(data []omnitruck.ProductVersion, prod
 	return []omnitruck.ProductVersion{data[len(data)-1]}
 }
 
-func SelectModeStrategy(mode ApiType) ModeStrategy {
+func SelectModeStrategy(mode models.ApiType) ModeStrategy {
 	switch mode {
-	case Opensource:
+	case models.Opensource:
 		return &OpensourceModeStrategy{}
-	case Trial:
+	case models.Trial:
 		return &TrialModeStrategy{}
 	default:
 		return &CommercialModeStrategy{}

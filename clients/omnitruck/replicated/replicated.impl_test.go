@@ -11,6 +11,7 @@ import (
 	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/constants"
 	"github.com/chef/omnitruck-service/logger"
+	"github.com/chef/omnitruck-service/models"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -95,7 +96,7 @@ func TestReplicatedImpl_GetDowloadUrl(t *testing.T) {
 		Logger           logger.Logger
 	}
 	type args struct {
-		customer  replicated.Customer
+		customer  models.Customer
 		requestId string
 	}
 	tests := []struct {
@@ -111,10 +112,10 @@ func TestReplicatedImpl_GetDowloadUrl(t *testing.T) {
 				ReplicatedConfig: config.ReplicatedConfig{},
 				Logger:           logger.NewLogrusStandardLogger(),
 			},
-			args: args{customer: replicated.Customer{
+			args: args{customer: models.Customer{
 				ID:       "cust123",
 				Airgap:   true,
-				Channels: []replicated.Channel{},
+				Channels: []models.Channel{},
 			}},
 			wantUrl: "",
 			wantErr: true,
@@ -125,10 +126,10 @@ func TestReplicatedImpl_GetDowloadUrl(t *testing.T) {
 				ReplicatedConfig: config.ReplicatedConfig{},
 				Logger:           logger.NewLogrusStandardLogger(),
 			},
-			args: args{customer: replicated.Customer{
+			args: args{customer: models.Customer{
 				ID:     "cust123",
 				Airgap: true,
-				Channels: []replicated.Channel{
+				Channels: []models.Channel{
 					{ID: "channel123", AppSlug: "app123"},
 				},
 			}},
@@ -141,10 +142,10 @@ func TestReplicatedImpl_GetDowloadUrl(t *testing.T) {
 				ReplicatedConfig: config.ReplicatedConfig{},
 				Logger:           logger.NewLogrusStandardLogger(),
 			},
-			args: args{customer: replicated.Customer{
+			args: args{customer: models.Customer{
 				ID:     "cust123",
 				Airgap: false,
-				Channels: []replicated.Channel{
+				Channels: []models.Channel{
 					{ID: "channel123", AppSlug: "app123", ChannelSlug: "ch123"},
 				},
 			}},
@@ -157,10 +158,10 @@ func TestReplicatedImpl_GetDowloadUrl(t *testing.T) {
 				ReplicatedConfig: config.ReplicatedConfig{},
 				Logger:           logger.NewLogrusStandardLogger(),
 			},
-			args: args{customer: replicated.Customer{
+			args: args{customer: models.Customer{
 				ID:     "cust123",
 				Airgap: true,
-				Channels: []replicated.Channel{
+				Channels: []models.Channel{
 					{ID: "channel123", AppSlug: "app123", ChannelSlug: "ch123"},
 				},
 			}},
