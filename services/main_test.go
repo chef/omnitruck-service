@@ -120,6 +120,15 @@ func TestLatestVersionsHandler(t *testing.T) {
 			versions_err:     nil,
 		},
 		{
+			name: "failure on chef-ice for opensource",
+			requestPath: 	"/stable/chef-ice/versions/latest",
+			serverMode:       Opensource,
+			expectedStatus:   fiber.StatusBadRequest,
+			expectedResponse: `{"code":400, "message":"chef-ice not available for the opensource mode", "status_text":"Bad Request"}`,
+			versions:         []string{},
+			versions_err:     nil,
+		},
+		{
 			name:             "chef-360 success",
 			requestPath:      "/stable/chef-360/versions/latest",
 			serverMode:       Commercial,
@@ -220,6 +229,9 @@ func TestProductVersionsHandler(t *testing.T) {
 			expectedResponse: `["0.3.2", "0.7.11", "0.9.0", "0.9.3"]`,
 			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0", "1.0.0"},
 			versions_err:     nil,
+		},
+		{
+			
 		},
 		{
 			name:             "success for chef-360",
@@ -779,7 +791,7 @@ func TestFileNameHandler(t *testing.T) {
 			serverMode:       Commercial,
 			expectedStatus:   http.StatusOK,
 			requestPath:      "/current/chef-360/fileName?p=linux&pv=20.04&m=x86_64&v=1.2&license_id=viv2c0a2-111f-2caf-1fa2-1211fe1212d1",
-			expectedResponse: `{"fileName":"chef-360.zip"}`,
+			expectedResponse: `{"fileName":"chef-360.tar.gz"}`,
 			metadata:         models.MetaData{},
 			metadata_err:     nil,
 			version:          "latest",

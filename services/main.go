@@ -172,10 +172,14 @@ func (server *ApiService) latestVersionHandler(c *fiber.Ctx) error {
 		return err
 	}
 
+	if params.Product == constants.CHEF_ICE_PRODUCT && server.Mode == Opensource {	
+		return server.SendErrorResponse(c, http.StatusBadRequest, "chef-ice not available for the opensource mode")
+	}
+
 	var data omnitruck.ProductVersion
 	var request *clients.Request
 
-	if server.Mode == Opensource {
+	if server.Mode == Opensource && params.Product != constants.CHEF_ICE_PRODUCT {
 		data, request = server.fetchLatestOSVersion(params, c)
 	} else {
 		data, request = server.fetchLatestVersion(params, c)
@@ -190,7 +194,7 @@ func (server *ApiService) latestVersionHandler(c *fiber.Ctx) error {
 
 func (server *ApiService) fetchLatestVersion(params *omnitruck.RequestParams, c *fiber.Ctx) (omnitruck.ProductVersion, *clients.Request) {
 	var data omnitruck.ProductVersion
-	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
+	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT || params.Product == constants.CHEF_ICE_PRODUCT {
 		request := clients.Request{}
 		data, err := server.DynamoServices(server.DatabaseService, c).VersionLatest(params)
 		if err != nil {
@@ -283,7 +287,11 @@ func (server *ApiService) productVersionsHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT {
+	if params.Product == constants.CHEF_ICE_PRODUCT && server.Mode == Opensource {
+		return server.SendErrorResponse(c, http.StatusBadRequest, "chef-ice is not available in opensource mode")
+	}
+
+	if params.Product == constants.AUTOMATE_PRODUCT || params.Product == constants.HABITAT_PRODUCT || params.Product == constants.CHEF_ICE_PRODUCT {
 		return server.createDynamoServiceResponse(params, c)
 	} else if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
 		versions, err := server.PlatformServices(c).PlatformVersionsAll(params, int(server.Mode))

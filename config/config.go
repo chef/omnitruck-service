@@ -1,13 +1,15 @@
 package config
 
 type ServiceConfig struct {
-	LicenseServiceUrl    string           `json:"licenseServiceUrl"`
-	RelatedProductsTable string           `json:"relatedProductsTable"`
-	MetadataDetailsTable string           `json:"metadataDetailsTable"`
-	AWSConfig            AWSConfig        `json:"awsConfig"`
-	ReplicatedConfig     ReplicatedConfig `json:"replicatedConfig"`
-	ReadWriteTimeout     int64            `jso:"readWriteTimeout"`
-	PackageManagersTable string           `json:"packageManagersTable"`
+	LicenseServiceUrl          string           `json:"licenseServiceUrl"`
+	RelatedProductsTable       string           `json:"relatedProductsTable"`
+	MetadataDetailsTable       string           `json:"metadataDetailsTable"`
+	AWSConfig                  AWSConfig        `json:"awsConfig"`
+	ReplicatedConfig           ReplicatedConfig `json:"replicatedConfig"`
+	ReadWriteTimeout           int64            `jso:"readWriteTimeout"`
+	PackageManagersTable       string           `json:"packageManagersTable"`
+	PackageDetailsCurrentTable string           `json:"packageDetailsCurrentTable"`
+	PackageDetailsStableTable  string           `json:"packageDetailsStableTable"`
 }
 
 type ReplicatedConfig struct {
