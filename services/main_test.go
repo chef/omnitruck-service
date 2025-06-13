@@ -8,12 +8,14 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
 	"github.com/chef/omnitruck-service/clients/omnitruck/replicated"
+	"github.com/chef/omnitruck-service/constants"
 	"github.com/chef/omnitruck-service/dboperations"
 	_ "github.com/chef/omnitruck-service/docs"
 	"github.com/chef/omnitruck-service/logger"
@@ -120,15 +122,6 @@ func TestLatestVersionsHandler(t *testing.T) {
 			versions_err:     nil,
 		},
 		{
-			name: "failure on chef-ice for opensource",
-			requestPath: 	"/stable/chef-ice/versions/latest",
-			serverMode:       Opensource,
-			expectedStatus:   fiber.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"chef-ice not available for the opensource mode", "status_text":"Bad Request"}`,
-			versions:         []string{},
-			versions_err:     nil,
-		},
-		{
 			name:             "chef-360 success",
 			requestPath:      "/stable/chef-360/versions/latest",
 			serverMode:       Commercial,
@@ -231,12 +224,30 @@ func TestProductVersionsHandler(t *testing.T) {
 			versions_err:     nil,
 		},
 		{
-			name: "failure for the chef-ice",
+			name:             "failure for the chef-ice",
 			requestPath:      "/stable/chef-ice/versions/all",
 			serverMode:       Opensource,
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"chef-ice is not available in opensource mode", "status_text":"Bad Request"}`,
 			versions:         []string{},
+			versions_err:     nil,
+		},
+		{
+			name:             "success for chef-ice ( stable channel with trial server )",
+			requestPath:      "/stable/chef-ice/versions/all",
+			serverMode:       Trial,
+			expectedStatus:   fiber.StatusOK,
+			expectedResponse: `["1.0.0"]`,
+			versions:         []string{"1.0.0"},
+			versions_err:     nil,
+		},
+		{
+			name:             "success for chef-ice ( current channel with opensource server )",
+			requestPath:      "/current/chef-ice/versions/all",
+			serverMode:       Commercial,
+			expectedStatus:   fiber.StatusOK,
+			expectedResponse:  `["1.0.0"]`,
+			versions:         []string{"1.0.0"},
 			versions_err:     nil,
 		},
 		{
@@ -280,8 +291,14 @@ func TestProductVersionsHandler(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			app := fiber.New()
 			mockDbService := new(dboperations.MockIDbOperations)
-			mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
-				return test.versions, test.versions_err
+			if strings.Contains(test.name, constants.CHEF_ICE_PRODUCT) {
+				mockDbService.GetPackageManagersVersionsAllfunc = func(partitionValue string, channel string) ([]string, error) {
+					return test.versions, test.versions_err
+				}
+			} else {
+				mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
+					return test.versions, test.versions_err
+				}
 			}
 
 			server := &ApiService{

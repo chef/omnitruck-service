@@ -25,7 +25,6 @@ type IDbOperations interface {
 	GetRelatedProducts(partitionValue string) (*models.RelatedProducts, error)
 	GetPackageManagers() ([]string, error)
 	GetPackageManagersVersionsAll(partitionValue string, channel string) ([]string, error)
-	GetPackageManagersVersionsLatest(partitionValue string, channel string) (string, error)
 }
 
 type IDynamoDBOps interface {

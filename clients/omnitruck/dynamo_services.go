@@ -272,15 +272,8 @@ func (svc *DynamoServices) VersionLatest(params *RequestParams) (ProductVersion,
 		svc.log.Error(validating_log, requestParams.Message)
 		return "", fiber.NewError(requestParams.Code, requestParams.Message)
 	}
-	
-	var version string
-	var err error
 
-	if params.Product == constants.CHEF_ICE_PRODUCT {
-		version, err = svc.db.GetPackageManagersVersionsLatest(params.Product, params.Channel)
-	} else {
-		version, err = svc.db.GetVersionLatest(params.Product)
-	}
+	version, err := svc.db.GetVersionLatest(params.Product)
 
 	if err != nil {
 		svc.log.WithError(err).Error("Error while fetching the latest version for the product.")

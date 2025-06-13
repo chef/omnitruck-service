@@ -172,14 +172,10 @@ func (server *ApiService) latestVersionHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	if params.Product == constants.CHEF_ICE_PRODUCT && server.Mode == Opensource {	
-		return server.SendErrorResponse(c, http.StatusBadRequest, "chef-ice not available for the opensource mode")
-	}
-
 	var data omnitruck.ProductVersion
 	var request *clients.Request
 
-	if server.Mode == Opensource && params.Product != constants.CHEF_ICE_PRODUCT {
+	if server.Mode == Opensource {
 		data, request = server.fetchLatestOSVersion(params, c)
 	} else {
 		data, request = server.fetchLatestVersion(params, c)

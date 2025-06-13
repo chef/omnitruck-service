@@ -65,7 +65,7 @@ func TestProducts(t *testing.T) {
 				p:   []string{"new"},
 				eol: "false",
 			},
-			want: []string{"chef-ice","habitat", "new"},
+			want: []string{"chef-ice", "habitat", "new"},
 		},
 		{
 			name: "eol true",
@@ -833,18 +833,18 @@ func TestVersionAll(t *testing.T) {
 			versions_err: nil,
 		},
 		{
-			name: "Success for the chef-ice product",
+			name:     "Success for the chef-ice product",
 			versions: []string{"0.70.0", "0.71.0", "0.72.0", "0.73.0"},
 			args: args{
 				p: &RequestParams{
 					Channel:   "stable",
 					Product:   "chef-ice",
 					Eol:       "",
-					LicenseId: "",	
+					LicenseId: "",
 				},
 			},
-			want:         []ProductVersion{"0.70.0", "0.71.0", "0.72.0", "0.73.0"},
-			wantErr:      false,
+			want:    []ProductVersion{"0.70.0", "0.71.0", "0.72.0", "0.73.0"},
+			wantErr: false,
 		},
 		{
 			name:     "Failure validation",
@@ -952,21 +952,6 @@ func TestVersionLatest(t *testing.T) {
 			version_err: nil,
 		},
 		{
-			name: "Success product is chef-ice",
-			version: "0.70.0",
-			args: args{
-				p: &RequestParams{
-					Channel:   "stable",
-					Product:   "chef-ice",
-					Eol:       "",
-					LicenseId: "",
-				},
-			},
-			want:        ProductVersion("0.70.0"),
-			wantErr:     false,
-			version_err: nil,
-		},
-		{
 			name:    "Failure validation",
 			version: "",
 			args: args{
@@ -1002,14 +987,8 @@ func TestVersionLatest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDbService := new(dboperations.MockIDbOperations)
-			if tt.args.p.Product == "chef-ice" {
-				mockDbService.GetPackageManagersVersionsLatestfunc = func(partitionValue string, channel string) (string, error) {
-					return tt.version, tt.version_err
-				}
-			} else {
-				mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
-					return tt.version, tt.version_err
-				}
+			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
+				return tt.version, tt.version_err
 			}
 			svc := &DynamoServices{
 				db:  mockDbService,

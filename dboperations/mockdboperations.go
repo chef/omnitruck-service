@@ -12,7 +12,6 @@ type MockIDbOperations struct {
 	GetRelatedProductsfunc               func(partitionValue string) (*models.RelatedProducts, error)
 	GetPackageManagersfunc               func() ([]string, error)
 	GetPackageManagersVersionsAllfunc    func(partitionValue string, channel string) ([]string, error)
-	GetPackageManagersVersionsLatestfunc func(partitionValue string, channel string) (string, error)
 }
 
 func (mdbop *MockIDbOperations) GetPackages(partitionValue string, sortValue string) (*models.ProductDetails, error) {
@@ -41,8 +40,4 @@ func (mdbop *MockIDbOperations) GetPackageManagers() ([]string, error) {
 
 func (mdbop *MockIDbOperations) GetPackageManagersVersionsAll(partitionValue string, channel string) ([]string, error) {
 	return mdbop.GetPackageManagersVersionsAllfunc(partitionValue, channel)
-}
-
-func (mdbop *MockIDbOperations) GetPackageManagersVersionsLatest(partitionValue string, channel string) (string, error) {
-	return mdbop.GetPackageManagersVersionsLatestfunc(partitionValue, channel)
 }
