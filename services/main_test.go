@@ -231,7 +231,13 @@ func TestProductVersionsHandler(t *testing.T) {
 			versions_err:     nil,
 		},
 		{
-			
+			name: "failure for the chef-ice",
+			requestPath:      "/stable/chef-ice/versions/all",
+			serverMode:       Opensource,
+			expectedStatus:   fiber.StatusBadRequest,
+			expectedResponse: `{"code":400, "message":"chef-ice is not available in opensource mode", "status_text":"Bad Request"}`,
+			versions:         []string{},
+			versions_err:     nil,
 		},
 		{
 			name:             "success for chef-360",
