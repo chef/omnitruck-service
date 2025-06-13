@@ -30,3 +30,24 @@ type ScriptParams struct {
 	BaseUrl   string `json:"base_url"`
 	LicenseId string `json:"licenseId"`
 }
+
+type PackageDetails struct {
+    Product  string              `json:"product"`  
+    Version  string              `json:"version"`  
+    Metadata map[string]Platform `json:"metadata"` 
+}
+
+type Platform struct {
+    Architectures map[string]Architecture `json:"architectures"` 
+}
+
+type Architecture struct {
+    PackageTypes map[string]PackageType `json:"package_types"` 
+}
+
+type PackageType struct {
+    FileName       string `json:"filename"`        
+    InstallMessage string `json:"install_message"` 
+    SHA1           string `json:"sha1"`            
+    SHA256         string `json:"sha256"`          
+}
