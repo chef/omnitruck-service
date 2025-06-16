@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/chef/omnitruck-service/constants"
 	"github.com/chef/omnitruck-service/dboperations"
 	"github.com/chef/omnitruck-service/models"
 	"github.com/chef/omnitruck-service/utils"
@@ -236,7 +237,14 @@ func (svc *DynamoServices) VersionAll(params *RequestParams) ([]ProductVersion, 
 		return productVersions, fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 
-	versions, err := svc.db.GetVersionAll(params.Product)
+	var versions []string
+	var err error
+
+	if params.Product == constants.CHEF_ICE_PRODUCT {
+		versions, err = svc.db.GetPackageManagersVersionsAll(params.Product, params.Channel)
+	} else {
+		versions, err = svc.db.GetVersionAll(params.Product)
+	}
 
 	if err != nil {
 		svc.log.WithError(err).Error("Error while fetching Versions")

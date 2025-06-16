@@ -37,8 +37,8 @@ type ProductStrategyDeps struct {
 // SelectProductStrategy returns the appropriate ProductStrategy based on the product.
 func SelectProductStrategy(product string, deps *ProductStrategyDeps) ProductStrategy {
 	switch product {
-	case constants.AUTOMATE_PRODUCT, constants.HABITAT_PRODUCT:
-		return &ProductDynamoStrategy{DynamoService: deps.DynamoService, Log: deps.Log}
+	case constants.AUTOMATE_PRODUCT, constants.HABITAT_PRODUCT, constants.CHEF_ICE_PRODUCT:
+		return &ProductDynamoStrategy{DynamoService: deps.DynamoService, Log: deps.Log, Mode: deps.Mode}
 	case constants.PLATFORM_SERVICE_PRODUCT:
 		return &PlatformServiceStrategy{
 			PlatformService:   deps.PlatformService,

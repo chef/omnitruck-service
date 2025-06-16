@@ -6,6 +6,7 @@ const (
 	PRODUCT_SORT_KEY                     = "version"
 	AUTOMATE_PRODUCT                     = "automate"
 	HABITAT_PRODUCT                      = "habitat"
+	CHEF_ICE_PRODUCT                     = "chef-ice"
 	LATEST                               = "latest"
 	PLATFORM_SERVICE                     = "chef-360"
 	PLATFORM_SERVICE_PRODUCT             = "chef-360"

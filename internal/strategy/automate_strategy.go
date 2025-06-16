@@ -6,7 +6,9 @@ import (
 
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
+	"github.com/chef/omnitruck-service/constants"
 	helpers "github.com/chef/omnitruck-service/internal/helper"
+	"github.com/chef/omnitruck-service/models"
 	"github.com/gofiber/fiber/v2"
 	log "github.com/sirupsen/logrus"
 )
@@ -16,6 +18,7 @@ import (
 type ProductDynamoStrategy struct {
 	DynamoService *omnitruck.DynamoServices
 	Log           *log.Entry
+	Mode          models.ApiType
 }
 
 func (s *ProductDynamoStrategy) GetLatestVersion(params *omnitruck.RequestParams) (omnitruck.ProductVersion, *clients.Request) {
@@ -33,6 +36,13 @@ func (s *ProductDynamoStrategy) GetLatestVersion(params *omnitruck.RequestParams
 
 func (s *ProductDynamoStrategy) GetAllVersions(params *omnitruck.RequestParams) ([]omnitruck.ProductVersion, *clients.Request) {
 	request := clients.Request{}
+	if params.Product == constants.CHEF_ICE_PRODUCT && s.Mode == models.Opensource {
+		return nil, &clients.Request{
+			Ok:      false,
+			Code:    fiber.StatusBadRequest,
+			Message: "chef-ice is not available in Open Source mode",
+		}
+	}
 	data, err := s.DynamoService.VersionAll(params)
 	if err != nil {
 		code, msg := helpers.GetErrorCodeAndMsg(err)

@@ -10,7 +10,6 @@ import (
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/utils"
 	"github.com/gofiber/fiber/v2"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -18,7 +17,7 @@ const omnitruckApi = "https://omnitruck.chef.io"
 
 type Omnitruck struct {
 	client *http.Client
-	log    *logrus.Entry
+	log    *log.Entry
 }
 
 type FiberContext interface {

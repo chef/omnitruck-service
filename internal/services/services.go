@@ -236,6 +236,15 @@ func (server *DownloadService) ProductVersions(params *omnitruck.RequestParams) 
 	// Get all versions using product strategy
 	// Filter versions using mode strategy
 
+	msg, code, ok := server.ValidateRequest(params)
+	if !ok {
+		return nil, &clients.Request{
+			Ok:      false,
+			Code:    code,
+			Message: msg,
+		}
+	}
+
 	productStrategyDeps := &strategy.ProductStrategyDeps{
 		DynamoService:     server.DynamoServices(server.DatabaseService),
 		PlatformService:   server.PlatformServices(),
