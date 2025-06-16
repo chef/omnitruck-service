@@ -3,7 +3,13 @@ package httpserver
 import (
 	"time"
 
+	"github.com/chef/omnitruck-service/clients"
+	"github.com/chef/omnitruck-service/clients/omnitruck"
+	"github.com/chef/omnitruck-service/clients/omnitruck/replicated"
+	"github.com/chef/omnitruck-service/dboperations"
 	"github.com/chef/omnitruck-service/internal/api/handler"
+	"github.com/chef/omnitruck-service/models"
+	"github.com/chef/omnitruck-service/utils/template"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/gofiber/swagger"
@@ -51,12 +57,13 @@ func Injector(server *ApiServer) func(*fiber.Ctx) error {
 	return func(c *fiber.Ctx) error {
 		reqInjector := do.New()
 		// Example: set dependencies from ApiServer. Replace or add your actual fields here.
-		do.ProvideNamedValue(reqInjector, "validator", server.Validator)
-		do.ProvideNamedValue(reqInjector, "dbService", server.DatabaseService)
-		do.ProvideNamedValue(reqInjector, "templateRenderer", server.TemplateRenderer)
-		do.ProvideNamedValue(reqInjector, "replicated", server.Replicated)
-		do.ProvideNamedValue(reqInjector, "licenseClient", server.LicenseClient)
-		do.ProvideNamedValue(reqInjector, "mode", server.Mode)
+		do.ProvideNamedValue[omnitruck.RequestValidator](reqInjector, "validator", server.Validator)
+		do.ProvideNamedValue[dboperations.IDbOperations](reqInjector, "dbService", server.DatabaseService)
+		do.ProvideNamedValue[template.TemplateRender](reqInjector, "templateRenderer", server.TemplateRenderer)
+		do.ProvideNamedValue[replicated.IReplicated](reqInjector, "replicated", server.Replicated)
+		do.ProvideNamedValue[clients.ILicense](reqInjector, "licenseClient", server.LicenseClient)
+		do.ProvideNamedValue[models.ApiType](reqInjector, "mode", server.Mode)
+		do.ProvideNamedValue[string](reqInjector, "licenseServiceUrl", server.Config.ServiceConfig.LicenseServiceUrl)
 		c.Locals("reqinjector", reqInjector)
 		err := c.Next()
 		reqInjector.Shutdown()

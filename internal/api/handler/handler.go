@@ -344,7 +344,7 @@ func (h *DownloadsHandler) FileNameHandler(c *fiber.Ctx) error {
 	fileName, request := downloadService.GetFileName(params)
 	if request.Ok {
 		return h.SendResponse(c, map[string]interface{}{
-			"file_name": fileName,
+			"fileName": fileName,
 		})
 	} else {
 		return h.SendError(c, request)

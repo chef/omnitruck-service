@@ -7,7 +7,7 @@ import (
 )
 
 type ModeStrategy interface {
-	FilterProducts(data omnitruck.ItemList) omnitruck.ItemList
+	FilterProducts(data omnitruck.ItemList, eol bool) omnitruck.ItemList
 	FilterVersions(data []omnitruck.ProductVersion, product string) []omnitruck.ProductVersion
 }
 
@@ -17,8 +17,10 @@ type OpensourceModeStrategy struct{}
 
 type TrialModeStrategy struct{}
 
-func (s *CommercialModeStrategy) FilterProducts(data omnitruck.ItemList) omnitruck.ItemList {
-	data = omnitruck.FilterList(data, omnitruck.EolProductName)
+func (s *CommercialModeStrategy) FilterProducts(data omnitruck.ItemList, eol bool) omnitruck.ItemList {
+	if !eol {
+		data = omnitruck.FilterList(data, omnitruck.EolProductName)
+	}
 	return append(data, constants.PLATFORM_SERVICE_PRODUCT)
 }
 
@@ -26,7 +28,7 @@ func (s *CommercialModeStrategy) FilterVersions(data []omnitruck.ProductVersion,
 	return omnitruck.FilterProductList(data, product, omnitruck.EolProductVersion)
 }
 
-func (s *OpensourceModeStrategy) FilterProducts(data omnitruck.ItemList) omnitruck.ItemList {
+func (s *OpensourceModeStrategy) FilterProducts(data omnitruck.ItemList, eol bool) omnitruck.ItemList {
 	return omnitruck.SelectList(data, omnitruck.OsProductName)
 }
 
@@ -39,8 +41,10 @@ func (s *OpensourceModeStrategy) FilterVersions(data []omnitruck.ProductVersion,
 	return data
 }
 
-func (s *TrialModeStrategy) FilterProducts(data omnitruck.ItemList) omnitruck.ItemList {
-	data = omnitruck.FilterList(data, omnitruck.EolProductName)
+func (s *TrialModeStrategy) FilterProducts(data omnitruck.ItemList, eol bool) omnitruck.ItemList {
+	if !eol {
+		data = omnitruck.FilterList(data, omnitruck.EolProductName)
+	}
 	data = omnitruck.FilterProductsForFreeTrial(data, omnitruck.ProductsForFreeTrial)
 	return omnitruck.ProductDisplayName(data)
 }

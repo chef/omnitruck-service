@@ -21,14 +21,15 @@ import (
 )
 
 type DownloadService struct {
-	Log              *log.Entry
-	Validator        omnitruck.RequestValidator
-	DatabaseService  dboperations.IDbOperations
-	TemplateRenderer template.TemplateRender
-	Replicated       replicated.IReplicated
-	LicenseClient    clients.ILicense
-	Mode             models.ApiType
-	locals           map[string]interface{}
+	Log               *log.Entry
+	Validator         omnitruck.RequestValidator
+	DatabaseService   dboperations.IDbOperations
+	TemplateRenderer  template.TemplateRender
+	Replicated        replicated.IReplicated
+	LicenseClient     clients.ILicense
+	LicenseServiceUrl string
+	Mode              models.ApiType
+	locals            map[string]interface{}
 }
 
 func NewDownloadService(c *fiber.Ctx, log *log.Entry) (*DownloadService, error) {
@@ -47,12 +48,14 @@ func NewDownloadService(c *fiber.Ctx, log *log.Entry) (*DownloadService, error) 
 	templateRenderer := do.MustInvokeNamed[template.TemplateRender](reqInjector, "templateRenderer")
 	replicatedService := do.MustInvokeNamed[replicated.IReplicated](reqInjector, "replicated")
 	licenseClient := do.MustInvokeNamed[clients.ILicense](reqInjector, "licenseClient")
+	licenseServiceUrl := do.MustInvokeNamed[string](reqInjector, "licenseServiceUrl")
 	mode := do.MustInvokeNamed[models.ApiType](reqInjector, "mode")
 	service.Validator = validator
 	service.DatabaseService = databaseService
 	service.TemplateRenderer = templateRenderer
 	service.Replicated = replicatedService
 	service.LicenseClient = licenseClient
+	service.LicenseServiceUrl = licenseServiceUrl
 	service.Mode = mode
 	return &service, nil
 }
@@ -148,7 +151,8 @@ func (server *DownloadService) Products(params *omnitruck.RequestParams) (data o
 	data = server.DynamoServices(server.DatabaseService).Products(data, params.Eol)
 
 	getServerStrategy := strategy.SelectModeStrategy(server.Mode)
-	data = getServerStrategy.FilterProducts(data)
+	eol := params.Eol == "true"
+	data = getServerStrategy.FilterProducts(data, eol)
 
 	// if server.Mode == Opensource {
 	// 	server.logCtx(c).Info("filtering opensource products")
@@ -199,7 +203,7 @@ func (server *DownloadService) LatestVersion(params *omnitruck.RequestParams) (d
 		Log:               server.logCtx(),
 		Replicated:        server.Replicated,
 		LicenseClient:     server.LicenseClient,
-		LicenseServiceUrl: "", //TODO: set this from config or environment
+		LicenseServiceUrl: server.LicenseServiceUrl,
 		Mode:              server.Mode,
 	}
 	productStrategy := strategy.SelectProductStrategy(params.Product, productStrategyDeps)
@@ -234,10 +238,14 @@ func (server *DownloadService) ProductVersions(params *omnitruck.RequestParams) 
 	// Filter versions using mode strategy
 
 	productStrategyDeps := &strategy.ProductStrategyDeps{
-		DynamoService:    server.DynamoServices(server.DatabaseService),
-		PlatformService:  server.PlatformServices(),
-		OmnitruckService: server.Omnitruck(),
-		Log:              server.logCtx(),
+		DynamoService:     server.DynamoServices(server.DatabaseService),
+		PlatformService:   server.PlatformServices(),
+		OmnitruckService:  server.Omnitruck(),
+		Log:               server.logCtx(),
+		Replicated:        server.Replicated,
+		LicenseClient:     server.LicenseClient,
+		LicenseServiceUrl: server.LicenseServiceUrl,
+		Mode:              server.Mode,
 	}
 	productStrategy := strategy.SelectProductStrategy(params.Product, productStrategyDeps)
 	modeStrategy := strategy.SelectModeStrategy(server.Mode)
@@ -267,10 +275,14 @@ func (server *DownloadService) ProductPackages(params *omnitruck.RequestParams) 
 	}
 
 	productStrategyDeps := &strategy.ProductStrategyDeps{
-		DynamoService:    server.DynamoServices(server.DatabaseService),
-		PlatformService:  server.PlatformServices(),
-		OmnitruckService: server.Omnitruck(),
-		Log:              server.logCtx(),
+		DynamoService:     server.DynamoServices(server.DatabaseService),
+		PlatformService:   server.PlatformServices(),
+		OmnitruckService:  server.Omnitruck(),
+		Log:               server.logCtx(),
+		Replicated:        server.Replicated,
+		LicenseClient:     server.LicenseClient,
+		LicenseServiceUrl: server.LicenseServiceUrl,
+		Mode:              server.Mode,
 	}
 	productStrategy := strategy.SelectProductStrategy(params.Product, productStrategyDeps)
 	modeStrategy := strategy.SelectModeStrategy(server.Mode)
@@ -329,10 +341,14 @@ func (server *DownloadService) ProductMetadata(params *omnitruck.RequestParams) 
 	}
 
 	productStrategyDeps := &strategy.ProductStrategyDeps{
-		DynamoService:    server.DynamoServices(server.DatabaseService),
-		PlatformService:  server.PlatformServices(),
-		OmnitruckService: server.Omnitruck(),
-		Log:              server.logCtx(),
+		DynamoService:     server.DynamoServices(server.DatabaseService),
+		PlatformService:   server.PlatformServices(),
+		OmnitruckService:  server.Omnitruck(),
+		Log:               server.logCtx(),
+		Replicated:        server.Replicated,
+		LicenseClient:     server.LicenseClient,
+		LicenseServiceUrl: server.LicenseServiceUrl,
+		Mode:              server.Mode,
 	}
 	productStrategy := strategy.SelectProductStrategy(params.Product, productStrategyDeps)
 	modeStrategy := strategy.SelectModeStrategy(server.Mode)
@@ -375,7 +391,7 @@ func (server *DownloadService) ProductMetadata(params *omnitruck.RequestParams) 
 			Message: "Metadata retrieved successfully",
 		}
 	} else {
-		return omnitruck.PackageMetadata{}, req
+		return omnitruck.PackageMetadata{}, request
 	}
 }
 
@@ -428,10 +444,14 @@ func (server *DownloadService) GetFileName(params *omnitruck.RequestParams) (str
 
 	// Two-Level Strategy: select both product and mode strategies
 	productStrategyDeps := &strategy.ProductStrategyDeps{
-		DynamoService:    server.DynamoServices(server.DatabaseService),
-		PlatformService:  server.PlatformServices(),
-		OmnitruckService: server.Omnitruck(),
-		Log:              server.logCtx(),
+		DynamoService:     server.DynamoServices(server.DatabaseService),
+		PlatformService:   server.PlatformServices(),
+		OmnitruckService:  server.Omnitruck(),
+		Log:               server.logCtx(),
+		Replicated:        server.Replicated,
+		LicenseClient:     server.LicenseClient,
+		LicenseServiceUrl: server.LicenseServiceUrl,
+		Mode:              server.Mode,
 	}
 	productStrategy := strategy.SelectProductStrategy(params.Product, productStrategyDeps)
 	modeStrategy := strategy.SelectModeStrategy(server.Mode)
@@ -546,10 +566,14 @@ func (server *DownloadService) ProductDownload(params *omnitruck.RequestParams, 
 
 	// Two-Level Strategy: select both product and mode strategies
 	productStrategyDeps := &strategy.ProductStrategyDeps{
-		DynamoService:    server.DynamoServices(server.DatabaseService),
-		PlatformService:  server.PlatformServices(),
-		OmnitruckService: server.Omnitruck(),
-		Log:              server.logCtx(),
+		DynamoService:     server.DynamoServices(server.DatabaseService),
+		PlatformService:   server.PlatformServices(),
+		OmnitruckService:  server.Omnitruck(),
+		Log:               server.logCtx(),
+		Replicated:        server.Replicated,
+		LicenseClient:     server.LicenseClient,
+		LicenseServiceUrl: server.LicenseServiceUrl,
+		Mode:              server.Mode,
 	}
 	productStrategy := strategy.SelectProductStrategy(params.Product, productStrategyDeps)
 	modeStrategy := strategy.SelectModeStrategy(server.Mode)

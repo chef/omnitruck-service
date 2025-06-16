@@ -31,6 +31,7 @@ func testInjector(service services.DownloadService) func(*fiber.Ctx) error {
 		do.ProvideNamedValue[clients.ILicense](reqInjector, "licenseClient", service.LicenseClient)
 		do.ProvideNamedValue[dboperations.IDbOperations](reqInjector, "dbService", service.DatabaseService)
 		do.ProvideNamedValue[models.ApiType](reqInjector, "mode", service.Mode)
+		do.ProvideNamedValue[string](reqInjector, "licenseServiceUrl", service.LicenseServiceUrl)
 
 		// Inject mock replicated dependency
 		mockReplicated := &replicated.MockReplicated{
@@ -100,6 +101,10 @@ func TestRelatedProductsHandler(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			app := fiber.New()
+			app.Use(func(c *fiber.Ctx) error {
+				c.Locals("base_url", "http://example.com")
+				return c.Next()
+			})
 			mockDbService := new(dboperations.MockIDbOperations)
 			mockDbService.GetRelatedProductsfunc = func(partitionValue string) (*models.RelatedProducts, error) {
 				return &test.relatedProducts, test.err
@@ -117,7 +122,7 @@ func TestRelatedProductsHandler(t *testing.T) {
 				return handler.RelatedProductsHandler(c)
 			})
 
-			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
+			req := httptest.NewRequest(http.MethodGet, "http://example.com"+test.requestPath, nil)
 			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
 			assert.NoError(t, err)
 			assert.Equal(t, test.expectedStatus, resp.StatusCode)
@@ -205,6 +210,10 @@ func TestLatestVersionsHandler(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			app := fiber.New()
+			app.Use(func(c *fiber.Ctx) error {
+				c.Locals("base_url", "http://example.com")
+				return c.Next()
+			})
 			mockDbService := new(dboperations.MockIDbOperations)
 			mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
 				return test.versions, test.versions_err
@@ -226,7 +235,7 @@ func TestLatestVersionsHandler(t *testing.T) {
 				return handler.LatestVersionHandler(c)
 			})
 
-			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
+			req := httptest.NewRequest(http.MethodGet, "http://example.com"+test.requestPath, nil)
 			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
 
 			assert.NoError(t, err)
@@ -301,6 +310,10 @@ func TestProductVersionsHandler(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			app := fiber.New()
+			app.Use(func(c *fiber.Ctx) error {
+				c.Locals("base_url", "http://example.com")
+				return c.Next()
+			})
 			mockDbService := new(dboperations.MockIDbOperations)
 			mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
 				return test.versions, test.versions_err
@@ -318,7 +331,7 @@ func TestProductVersionsHandler(t *testing.T) {
 				return handler.ProductVersionsHandler(c)
 			})
 
-			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
+			req := httptest.NewRequest(http.MethodGet, "http://example.com"+test.requestPath, nil)
 			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
 
 			assert.NoError(t, err)
@@ -365,7 +378,7 @@ func TestProductMetadataHandler(t *testing.T) {
 			err:          nil,
 			version:      "latest",
 			version_err:  nil,
-			versions:     []string{},
+			versions:     []string{"latest"},
 			versions_err: nil,
 		},
 		{
@@ -385,7 +398,7 @@ func TestProductMetadataHandler(t *testing.T) {
 			err:          nil,
 			version:      "",
 			version_err:  nil,
-			versions:     []string{},
+			versions:     []string{"latest"},
 			versions_err: nil,
 		},
 		{
@@ -398,7 +411,7 @@ func TestProductMetadataHandler(t *testing.T) {
 			err:              nil,
 			version:          "latest",
 			version_err:      nil,
-			versions:         []string{},
+			versions:         []string{"latest"},
 			versions_err:     nil,
 		},
 		{
@@ -411,7 +424,7 @@ func TestProductMetadataHandler(t *testing.T) {
 			err:              nil,
 			version:          "latest",
 			version_err:      nil,
-			versions:         []string{},
+			versions:         []string{"latest"},
 			versions_err:     nil,
 		},
 		{
@@ -430,12 +443,12 @@ func TestProductMetadataHandler(t *testing.T) {
 			serverMode:       models.Trial,
 			requestPath:      "/stable/automate/metadata?p=linux&m=x86_64&v=1.2",
 			expectedStatus:   fiber.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"Version is not latest.", "status_text":"Bad Request"}`,
+			expectedResponse: `{"code":400, "message":"requested version is not latest", "status_text":"Bad Request"}`,
 			metadata:         models.MetaData{},
 			err:              errors.New("ResourceNotFoundException: Requested resource not found"),
 			version:          "latest",
 			version_err:      nil,
-			versions:         []string{},
+			versions:         []string{"latest"},
 			versions_err:     nil,
 		},
 		{
@@ -486,6 +499,10 @@ func TestProductMetadataHandler(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			app := fiber.New()
+			app.Use(func(c *fiber.Ctx) error {
+				c.Locals("base_url", "http://example.com")
+				return c.Next()
+			})
 			mockDbService := new(dboperations.MockIDbOperations)
 			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture string) (*models.MetaData, error) {
 				return &test.metadata, test.err
@@ -502,6 +519,7 @@ func TestProductMetadataHandler(t *testing.T) {
 			service := services.DownloadService{
 				DatabaseService: mockDbService,
 				Mode:            test.serverMode,
+				Validator:       omnitruck.RequestValidator{},
 			}
 
 			app.Use(testInjector(service))
@@ -509,7 +527,7 @@ func TestProductMetadataHandler(t *testing.T) {
 				return handler.ProductMetadataHandler(c)
 			})
 
-			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
+			req := httptest.NewRequest(http.MethodGet, "http://example.com"+test.requestPath, nil)
 			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
 
 			assert.NoError(t, err)
@@ -562,7 +580,7 @@ func TestProductPackagesHandler(t *testing.T) {
 			err:          nil,
 			version:      "latest",
 			version_err:  nil,
-			versions:     []string{},
+			versions:     []string{"latest"},
 			versions_err: nil,
 		},
 		{
@@ -570,12 +588,12 @@ func TestProductPackagesHandler(t *testing.T) {
 			serverMode:       models.Trial,
 			requestPath:      "/stable/automate/packages?eol=false&v=1",
 			expectedStatus:   fiber.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"Version is not latest.", "status_text":"Bad Request"}`,
+			expectedResponse: `{"code":400, "message":"requested version is not latest", "status_text":"Bad Request"}`,
 			details:          models.ProductDetails{},
 			err:              nil,
 			version:          "latest",
 			version_err:      nil,
-			versions:         []string{},
+			versions:         []string{"latestt"},
 			versions_err:     nil,
 		},
 		{
@@ -588,7 +606,7 @@ func TestProductPackagesHandler(t *testing.T) {
 			err:              nil,
 			version:          "latest",
 			version_err:      nil,
-			versions:         []string{},
+			versions:         []string{"latest"},
 			versions_err:     nil,
 		},
 		{
@@ -614,7 +632,7 @@ func TestProductPackagesHandler(t *testing.T) {
 			err:          nil,
 			version:      "latest",
 			version_err:  nil,
-			versions:     []string{},
+			versions:     []string{"latest"},
 			versions_err: nil,
 		},
 		{
@@ -627,7 +645,7 @@ func TestProductPackagesHandler(t *testing.T) {
 			err:              nil,
 			version:          "",
 			version_err:      errors.New("ResourceNotFoundException: Requested resource not found"),
-			versions:         []string{},
+			versions:         []string{"latest"},
 			versions_err:     nil,
 		},
 		{
@@ -712,6 +730,10 @@ func TestProductPackagesHandler(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			app := fiber.New()
+			app.Use(func(c *fiber.Ctx) error {
+				c.Locals("base_url", "http://example.com")
+				return c.Next()
+			})
 			mockDbService := new(dboperations.MockIDbOperations)
 			mockDbService.GetPackagesfunc = func(partitionValue, sortValue string) (*models.ProductDetails, error) {
 				return &test.details, test.err
@@ -734,7 +756,7 @@ func TestProductPackagesHandler(t *testing.T) {
 				return handler.ProductPackagesHandler(c)
 			})
 
-			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
+			req := httptest.NewRequest(http.MethodGet, "http://example.com"+test.requestPath, nil)
 			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
 
 			assert.NoError(t, err)
@@ -888,6 +910,10 @@ func TestFileNameHandler(t *testing.T) {
 			go func() {
 				defer close(done)
 				app := fiber.New()
+				app.Use(func(c *fiber.Ctx) error {
+					c.Locals("base_url", "http://example.com")
+					return c.Next()
+				})
 				mockDbService := new(dboperations.MockIDbOperations)
 
 				mockDbService.GetMetaDatafunc = func(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (*models.MetaData, error) {
@@ -912,7 +938,7 @@ func TestFileNameHandler(t *testing.T) {
 					return handler.FileNameHandler(c)
 				})
 
-				req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
+				req := httptest.NewRequest(http.MethodGet, "http://example.com"+test.requestPath, nil)
 				resp, err := app.Test(req, 100*1000) // 100 seconds timeout
 
 				assert.NoError(t, err)
@@ -968,6 +994,10 @@ func TestDownloadLinuxScriptHandler(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			app := fiber.New()
+			app.Use(func(c *fiber.Ctx) error {
+				c.Locals("base_url", "http://example.com")
+				return c.Next()
+			})
 			mockTemplate := new(template.MockTemplateRennder)
 			mockTemplate.GetScriptfunc = test.mockTemplate
 			log := logrus.NewEntry(logrus.New())
@@ -1025,6 +1055,10 @@ func TestDownloadWindowsScriptHandler(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			app := fiber.New()
+			app.Use(func(c *fiber.Ctx) error {
+				c.Locals("base_url", "http://example.com")
+				return c.Next()
+			})
 			mockTemplate := new(template.MockTemplateRennder)
 			mockTemplate.GetScriptfunc = test.mockTemplate
 			log := logrus.NewEntry(logrus.New())
@@ -1520,6 +1554,10 @@ func TestPackageManagersHandler(t *testing.T) {
 			}
 
 			app := fiber.New()
+			app.Use(func(c *fiber.Ctx) error {
+				c.Locals("base_url", "http://example.com")
+				return c.Next()
+			})
 			log := logrus.NewEntry(logrus.New())
 			handler := NewDownloadsHandler(log)
 			service := services.DownloadService{
@@ -1607,6 +1645,10 @@ func TestProductsHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			app := fiber.New()
+			app.Use(func(c *fiber.Ctx) error {
+				c.Locals("base_url", "http://example.com")
+				return c.Next()
+			})
 
 			// Mock DB Service
 			mockDb := new(dboperations.MockIDbOperations)
