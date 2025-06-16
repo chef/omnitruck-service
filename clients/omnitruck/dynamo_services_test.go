@@ -65,7 +65,7 @@ func TestProducts(t *testing.T) {
 				p:   []string{"new"},
 				eol: "false",
 			},
-			want: []string{"chef-ice","habitat", "new"},
+			want: []string{"chef-ice", "habitat", "new"},
 		},
 		{
 			name: "eol true",
@@ -932,6 +932,21 @@ func TestVersionLatest(t *testing.T) {
 			version_err: nil,
 		},
 		{
+			name:    "Success: If the product is chef-ice",
+			version: "0.70.0",
+			args: args{
+				p: &RequestParams{
+					Channel:   "stable",
+					Product:   "chef-ice",
+					Eol:       "",
+					LicenseId: "",
+				},
+			},
+			want:        ProductVersion("0.70.0"),
+			wantErr:     false,
+			version_err: nil,
+		},
+		{
 			name:    "Failure validation",
 			version: "",
 			args: args{
@@ -967,8 +982,14 @@ func TestVersionLatest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDbService := new(dboperations.MockIDbOperations)
-			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
-				return tt.version, tt.version_err
+			if tt.args.p.Product == "chef-ice" {
+				mockDbService.GetPackageManagersVersionsLatestfunc = func(partitionValue string, channel string) (string, error) {
+					return tt.version, tt.version_err
+				}
+			} else {
+				mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
+					return tt.version, tt.version_err
+				}
 			}
 			svc := &DynamoServices{
 				db:  mockDbService,
