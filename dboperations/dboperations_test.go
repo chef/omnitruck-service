@@ -6,6 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/chef/omnitruck-service/constants"
 	"github.com/chef/omnitruck-service/models"
 	"github.com/stretchr/testify/assert"
 )
@@ -576,6 +577,114 @@ func TestGetPackageManagers(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expected, got)
+			}
+		})
+	}
+}
+
+func TestGetPackageManagersVersionsAll(t *testing.T) {
+	type args struct {
+		partitionValue string
+		channel        string
+	}
+	tests := []struct {
+		name           string
+		mockScanOutput *dynamodb.ScanOutput
+		mockScanError  error
+		args           args
+		want           []string
+		wantErr        bool
+		expectedErr    string
+	}{
+		{
+			name: "failure in unmarshalling the data",
+			mockScanOutput: &dynamodb.ScanOutput{
+				Items: []map[string]*dynamodb.AttributeValue{
+					{
+						"product": {S: aws.String("automate")},
+						"version": {S: aws.String("4.3.9")},
+						"metaData": {L: []*dynamodb.AttributeValue{
+							{
+								M: map[string]*dynamodb.AttributeValue{
+									"architecture":     {S: aws.String(("arch64"))},
+									"platform":         {S: aws.String("amazon")},
+									"platform_version": {S: aws.String("2")},
+									"sha1":             {S: aws.String("SHA1arch64")},
+									"sha256":           {S: aws.String("SHA256arch64")},
+								},
+							},
+						}},
+					},
+				},
+			},
+			args: args{
+				partitionValue: "automate",
+				channel:        "stable",
+			},
+			want:        nil,
+			wantErr:     true,
+			expectedErr: "unmarshal",
+		},
+		{
+			name: "successfully fetched the package's versions",
+			mockScanOutput: &dynamodb.ScanOutput{
+				Items: []map[string]*dynamodb.AttributeValue{
+					{
+						"product": {S: aws.String("chef-ice")},
+						"version": {S: aws.String("1.0.0")},
+					},
+					{
+						"product": {S: aws.String("chef-ice")},
+						"version": {S: aws.String("1.0.1")},
+					},
+				},
+			},
+			mockScanError: nil,
+			args: args{
+				partitionValue: "chef-ice",
+				channel:        "current",
+			},
+			want: []string{
+				"1.0.0",
+				"1.0.1",
+			},
+			wantErr: false,
+		},
+		{
+			name:           "scan failure",
+			mockScanOutput: nil,
+			mockScanError: &dynamodb.ReplicaNotFoundException{
+				Message_: aws.String("Requested resource not found"),
+			},
+			args: args{
+				partitionValue: constants.CHEF_ICE_PRODUCT,
+				channel:        "stable",
+			},
+			want:        nil,
+			wantErr:     true,
+			expectedErr: "Requested resource not found",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ser := &DbOperationsService{
+				db: &MDB{
+					Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+						return tt.mockScanOutput, tt.mockScanError
+					},
+				},
+				packageDetailsStableTable:  "package-details-stable-test",
+				packageDetailsCurrentTable: "package-details-current-test",
+			}
+			got, err := ser.GetPackageManagersVersionsAll(tt.args.partitionValue, tt.args.channel)
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.expectedErr != "" {
+					assert.Contains(t, err.Error(), tt.expectedErr)
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, got)
 			}
 		})
 	}
