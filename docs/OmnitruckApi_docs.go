@@ -22,6 +22,13 @@ const docTemplateOmnitruckApi = `{
         "/architectures": {
             "get": {
                 "description": "Returns a valid list of valid platform keys along with friendly names.\nAny of these architecture keys can be used in the p query string value in various endpoints below.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get architecture keys",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -44,6 +51,13 @@ const docTemplateOmnitruckApi = `{
         "/install.ps1": {
             "get": {
                 "description": "The ` + "`" + `ACCEPT` + "`" + ` HTTP header with a value of ` + "`" + `text/plain` + "`" + ` must be provided in the request for a text response to be returned",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Download install script for Windows",
                 "parameters": [
                     {
                         "type": "string",
@@ -78,6 +92,13 @@ const docTemplateOmnitruckApi = `{
         "/install.sh": {
             "get": {
                 "description": "The ` + "`" + `ACCEPT` + "`" + ` HTTP header with a value of ` + "`" + `application/x-sh` + "`" + ` must be provided in the request for a shell script response to be returned",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Download install script for Linux",
                 "parameters": [
                     {
                         "type": "string",
@@ -109,9 +130,43 @@ const docTemplateOmnitruckApi = `{
                 }
             }
         },
+        "/package-managers": {
+            "get": {
+                "description": "Get the list of available package managers",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get available package managers",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/platforms": {
             "get": {
                 "description": "Returns a valid list of valid platform keys along with full friendly names.\nAny of these platform keys can be used in the p query string value in various endpoints below.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get platform keys",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -131,6 +186,13 @@ const docTemplateOmnitruckApi = `{
         "/products": {
             "get": {
                 "description": "Returns a valid list of valid product keys.\nAny of these product keys can be used in the \u003cPRODUCT\u003e value of other endpoints. Please note many of these products are used for internal tools only and many have been EOL'd.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get list of available products",
                 "parameters": [
                     {
                         "type": "boolean",
@@ -161,6 +223,13 @@ const docTemplateOmnitruckApi = `{
         "/relatedProducts": {
             "get": {
                 "description": "The ` + "`" + `ACCEPT` + "`" + ` HTTP header with a value of ` + "`" + `application/json` + "`" + ` must be provided in the request for a JSON response to be returned",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get related products from a BOM",
                 "parameters": [
                     {
                         "type": "string",
@@ -198,6 +267,13 @@ const docTemplateOmnitruckApi = `{
         "/{channel}/{product}/download": {
             "get": {
                 "description": "Get details for a particular package.\nThe ` + "`" + `ACCEPT` + "`" + ` HTTP header with a value of ` + "`" + `application/json` + "`" + ` must be provided in the request for a JSON response to be returned",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Download a product package",
                 "parameters": [
                     {
                         "enum": [
@@ -285,6 +361,13 @@ const docTemplateOmnitruckApi = `{
         "/{channel}/{product}/fileName": {
             "get": {
                 "description": "The ` + "`" + `ACCEPT` + "`" + ` HTTP header with a value of ` + "`" + `application/json` + "`" + ` must be provided in the request for a JSON response to be returned",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get filename for a product package",
                 "parameters": [
                     {
                         "enum": [
@@ -369,6 +452,13 @@ const docTemplateOmnitruckApi = `{
         "/{channel}/{product}/metadata": {
             "get": {
                 "description": "Get details for a particular package.\nThe ` + "`" + `ACCEPT` + "`" + ` HTTP header with a value of ` + "`" + `application/json` + "`" + ` must be provided in the request for a JSON response to be returned",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get metadata for a product",
                 "parameters": [
                     {
                         "enum": [
@@ -459,6 +549,13 @@ const docTemplateOmnitruckApi = `{
         "/{channel}/{product}/packages": {
             "get": {
                 "description": "Get the full list of all packages for a particular channel and product combination.\nBy default all packages for the latest version are returned. If the v query string parameter is included the packages for the specified version are returned.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get packages for a product version",
                 "parameters": [
                     {
                         "enum": [
@@ -524,6 +621,13 @@ const docTemplateOmnitruckApi = `{
         "/{channel}/{product}/versions/all": {
             "get": {
                 "description": "Get a list of all available version numbers for a particular channel and product combination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get all versions of a product in a channel",
                 "parameters": [
                     {
                         "enum": [
@@ -585,6 +689,13 @@ const docTemplateOmnitruckApi = `{
         "/{channel}/{product}/versions/latest": {
             "get": {
                 "description": "Get the latest version number for a particular channel and product combination.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get latest version of a product in a channel",
                 "parameters": [
                     {
                         "enum": [

@@ -63,7 +63,15 @@ func (h *DownloadsHandler) SendErrorResponse(c *fiber.Ctx, code int, msg string)
 		Message:    msg,
 	})
 }
-
+// @Summary Get list of available products
+// @description Returns a valid list of valid product keys.
+// @description Any of these product keys can be used in the <PRODUCT> value of other endpoints. Please note many of these products are used for internal tools only and many have been EOL'd.
+// @Accept      json
+// @Produce     json
+// @Param       eol query    bool false "EOL Products"
+// @Success     200 {object} omnitruck.ItemList
+// @Failure     500 {object} ErrorResponse
+// @Router      /products [get]
 func (h *DownloadsHandler) ProductsHandler(c *fiber.Ctx) error {
 
 	params := helpers.GetRequestParams(c)
@@ -80,10 +88,13 @@ func (h *DownloadsHandler) ProductsHandler(c *fiber.Ctx) error {
 	}
 }
 
+// @Summary Get platform keys
 // @description Returns a valid list of valid platform keys along with full friendly names.
 // @description Any of these platform keys can be used in the p query string value in various endpoints below.
+// @Accept      json
+// @Produce     json
 // @Success     200 {object} omnitruck.PlatformList
-// @Failure     500 {object} services.ErrorResponse
+// @Failure     500 {object} ErrorResponse
 // @Router      /platforms [get]
 func (h *DownloadsHandler) PlatformsHandler(c *fiber.Ctx) error {
 	var data omnitruck.PlatformList
@@ -100,10 +111,13 @@ func (h *DownloadsHandler) PlatformsHandler(c *fiber.Ctx) error {
 	}
 }
 
+// @Summary Get architecture keys
 // @description Returns a valid list of valid platform keys along with friendly names.
 // @description Any of these architecture keys can be used in the p query string value in various endpoints below.
+// @Accept      json
+// @Produce     json
 // @Success     200 {object} omnitruck.ItemList
-// @Failure     500 {object} services.ErrorResponse
+// @Failure     500 {object} ErrorResponse
 // @Router      /architectures [get]
 func (h *DownloadsHandler) ArchitecturesHandler(c *fiber.Ctx) error {
 
@@ -120,13 +134,16 @@ func (h *DownloadsHandler) ArchitecturesHandler(c *fiber.Ctx) error {
 	}
 }
 
+// @Summary Get latest version of a product in a channel
 // @description Get the latest version number for a particular channel and product combination.
+// @Accept      json
+// @Produce     json
 // @Param       channel    path     string true  "Channel" Enums(current, stable)
 // @Param       product    path     string true  "Product"
 // @Param       license_id query    string false "License ID"
 // @Success     200        {object} omnitruck.ProductVersion
-// @Failure     400        {object} services.ErrorResponse
-// @Failure     403        {object} services.ErrorResponse
+// @Failure     400        {object} ErrorResponse
+// @Failure     403        {object} ErrorResponse
 // @Router      /{channel}/{product}/versions/latest [get]
 func (h *DownloadsHandler) LatestVersionHandler(c *fiber.Ctx) error {
 	params := helpers.GetRequestParams(c)
@@ -145,14 +162,17 @@ func (h *DownloadsHandler) LatestVersionHandler(c *fiber.Ctx) error {
 	}
 }
 
+// @Summary Get all versions of a product in a channel
 // @description Get a list of all available version numbers for a particular channel and product combination
+// @Accept      json
+// @Produce     json
 // @Param       channel    path     string true  "Channel" Enums(current, stable)
 // @Param       product    path     string true  "Product"
 // @Param       license_id query    string false "License ID"
 // @Param       eol        query    bool   false "EOL Products" Default(false)
 // @Success     200        {object} omnitruck.ItemList
-// @Failure     400        {object} services.ErrorResponse
-// @Failure     403        {object} services.ErrorResponse
+// @Failure     400        {object} ErrorResponse
+// @Failure     403        {object} ErrorResponse
 // @Router      /{channel}/{product}/versions/all [get]
 func (h *DownloadsHandler) ProductVersionsHandler(c *fiber.Ctx) error {
 	params := helpers.GetRequestParams(c)
@@ -168,16 +188,19 @@ func (h *DownloadsHandler) ProductVersionsHandler(c *fiber.Ctx) error {
 	}
 }
 
+// @Summary Get packages for a product version
 // @description Get the full list of all packages for a particular channel and product combination.
 // @description By default all packages for the latest version are returned. If the v query string parameter is included the packages for the specified version are returned.
+// @Accept      json
+// @Produce     json
 // @Param       channel    path     string true  "Channel" Enums(current, stable)
 // @Param       product    path     string true  "Product" Example(chef)
 // @Param       v          query    string false "Version"
 // @Param       license_id query    string false "License ID"
 // @Param       eol        query    bool   false "EOL Products" Default(false)
 // @Success     200        {object} omnitruck.PackageList
-// @Failure     400        {object} services.ErrorResponse
-// @Failure     403        {object} services.ErrorResponse
+// @Failure     400        {object} ErrorResponse
+// @Failure     403        {object} ErrorResponse
 // @Router      /{channel}/{product}/packages [get]
 func (h *DownloadsHandler) ProductPackagesHandler(c *fiber.Ctx) error {
 	params := helpers.GetRequestParams(c)
@@ -193,8 +216,11 @@ func (h *DownloadsHandler) ProductPackagesHandler(c *fiber.Ctx) error {
 	}
 }
 
+// @Summary Get metadata for a product
 // @description Get details for a particular package.
 // @description The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned
+// @Accept      json
+// @Produce     json
 // @Param       channel    path     string true  "Channel"                                                                                                                      Enums(current, stable)
 // @Param       product    path     string true  "Product"                                                                                                                      Example(chef)
 // @Param       p          query    string true  "Platform, valid values are returned from the `/platforms` endpoint."                                                          Example(ubuntu)
@@ -204,8 +230,8 @@ func (h *DownloadsHandler) ProductPackagesHandler(c *fiber.Ctx) error {
 // @Param       license_id query    string false "License ID"
 // @Param       eol        query    bool   false "EOL Products" Default(false)
 // @Success     200        {object} omnitruck.PackageMetadata
-// @Failure     400        {object} services.ErrorResponse
-// @Failure     403        {object} services.ErrorResponse
+// @Failure     400        {object} ErrorResponse
+// @Failure     403        {object} ErrorResponse
 // @Router      /{channel}/{product}/metadata [get]
 func (h *DownloadsHandler) ProductMetadataHandler(c *fiber.Ctx) error {
 	params := helpers.GetRequestParams(c)
@@ -221,8 +247,11 @@ func (h *DownloadsHandler) ProductMetadataHandler(c *fiber.Ctx) error {
 	}
 }
 
+// @Summary Download a product package
 // @description Get details for a particular package.
 // @description The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned
+// @Accept      json
+// @Produce     json
 // @Param       channel    path   string true  "Channel"                                                                                                                      Enums(current, stable)
 // @Param       product    path   string true  "Product"                                                                                                                      Example(chef)
 // @Param       p          query  string true  "Platform, valid values are returned from the `/platforms` endpoint."                                                          Example(ubuntu)
@@ -232,8 +261,8 @@ func (h *DownloadsHandler) ProductMetadataHandler(c *fiber.Ctx) error {
 // @Param       license_id query  string false "License ID"
 // @Param       eol        query  bool   false "EOL Products" Default(false)
 // @Success     302
-// @Failure     400 {object} services.ErrorResponse
-// @Failure     403 {object} services.ErrorResponse
+// @Failure     400 {object} ErrorResponse
+// @Failure     403 {object} ErrorResponse
 // @Router      /{channel}/{product}/download [get]
 func (h *DownloadsHandler) ProductDownloadHandler(c *fiber.Ctx) error {
 	params := helpers.GetRequestParams(c)
@@ -302,12 +331,15 @@ func (h *DownloadsHandler) ProductDownloadHandler(c *fiber.Ctx) error {
 	return h.SendErrorResponse(c, http.StatusInternalServerError, "No download URL or response available")
 }
 
+// @Summary Get related products from a BOM
 // @description The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned
+// @Accept      json
+// @Produce     json
 // @Param       bom    	   query string true  "bom"
 // @Param       license_id query string false "License ID"
 // @Success     200
-// @Failure     400 {object} services.ErrorResponse
-// @Failure     403 {object} services.ErrorResponse
+// @Failure     400 {object} ErrorResponse
+// @Failure     403 {object} ErrorResponse
 // @Router      /relatedProducts [get]
 func (h *DownloadsHandler) RelatedProductsHandler(c *fiber.Ctx) error {
 	params := helpers.GetRequestParams(c)
@@ -323,7 +355,10 @@ func (h *DownloadsHandler) RelatedProductsHandler(c *fiber.Ctx) error {
 	}
 }
 
+// @Summary Get filename for a product package
 // @description The `ACCEPT` HTTP header with a value of `application/json` must be provided in the request for a JSON response to be returned
+// @Accept      json
+// @Produce     json
 // @Param       channel    path     string true  "Channel"                                                                                                                      Enums(current, stable)
 // @Param       product    path     string true  "Product"                                                                                                                      Example(chef)
 // @Param       p          query    string true  "Platform, valid values are returned from the `/platforms` endpoint."                                                          Example(ubuntu)
@@ -332,8 +367,8 @@ func (h *DownloadsHandler) RelatedProductsHandler(c *fiber.Ctx) error {
 // @Param       v          query    string false "Version of the product to be installed. A version always takes the form `x.y.z`"                                              Default(latest)
 // @Param       license_id query    string false "License ID"
 // @Success     200        {object} map[string]interface{}
-// @Failure     400        {object} services.ErrorResponse
-// @Failure     403        {object} services.ErrorResponse
+// @Failure     400        {object} ErrorResponse
+// @Failure     403        {object} ErrorResponse
 // @Router      /{channel}/{product}/fileName [get]
 func (h *DownloadsHandler) FileNameHandler(c *fiber.Ctx) error {
 	params := helpers.GetRequestParams(c)
@@ -351,11 +386,14 @@ func (h *DownloadsHandler) FileNameHandler(c *fiber.Ctx) error {
 	}
 }
 
+// @Summary Download install script for Linux
 // @description The `ACCEPT` HTTP header with a value of `application/x-sh` must be provided in the request for a shell script response to be returned
+// @Accept      json
+// @Produce     json
 // @Param       license_id query    string false "License ID"
 // @Success     200        {object} map[string]interface{}
-// @Failure     403        {object} services.ErrorResponse
-// @Failure     500        {object} services.ErrorResponse
+// @Failure     403        {object} ErrorResponse
+// @Failure     500        {object} ErrorResponse
 // @Router      /install.sh [get]
 func (h *DownloadsHandler) DownloadLinuxScript(c *fiber.Ctx) error {
 	params := helpers.GetRequestParams(c)
@@ -373,11 +411,14 @@ func (h *DownloadsHandler) DownloadLinuxScript(c *fiber.Ctx) error {
 	}
 }
 
+// @Summary Download install script for Windows
 // @description The `ACCEPT` HTTP header with a value of `text/plain` must be provided in the request for a text response to be returned
+// @Accept      json
+// @Produce     json
 // @Param       license_id query    string false "License ID"
 // @Success     200        {object} map[string]interface{}
-// @Failure     403        {object} services.ErrorResponse
-// @Failure     500        {object} services.ErrorResponse
+// @Failure     403        {object} ErrorResponse
+// @Failure     500        {object} ErrorResponse
 // @Router      /install.ps1 [get]
 func (h *DownloadsHandler) DownloadWindowsScript(c *fiber.Ctx) error {
 	params := helpers.GetRequestParams(c)
@@ -396,9 +437,12 @@ func (h *DownloadsHandler) DownloadWindowsScript(c *fiber.Ctx) error {
 	}
 }
 
+// @Summary Get available package managers
 // @description Get the list of available package managers
+// @Accept      json
+// @Produce     json
 // @Success 200 {object} map[string]interface{}
-// @Failure     500 {object} services.ErrorResponse
+// @Failure     500 {object} ErrorResponse
 // @Router /package-managers [get]
 func (h *DownloadsHandler) PackageManagersHandler(c *fiber.Ctx) error {
 	downloadService, err := services.NewDownloadService(c, h.Log)
