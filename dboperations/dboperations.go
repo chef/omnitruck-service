@@ -24,6 +24,8 @@ type IDbOperations interface {
 	GetVersionLatest(partitionValue string) (string, error)
 	GetRelatedProducts(partitionValue string) (*models.RelatedProducts, error)
 	GetPackageManagers() ([]string, error)
+	GetPackageManagersVersionsAll(partitionValue string, channel string) ([]string, error)
+	GetPackageManagersVersionsLatest(partitionValue string, channel string) (string, error)
 }
 
 type IDynamoDBOps interface {
@@ -32,17 +34,19 @@ type IDynamoDBOps interface {
 }
 
 type DbOperationsService struct {
-	db                   IDynamoDBOps
-	productTableName     string
-	skuTableName         string
-	packageManagersTable string
+	db                         IDynamoDBOps
+	productTableName           string
+	skuTableName               string
+	packageManagersTable       string
+	packageDetailsCurrentTable string
+	packageDetailsStableTable  string
 }
 
 // Expected structure of each item in the DynamoDB "package-manager-dev" table:
 //
-// {
-//     "packages": "deb"
-// }
+//	{
+//	    "packages": "deb"
+//	}
 //
 // - Each item represents a single package manager.
 // - The "packages" attribute is a string containing the name of the package manager (e.g., "deb", "rpm", "msi").
@@ -53,10 +57,12 @@ type PackageManagerItem struct {
 
 func NewDbOperationsService(dbConnection dbconnection.DbConnection, config config.ServiceConfig) *DbOperationsService {
 	return &DbOperationsService{
-		db:                   dbConnection.GetDbConnection(),
-		productTableName:     config.MetadataDetailsTable,
-		skuTableName:         config.RelatedProductsTable,
-		packageManagersTable: config.PackageManagersTable,
+		db:                         dbConnection.GetDbConnection(),
+		productTableName:           config.MetadataDetailsTable,
+		skuTableName:               config.RelatedProductsTable,
+		packageManagersTable:       config.PackageManagersTable,
+		packageDetailsCurrentTable: config.PackageDetailsCurrentTable,
+		packageDetailsStableTable:  config.PackageDetailsStableTable,
 	}
 }
 
@@ -228,4 +234,40 @@ func (dbo *DbOperationsService) GetPackageManagers() ([]string, error) {
 	}
 
 	return results, nil
+}
+
+func (dbo *DbOperationsService) GetPackageManagersVersionsAll(partitionValue string, channel string) ([]string, error) {
+	tableName := dbo.packageDetailsStableTable
+	if channel == "current" {
+		tableName = dbo.packageDetailsCurrentTable
+	}
+	res, err := dbo.fetchDataValues(partitionValue, tableName, constants.PRODUCT_PARTITION_KEY)
+	if err != nil {
+		log.Errorf("error in getting the Database value: %v", err)
+		return nil, err
+	}
+	var response models.PackageDetails
+	versionsArray := []string{}
+	for _, i := range res.Items {
+		err = dynamodbattribute.UnmarshalMap(i, &response)
+		versionsArray = append(versionsArray, response.Version)
+		if err != nil {
+			log.Errorf("Got error unmarshalling: %s", err)
+			return nil, err
+		}
+	}
+	return versionsArray, nil
+}
+
+func (dbo *DbOperationsService) GetPackageManagersVersionsLatest(partitionValue string, channel string) (string, error) {
+    versions, err := dbo.GetPackageManagersVersionsAll(partitionValue, channel)
+    if err != nil {
+        log.Errorf("Error in getting versions list: %v", err)
+        return "", err
+    }
+    if len(versions) == 0 {
+        return "", fmt.Errorf("no versions found for product %s ", partitionValue)
+    }
+    sort.Sort(sort.Reverse(sort.StringSlice(versions)))
+    return versions[0], nil
 }

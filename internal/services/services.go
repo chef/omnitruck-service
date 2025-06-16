@@ -195,6 +195,15 @@ func (server *DownloadService) LatestVersion(params *omnitruck.RequestParams) (d
 	// Filter versions using mode strategy
 	// Return the latest version (assume last in filtered list is latest)
 
+	msg, code, ok := server.ValidateRequest(params)
+	if !ok {
+		return "", &clients.Request{
+			Ok:      false,
+			Code:    code,
+			Message: msg,
+		}
+	}
+	
 	productStrategyDeps := &strategy.ProductStrategyDeps{
 		DynamoService:     server.DynamoServices(server.DatabaseService),
 		PlatformService:   server.PlatformServices(),
@@ -206,25 +215,16 @@ func (server *DownloadService) LatestVersion(params *omnitruck.RequestParams) (d
 		Mode:              server.Mode,
 	}
 	productStrategy := strategy.SelectProductStrategy(params.Product, productStrategyDeps)
-	modeStrategy := strategy.SelectModeStrategy(server.Mode)
+	//odeStrategy := strategy.SelectModeStrategy(server.Mode)
 
-	versions, req := productStrategy.GetAllVersions(params)
+	versions, req := productStrategy.GetLatestVersion(params)
 
 	if !req.Ok {
 		return "", req
 	}
 
-	filtered := modeStrategy.FilterVersions(versions, params.Product)
-	if len(filtered) == 0 {
-		return "", &clients.Request{
-			Ok:      false,
-			Code:    fiber.StatusNotFound,
-			Message: "No versions found for this product/mode",
-		}
-	}
-
-	latest := filtered[len(filtered)-1]
-	return latest, &clients.Request{
+	
+	return versions, &clients.Request{
 		Ok:      true,
 		Code:    fiber.StatusOK,
 		Message: "Latest version found",
