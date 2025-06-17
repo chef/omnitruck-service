@@ -6,6 +6,7 @@ import (
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
 	"github.com/chef/omnitruck-service/clients/omnitruck/replicated"
+	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/constants"
 	"github.com/chef/omnitruck-service/dboperations"
 	"github.com/chef/omnitruck-service/internal/api/handler"
@@ -69,7 +70,7 @@ func Injector(server *ApiServer) func(*fiber.Ctx) error {
 		do.ProvideNamedValue[replicated.IReplicated](reqInjector, "replicated", server.Replicated)
 		do.ProvideNamedValue[clients.ILicense](reqInjector, "licenseClient", server.LicenseClient)
 		do.ProvideNamedValue[constants.ApiType](reqInjector, "mode", server.Mode)
-		do.ProvideNamedValue[string](reqInjector, "licenseServiceUrl", server.Config.ServiceConfig.LicenseServiceUrl)
+		do.ProvideNamedValue[config.ServiceConfig](reqInjector, "config", server.Config.ServiceConfig)
 		c.Locals("reqinjector", reqInjector)
 		err := c.Next()
 		reqInjector.Shutdown()

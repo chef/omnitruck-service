@@ -126,7 +126,7 @@ func OsProductName(name string) bool {
 func OsProductVersion(name string, v ProductVersion) bool {
 	// If we can't find it in our list then it's not Opensource
 	p, ok := supportedProducts[name]
-	if !ok {
+	if !ok || p.OpensourceVersion == nil {
 		return false
 	}
 
