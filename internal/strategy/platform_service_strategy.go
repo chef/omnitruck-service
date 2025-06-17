@@ -11,7 +11,6 @@ import (
 	"github.com/chef/omnitruck-service/clients/omnitruck/replicated"
 	"github.com/chef/omnitruck-service/constants"
 	helpers "github.com/chef/omnitruck-service/internal/helper"
-	"github.com/gofiber/fiber/v2"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -70,7 +69,7 @@ func (s *PlatformServiceStrategy) GetMetadata(params *omnitruck.RequestParams) (
 	return data, request
 }
 
-func (s *PlatformServiceStrategy) Download(params *omnitruck.RequestParams, c *fiber.Ctx) (url string, resp io.ReadCloser, header http.Header, msg string, code int, err error) {
+func (s *PlatformServiceStrategy) Download(params *omnitruck.RequestParams) (url string, resp io.ReadCloser, header http.Header, msg string, code int, err error) {
 	if s.Mode == constants.Commercial {
 		return s.DownloadChefPlatform(params)
 	}

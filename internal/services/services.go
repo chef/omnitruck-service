@@ -29,6 +29,7 @@ type DownloadService struct {
 	LicenseServiceUrl string
 	Mode              constants.ApiType
 	locals            map[string]interface{}
+	Config            config.ServiceConfig
 }
 
 func NewDownloadService(c *fiber.Ctx, log *log.Entry) (*DownloadService, error) {
@@ -47,15 +48,16 @@ func NewDownloadService(c *fiber.Ctx, log *log.Entry) (*DownloadService, error) 
 	templateRenderer := do.MustInvokeNamed[template.TemplateRender](reqInjector, "templateRenderer")
 	replicatedService := do.MustInvokeNamed[replicated.IReplicated](reqInjector, "replicated")
 	licenseClient := do.MustInvokeNamed[clients.ILicense](reqInjector, "licenseClient")
-	licenseServiceUrl := do.MustInvokeNamed[string](reqInjector, "licenseServiceUrl")
 	mode := do.MustInvokeNamed[constants.ApiType](reqInjector, "mode")
+	config := do.MustInvokeNamed[config.ServiceConfig](reqInjector, "config")
 	service.Validator = validator
 	service.DatabaseService = databaseService
 	service.TemplateRenderer = templateRenderer
 	service.Replicated = replicatedService
 	service.LicenseClient = licenseClient
-	service.LicenseServiceUrl = licenseServiceUrl
 	service.Mode = mode
+	service.LicenseServiceUrl = config.LicenseServiceUrl
+	service.Config = config
 	return &service, nil
 }
 func (svc *DownloadService) SetLocals(c *fiber.Ctx) {
@@ -166,22 +168,9 @@ func (svc *DownloadService) LatestVersion(params *omnitruck.RequestParams) (data
 	// Get all versions using product strategy
 	// Filter versions using mode strategy
 	// Return the latest version (assume last in filtered list is latest)
-	productStrategy := strategy.SelectProductStrategy(params.Product, svc.ProductStrategyDeps())
-	modeStrategy := strategy.SelectModeStrategy(svc.Mode)
-
-	versions, req := productStrategy.GetAllVersions(params)
-
-	if !req.Ok {
-		return "", req
-	}
-
-	filtered := modeStrategy.FilterVersions(versions, params.Product)
-	if len(filtered) == 0 {
-		return "", &clients.Request{
-			Ok:      false,
-			Code:    fiber.StatusNotFound,
-			Message: "No versions found for this product/mode",
-		}
+	filtered, err := svc.getFilteredVersions(params)
+	if err != nil {
+		return "", err
 	}
 
 	latest := filtered[len(filtered)-1]
@@ -196,16 +185,11 @@ func (svc *DownloadService) ProductVersions(params *omnitruck.RequestParams) (da
 	// Two-Level Strategy: select both product and mode strategies
 	// Get all versions using product strategy
 	// Filter versions using mode strategy
-	productStrategy := strategy.SelectProductStrategy(params.Product, svc.ProductStrategyDeps())
-	modeStrategy := strategy.SelectModeStrategy(svc.Mode)
-
-	versions, req := productStrategy.GetAllVersions(params)
-
-	if !req.Ok {
-		return nil, req
+	filtered, err := svc.getFilteredVersions(params)
+	if err != nil {
+		return nil, err
 	}
 
-	filtered := modeStrategy.FilterVersions(versions, params.Product)
 	return filtered, &clients.Request{
 		Ok:      true,
 		Code:    fiber.StatusOK,
@@ -214,23 +198,10 @@ func (svc *DownloadService) ProductVersions(params *omnitruck.RequestParams) (da
 }
 
 func (svc *DownloadService) ProductPackages(params *omnitruck.RequestParams) (data omnitruck.PackageList, request *clients.Request) {
-	productStrategy := strategy.SelectProductStrategy(params.Product, svc.ProductStrategyDeps())
-	modeStrategy := strategy.SelectModeStrategy(svc.Mode)
-
-	// Get all versions using product strategy
-	versions, req := productStrategy.GetAllVersions(params)
-	if !req.Ok || len(versions) == 0 {
-		return nil, req
-	}
-
-	// Filter versions using mode strategy
-	filtered := modeStrategy.FilterVersions(versions, params.Product)
-	if len(filtered) == 0 {
-		return nil, &clients.Request{
-			Ok:      false,
-			Code:    fiber.StatusNotFound,
-			Message: "No versions found for this product/mode",
-		}
+	productStrategy := strategy.SelectProductStrategy(params.Product, params.Channel, svc.ProductStrategyDeps())
+	filtered, err := svc.getFilteredVersions(params)
+	if err != nil {
+		return nil, err
 	}
 
 	// If a version is provided, validate it is in the filtered list
@@ -242,9 +213,9 @@ func (svc *DownloadService) ProductPackages(params *omnitruck.RequestParams) (da
 		}
 	}
 
-	data, err := productStrategy.GetPackages(params)
-	if err != nil {
-		code, msg := helpers.GetErrorCodeAndMsg(err)
+	data, perr := productStrategy.GetPackages(params)
+	if perr != nil {
+		code, msg := helpers.GetErrorCodeAndMsg(perr)
 		return nil, &clients.Request{
 			Ok:      false,
 			Code:    code,
@@ -261,23 +232,12 @@ func (svc *DownloadService) ProductPackages(params *omnitruck.RequestParams) (da
 }
 
 func (svc *DownloadService) ProductMetadata(params *omnitruck.RequestParams) (data omnitruck.PackageMetadata, request *clients.Request) {
-	productStrategy := strategy.SelectProductStrategy(params.Product, svc.ProductStrategyDeps())
-	modeStrategy := strategy.SelectModeStrategy(svc.Mode)
+	productStrategy := strategy.SelectProductStrategy(params.Product, params.Channel, svc.ProductStrategyDeps())
 
 	// Get all versions using product strategy
-	versions, req := productStrategy.GetAllVersions(params)
-	if !req.Ok || len(versions) == 0 {
-		return omnitruck.PackageMetadata{}, req
-	}
-
-	// Filter versions using mode strategy
-	filtered := modeStrategy.FilterVersions(versions, params.Product)
-	if len(filtered) == 0 {
-		return omnitruck.PackageMetadata{}, &clients.Request{
-			Ok:      false,
-			Code:    fiber.StatusNotFound,
-			Message: "No versions found for this product/mode",
-		}
+	filtered, err := svc.getFilteredVersions(params)
+	if err != nil {
+		return omnitruck.PackageMetadata{}, err
 	}
 
 	// If a version is provided, validate it is in the filtered list
@@ -334,7 +294,7 @@ func (svc *DownloadService) RelatedProducts(params *omnitruck.RequestParams) (da
 
 func (svc *DownloadService) GetFileName(params *omnitruck.RequestParams) (string, *clients.Request) {
 	// Two-Level Strategy: select both product and mode strategies
-	productStrategy := strategy.SelectProductStrategy(params.Product, svc.ProductStrategyDeps())
+	productStrategy := strategy.SelectProductStrategy(params.Product, params.Channel, svc.ProductStrategyDeps())
 	modeStrategy := strategy.SelectModeStrategy(svc.Mode)
 
 	// Get all versions using product strategy
@@ -350,6 +310,14 @@ func (svc *DownloadService) GetFileName(params *omnitruck.RequestParams) (string
 			Ok:      false,
 			Code:    fiber.StatusNotFound,
 			Message: "No versions found for this product/mode",
+		}
+	}
+
+	if len(filtered) == 0 {
+		return "", &clients.Request{
+			Ok:      false,
+			Code:    fiber.StatusNotFound,
+			Message: params.Product + " is not supported for opensource",
 		}
 	}
 
@@ -423,7 +391,7 @@ func (svc *DownloadService) GetWindowsScript(params *omnitruck.RequestParams) (s
 func (svc *DownloadService) ProductDownload(params *omnitruck.RequestParams, c *fiber.Ctx) (string, io.ReadCloser, http.Header, string, int, error) {
 	svc.logCtx().Infof("Received product download request for %s", params.Product)
 	// Two-Level Strategy: select both product and mode strategies
-	productStrategy := strategy.SelectProductStrategy(params.Product, svc.ProductStrategyDeps())
+	productStrategy := strategy.SelectProductStrategy(params.Product, params.Channel, svc.ProductStrategyDeps())
 	modeStrategy := strategy.SelectModeStrategy(svc.Mode)
 
 	// Get all versions using product strategy
@@ -440,6 +408,7 @@ func (svc *DownloadService) ProductDownload(params *omnitruck.RequestParams, c *
 		//return svc.SendErrorResponse(c, fiber.StatusNotFound, "No versions found for this product/mode")
 	}
 
+
 	// Validate or set version
 	if err := helpers.ValidateOrSetVersion(params, filtered); err != nil {
 		return "", nil, nil, err.Error(), fiber.StatusBadRequest, err
@@ -447,7 +416,7 @@ func (svc *DownloadService) ProductDownload(params *omnitruck.RequestParams, c *
 	}
 
 	// Download using the product strategy
-	return productStrategy.Download(params, c)
+	return productStrategy.Download(params)
 }
 
 func (svc *DownloadService) GetPackageManagers() (data omnitruck.ItemList, request *clients.Request) {
@@ -482,5 +451,24 @@ func (svc *DownloadService) ProductStrategyDeps() *strategy.ProductStrategyDeps 
 		LicenseClient:     svc.LicenseClient,
 		LicenseServiceUrl: svc.LicenseServiceUrl,
 		Mode:              svc.Mode,
+		Config:            svc.Config,
 	}
+}
+
+func (svc *DownloadService) getFilteredVersions(params *omnitruck.RequestParams) ([]omnitruck.ProductVersion, *clients.Request) {
+    productStrategy := strategy.SelectProductStrategy(params.Product, params.Channel, svc.ProductStrategyDeps())
+    modeStrategy := strategy.SelectModeStrategy(svc.Mode)
+    versions, req := productStrategy.GetAllVersions(params)
+    if !req.Ok || len(versions) == 0 {
+        return nil, req
+    }
+    filtered := modeStrategy.FilterVersions(versions, params.Product)
+    if len(filtered) == 0 {
+        return nil, &clients.Request{
+            Ok:      false,
+            Code:    fiber.StatusNotFound,
+            Message: "No versions found for this product/mode",
+        }
+    }
+    return filtered, nil
 }

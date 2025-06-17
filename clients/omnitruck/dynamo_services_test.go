@@ -65,7 +65,7 @@ func TestProducts(t *testing.T) {
 				p:   []string{"new"},
 				eol: "false",
 			},
-			want: []string{"chef-ice","habitat", "new"},
+			want: []string{"chef-ice", "habitat", "new"},
 		},
 		{
 			name: "eol true",
@@ -298,7 +298,7 @@ func TestProductDownload(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDbService := new(dboperations.MockIDbOperations)
-			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture string) (*models.MetaData, error) {
+			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture string) (interface{}, error) {
 				return tt.metadata, tt.metadata_err
 			}
 			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
@@ -494,7 +494,7 @@ func TestProductMetadata(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDbService := new(dboperations.MockIDbOperations)
-			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture string) (*models.MetaData, error) {
+			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture string) (interface{}, error) {
 				return tt.metadata, tt.metadata_err
 			}
 			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
@@ -667,7 +667,7 @@ func TestProductPackages(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDbService := new(dboperations.MockIDbOperations)
-			mockDbService.GetPackagesfunc = func(partitionValue, sortValue string) (*models.ProductDetails, error) {
+			mockDbService.GetPackagesfunc = func(partitionValue, sortValue string) (interface{}, error) {
 				return &tt.packages, tt.package_err
 			}
 			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
@@ -1270,7 +1270,7 @@ func TestGetFilename(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDbService := new(dboperations.MockIDbOperations)
-			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture string) (*models.MetaData, error) {
+			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture string) (interface{}, error) {
 				return tt.metadata, tt.metadata_err
 			}
 			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {

@@ -506,7 +506,7 @@ func TestProductMetadataHandler(t *testing.T) {
 				return c.Next()
 			})
 			mockDbService := new(dboperations.MockIDbOperations)
-			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture string) (*models.MetaData, error) {
+			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture string) (interface{}, error) {
 				return &test.metadata, test.err
 			}
 			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
@@ -737,7 +737,7 @@ func TestProductPackagesHandler(t *testing.T) {
 				return c.Next()
 			})
 			mockDbService := new(dboperations.MockIDbOperations)
-			mockDbService.GetPackagesfunc = func(partitionValue, sortValue string) (*models.ProductDetails, error) {
+			mockDbService.GetPackagesfunc = func(partitionValue, sortValue string) (interface{}, error) {
 				return &test.details, test.err
 			}
 			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
@@ -922,7 +922,7 @@ func TestFileNameHandler(t *testing.T) {
 				})
 				mockDbService := new(dboperations.MockIDbOperations)
 
-				mockDbService.GetMetaDatafunc = func(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (*models.MetaData, error) {
+				mockDbService.GetMetaDatafunc = func(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (interface{}, error) {
 					return &test.metadata, test.metadata_err
 				}
 				mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {

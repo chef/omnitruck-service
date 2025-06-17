@@ -5,6 +5,7 @@ const (
 	PRODUCT_PARTITION_KEY                = "product"
 	PRODUCT_SORT_KEY                     = "version"
 	AUTOMATE_PRODUCT                     = "automate"
+	CHEF_INFRA_PRODUCT                   = "chef-ice"
 	HABITAT_PRODUCT                      = "habitat"
 	LATEST                               = "latest"
 	PLATFORM_SERVICE                     = "chef-360"
@@ -14,6 +15,8 @@ const (
 	OCTET_STREAM                         = "application/octet-stream"
 	PLATFORM_SERVICE_CONTENT_DISPOSITION = "attachment;filename=chef-360.tar.gz"
 	CHUNKED                              = "chunked"
+	CURRENT_CHANNEL                      = "current"
+	STABLE_CHANNEL                       = "stable"
 )
 
 const (
