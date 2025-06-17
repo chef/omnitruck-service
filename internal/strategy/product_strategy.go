@@ -8,7 +8,6 @@ import (
 	"github.com/chef/omnitruck-service/clients/omnitruck"
 	"github.com/chef/omnitruck-service/clients/omnitruck/replicated"
 	"github.com/chef/omnitruck-service/constants"
-	"github.com/chef/omnitruck-service/models"
 	"github.com/gofiber/fiber/v2"
 	log "github.com/sirupsen/logrus"
 )
@@ -31,7 +30,7 @@ type ProductStrategyDeps struct {
 	Replicated        replicated.IReplicated
 	LicenseClient     clients.ILicense
 	LicenseServiceUrl string
-	Mode              models.ApiType
+	Mode              constants.ApiType
 }
 
 // SelectProductStrategy returns the appropriate ProductStrategy based on the product.

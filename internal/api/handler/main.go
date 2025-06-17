@@ -528,7 +528,7 @@ package handler
 // 	if !ok {
 // 		return err
 // 	}
-// 	server.logCtx(c).Infof("Recieved product download request for %s", params.Product)
+// 	server.logCtx(c).Infof("Received product download request for %s", params.Product)
 
 // 	err = server.versionCheckForTrialAndOsServer(params, c)
 // 	if err != nil {
@@ -567,7 +567,7 @@ package handler
 // 	request := server.LicenseClient.GetReplicatedCustomerEmail(params.LicenseId, server.Config.ServiceConfig.LicenseServiceUrl, &resp)
 
 // 	if !request.Ok {
-// 		server.logCtx(c).Errorf("Recieved error response from getReplicatedCustomer")
+// 		server.logCtx(c).Errorf("Received error response from getReplicatedCustomer")
 // 		return server.SendErrorResponse(c, request.Code, request.Message)
 // 	}
 
@@ -580,7 +580,7 @@ package handler
 // 	}
 
 // 	if replicatedEmailResp.StatusCode != http.StatusOK {
-// 		server.logCtx(c).Errorf("Recieved error response from getReplicatedCustomer")
+// 		server.logCtx(c).Errorf("Received error response from getReplicatedCustomer")
 // 		return server.SendErrorResponse(c, replicatedEmailResp.StatusCode, replicatedEmailResp.Message)
 
 // 	}

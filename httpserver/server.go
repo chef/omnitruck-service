@@ -10,11 +10,11 @@ import (
 	"github.com/chef/omnitruck-service/clients/omnitruck"
 	"github.com/chef/omnitruck-service/clients/omnitruck/replicated"
 	"github.com/chef/omnitruck-service/config"
+	"github.com/chef/omnitruck-service/constants"
 	"github.com/chef/omnitruck-service/dboperations"
 	logrus "github.com/chef/omnitruck-service/logger"
 	dbconnection "github.com/chef/omnitruck-service/middleware/db"
 	"github.com/chef/omnitruck-service/middleware/license"
-	"github.com/chef/omnitruck-service/models"
 	"github.com/chef/omnitruck-service/utils/awsutils"
 	"github.com/chef/omnitruck-service/utils/template"
 	fiber "github.com/gofiber/fiber/v2"
@@ -29,7 +29,7 @@ type Config struct {
 	Name          string
 	Listen        string
 	Log           *log.Entry
-	Mode          models.ApiType
+	Mode          constants.ApiType
 	ServiceConfig config.ServiceConfig
 }
 
@@ -45,7 +45,7 @@ type ApiServer struct {
 	Log              *log.Entry
 	App              *fiber.App
 	Validator        omnitruck.RequestValidator
-	Mode             models.ApiType
+	Mode             constants.ApiType
 	DatabaseService  dboperations.IDbOperations
 	TemplateRenderer template.TemplateRender
 	Replicated       replicated.IReplicated
@@ -80,7 +80,7 @@ func (server *ApiServer) Initialize(c Config) *ApiServer {
 		Views:                 engine,
 	})
 
-	if c.Mode == models.Trial || c.Mode == models.Opensource {
+	if c.Mode == constants.Trial || c.Mode == constants.Opensource {
 		channel := omnitruck.ContainsValidator{
 			Field:      "Channel",
 			Values:     []string{"stable"},
@@ -104,7 +104,7 @@ func (server *ApiServer) Initialize(c Config) *ApiServer {
 	// 	server.Validator.Add(&version)
 	// }
 
-	if c.Mode == models.Trial || c.Mode == models.Commercial {
+	if c.Mode == constants.Trial || c.Mode == constants.Commercial {
 		server.Log.Info("Adding EOL Validator")
 		eolversion := omnitruck.EolVersionValidator{}
 		server.Validator.Add(&eolversion)
@@ -158,7 +158,7 @@ func (server *ApiServer) StartService() {
 
 	server.App.Use(license.New(license.Config{
 		URL:      server.Config.ServiceConfig.LicenseServiceUrl,
-		Required: server.Config.Mode == models.Commercial,
+		Required: server.Config.Mode == constants.Commercial,
 		Next: func(c *fiber.Ctx) bool {
 			switch c.Path() {
 			case "/status":

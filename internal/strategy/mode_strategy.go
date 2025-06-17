@@ -3,7 +3,6 @@ package strategy
 import (
 	"github.com/chef/omnitruck-service/clients/omnitruck"
 	"github.com/chef/omnitruck-service/constants"
-	"github.com/chef/omnitruck-service/models"
 )
 
 type ModeStrategy interface {
@@ -33,7 +32,7 @@ func (s *OpensourceModeStrategy) FilterProducts(data omnitruck.ItemList, eol boo
 }
 
 func (s *OpensourceModeStrategy) FilterVersions(data []omnitruck.ProductVersion, product string) []omnitruck.ProductVersion {
-	if product == constants.HABITAT_PRODUCT {
+	if product != constants.AUTOMATE_PRODUCT {
 		return omnitruck.FilterList(data, func(v omnitruck.ProductVersion) bool {
 			return !omnitruck.OsProductVersion(product, v)
 		})
@@ -56,11 +55,11 @@ func (s *TrialModeStrategy) FilterVersions(data []omnitruck.ProductVersion, prod
 	return []omnitruck.ProductVersion{data[len(data)-1]}
 }
 
-func SelectModeStrategy(mode models.ApiType) ModeStrategy {
+func SelectModeStrategy(mode constants.ApiType) ModeStrategy {
 	switch mode {
-	case models.Opensource:
+	case constants.Opensource:
 		return &OpensourceModeStrategy{}
-	case models.Trial:
+	case constants.Trial:
 		return &TrialModeStrategy{}
 	default:
 		return &CommercialModeStrategy{}

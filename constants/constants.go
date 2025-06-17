@@ -22,3 +22,11 @@ const (
 	REPLICATED_CUSTOMER_ERROR          = "error while searching customer in replicated"
 	REPLICATED_DOWNLOAD_ERROR          = "error while downloading from replicated"
 )
+
+type ApiType int
+
+const (
+	Trial ApiType = iota
+	Opensource
+	Commercial
+)

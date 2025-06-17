@@ -13,7 +13,6 @@ import (
 	helpers "github.com/chef/omnitruck-service/internal/helper"
 	"github.com/chef/omnitruck-service/internal/strategy"
 	"github.com/chef/omnitruck-service/logger"
-	"github.com/chef/omnitruck-service/models"
 	"github.com/chef/omnitruck-service/utils/template"
 	"github.com/gofiber/fiber/v2"
 	"github.com/samber/do"
@@ -28,7 +27,7 @@ type DownloadService struct {
 	Replicated        replicated.IReplicated
 	LicenseClient     clients.ILicense
 	LicenseServiceUrl string
-	Mode              models.ApiType
+	Mode              constants.ApiType
 	locals            map[string]interface{}
 }
 
@@ -49,7 +48,7 @@ func NewDownloadService(c *fiber.Ctx, log *log.Entry) (*DownloadService, error) 
 	replicatedService := do.MustInvokeNamed[replicated.IReplicated](reqInjector, "replicated")
 	licenseClient := do.MustInvokeNamed[clients.ILicense](reqInjector, "licenseClient")
 	licenseServiceUrl := do.MustInvokeNamed[string](reqInjector, "licenseServiceUrl")
-	mode := do.MustInvokeNamed[models.ApiType](reqInjector, "mode")
+	mode := do.MustInvokeNamed[constants.ApiType](reqInjector, "mode")
 	service.Validator = validator
 	service.DatabaseService = databaseService
 	service.TemplateRenderer = templateRenderer
@@ -59,7 +58,7 @@ func NewDownloadService(c *fiber.Ctx, log *log.Entry) (*DownloadService, error) 
 	service.Mode = mode
 	return &service, nil
 }
-func (server *DownloadService) SetLocals(c *fiber.Ctx) {
+func (svc *DownloadService) SetLocals(c *fiber.Ctx) {
 	locals := map[string]interface{}{}
 	if c.Locals("valid_license") != nil {
 		requestId := c.Locals("valid_license").(bool)
@@ -88,86 +87,58 @@ func (server *DownloadService) SetLocals(c *fiber.Ctx) {
 	} else {
 		locals["license_id"] = ""
 	}
-	server.locals = locals
+	svc.locals = locals
 }
 
-func (server *DownloadService) Omnitruck() *omnitruck.Omnitruck {
-	client := omnitruck.New(server.logCtx())
+func (svc *DownloadService) Omnitruck() *omnitruck.Omnitruck {
+	client := omnitruck.New(svc.logCtx())
 
 	return &client
 }
 
-func (server *DownloadService) DynamoServices(db dboperations.IDbOperations) *omnitruck.DynamoServices {
-	service := omnitruck.NewDynamoServices(db, server.logCtx())
+func (svc *DownloadService) DynamoServices(db dboperations.IDbOperations) *omnitruck.DynamoServices {
+	service := omnitruck.NewDynamoServices(db, svc.logCtx())
 
 	return &service
 }
 
-func (server *DownloadService) PlatformServices() *omnitruck.PlatformServices {
-	service := omnitruck.NewPlatformServices(server.logCtx())
+func (svc *DownloadService) PlatformServices() *omnitruck.PlatformServices {
+	service := omnitruck.NewPlatformServices(svc.logCtx())
 	return &service
 }
 
-func (server *DownloadService) ReplicatedService(config config.ReplicatedConfig, log logger.Logger) replicated.IReplicated {
+func (svc *DownloadService) ReplicatedService(config config.ReplicatedConfig, log logger.Logger) replicated.IReplicated {
 	service := replicated.NewReplicatedImpl(config, log)
 	return service
 }
 
-func (server *DownloadService) logCtx() *log.Entry {
-	return server.Log.WithField("license_id", server.locals["license_id"])
+func (svc *DownloadService) logCtx() *log.Entry {
+	return svc.Log.WithField("license_id", svc.locals["license_id"])
 }
 
-func (server *DownloadService) validLicense() bool {
-	v := server.locals["valid_license"]
-	return v != nil && v.(bool)
-}
+func (svc *DownloadService) Products(params *omnitruck.RequestParams) (data omnitruck.ItemList, request *clients.Request) {
+	request = svc.Omnitruck().Products(params, &data)
 
-func (server *DownloadService) ValidateRequest(params *omnitruck.RequestParams) (string, int, bool) {
-	server.logCtx().Debugf("Validating request %+v", params)
-	context := omnitruck.Context{
-		License: server.validLicense(),
-	}
+	data = svc.DynamoServices(svc.DatabaseService).Products(data, params.Eol)
 
-	errors := server.Validator.Params(params, context)
-	if errors != nil {
-		msgs, code := server.Validator.ErrorMessages(errors)
-
-		return msgs, code, false
-	}
-
-	// server.logCtx(c).WithField("errors", msgs).Error("Error validating request")
-	// 	return c.Status(code).JSON(ErrorResponse{
-	// 		Code:       code,
-	// 		StatusText: http.StatusText(code),
-	// 		Message:    msgs,
-	// 	}), false
-
-	return "", 0, true
-}
-
-func (server *DownloadService) Products(params *omnitruck.RequestParams) (data omnitruck.ItemList, request *clients.Request) {
-	request = server.Omnitruck().Products(params, &data)
-
-	data = server.DynamoServices(server.DatabaseService).Products(data, params.Eol)
-
-	getServerStrategy := strategy.SelectModeStrategy(server.Mode)
+	getServerStrategy := strategy.SelectModeStrategy(svc.Mode)
 	eol := params.Eol == "true"
 	data = getServerStrategy.FilterProducts(data, eol)
 
-	// if server.Mode == Opensource {
-	// 	server.logCtx(c).Info("filtering opensource products")
+	// if svc.Mode == Opensource {
+	// 	svc.logCtx(c).Info("filtering opensource products")
 	// 	data = omnitruck.SelectList(data, omnitruck.OsProductName)
 	// } else if params.Eol != "true" {
-	// 	server.logCtx(c).Info("filtering eol products")
+	// 	svc.logCtx(c).Info("filtering eol products")
 	// 	data = omnitruck.FilterList(data, omnitruck.EolProductName)
 	// }
 
-	// if server.Mode == Trial {
+	// if svc.Mode == Trial {
 	// 	data = omnitruck.FilterProductsForFreeTrial(data, omnitruck.ProductsForFreeTrial)
 	// 	omnitruck.ProductDisplayName(data)
 	// }
 
-	// if server.Mode == Commercial {
+	// if svc.Mode == Commercial {
 	// 	data = append(data, constants.PLATFORM_SERVICE_PRODUCT)
 	// }
 
@@ -175,39 +146,28 @@ func (server *DownloadService) Products(params *omnitruck.RequestParams) (data o
 
 }
 
-func (server *DownloadService) Platforms() (data omnitruck.PlatformList, request *clients.Request) {
-	request = server.Omnitruck().Platforms().ParseData(&data)
+func (svc *DownloadService) Platforms() (data omnitruck.PlatformList, request *clients.Request) {
+	request = svc.Omnitruck().Platforms().ParseData(&data)
 
-	data = server.DynamoServices(server.DatabaseService).Platforms(data)
-
-	return data, request
-}
-
-func (server *DownloadService) Architectures() (data omnitruck.ItemList, request *clients.Request) {
-
-	request = server.Omnitruck().Architectures().ParseData(&data)
+	data = svc.DynamoServices(svc.DatabaseService).Platforms(data)
 
 	return data, request
 }
 
-func (server *DownloadService) LatestVersion(params *omnitruck.RequestParams) (data omnitruck.ProductVersion, request *clients.Request) {
+func (svc *DownloadService) Architectures() (data omnitruck.ItemList, request *clients.Request) {
+
+	request = svc.Omnitruck().Architectures().ParseData(&data)
+
+	return data, request
+}
+
+func (svc *DownloadService) LatestVersion(params *omnitruck.RequestParams) (data omnitruck.ProductVersion, request *clients.Request) {
 	// Two-Level Strategy: select both product and mode strategies
 	// Get all versions using product strategy
 	// Filter versions using mode strategy
 	// Return the latest version (assume last in filtered list is latest)
-
-	productStrategyDeps := &strategy.ProductStrategyDeps{
-		DynamoService:     server.DynamoServices(server.DatabaseService),
-		PlatformService:   server.PlatformServices(),
-		OmnitruckService:  server.Omnitruck(),
-		Log:               server.logCtx(),
-		Replicated:        server.Replicated,
-		LicenseClient:     server.LicenseClient,
-		LicenseServiceUrl: server.LicenseServiceUrl,
-		Mode:              server.Mode,
-	}
-	productStrategy := strategy.SelectProductStrategy(params.Product, productStrategyDeps)
-	modeStrategy := strategy.SelectModeStrategy(server.Mode)
+	productStrategy := strategy.SelectProductStrategy(params.Product, svc.ProductStrategyDeps())
+	modeStrategy := strategy.SelectModeStrategy(svc.Mode)
 
 	versions, req := productStrategy.GetAllVersions(params)
 
@@ -232,23 +192,12 @@ func (server *DownloadService) LatestVersion(params *omnitruck.RequestParams) (d
 	}
 }
 
-func (server *DownloadService) ProductVersions(params *omnitruck.RequestParams) (data []omnitruck.ProductVersion, request *clients.Request) {
+func (svc *DownloadService) ProductVersions(params *omnitruck.RequestParams) (data []omnitruck.ProductVersion, request *clients.Request) {
 	// Two-Level Strategy: select both product and mode strategies
 	// Get all versions using product strategy
 	// Filter versions using mode strategy
-
-	productStrategyDeps := &strategy.ProductStrategyDeps{
-		DynamoService:     server.DynamoServices(server.DatabaseService),
-		PlatformService:   server.PlatformServices(),
-		OmnitruckService:  server.Omnitruck(),
-		Log:               server.logCtx(),
-		Replicated:        server.Replicated,
-		LicenseClient:     server.LicenseClient,
-		LicenseServiceUrl: server.LicenseServiceUrl,
-		Mode:              server.Mode,
-	}
-	productStrategy := strategy.SelectProductStrategy(params.Product, productStrategyDeps)
-	modeStrategy := strategy.SelectModeStrategy(server.Mode)
+	productStrategy := strategy.SelectProductStrategy(params.Product, svc.ProductStrategyDeps())
+	modeStrategy := strategy.SelectModeStrategy(svc.Mode)
 
 	versions, req := productStrategy.GetAllVersions(params)
 
@@ -264,28 +213,9 @@ func (server *DownloadService) ProductVersions(params *omnitruck.RequestParams) 
 	}
 }
 
-func (server *DownloadService) ProductPackages(params *omnitruck.RequestParams) (data omnitruck.PackageList, request *clients.Request) {
-	msg, code, ok := server.ValidateRequest(params)
-	if !ok {
-		return nil, &clients.Request{
-			Ok:      false,
-			Code:    code,
-			Message: msg,
-		}
-	}
-
-	productStrategyDeps := &strategy.ProductStrategyDeps{
-		DynamoService:     server.DynamoServices(server.DatabaseService),
-		PlatformService:   server.PlatformServices(),
-		OmnitruckService:  server.Omnitruck(),
-		Log:               server.logCtx(),
-		Replicated:        server.Replicated,
-		LicenseClient:     server.LicenseClient,
-		LicenseServiceUrl: server.LicenseServiceUrl,
-		Mode:              server.Mode,
-	}
-	productStrategy := strategy.SelectProductStrategy(params.Product, productStrategyDeps)
-	modeStrategy := strategy.SelectModeStrategy(server.Mode)
+func (svc *DownloadService) ProductPackages(params *omnitruck.RequestParams) (data omnitruck.PackageList, request *clients.Request) {
+	productStrategy := strategy.SelectProductStrategy(params.Product, svc.ProductStrategyDeps())
+	modeStrategy := strategy.SelectModeStrategy(svc.Mode)
 
 	// Get all versions using product strategy
 	versions, req := productStrategy.GetAllVersions(params)
@@ -321,7 +251,7 @@ func (server *DownloadService) ProductPackages(params *omnitruck.RequestParams) 
 			Message: msg,
 		}
 	}
-	productStrategy.UpdatePackages(&data, params, server.locals["base_url"].(string))
+	productStrategy.UpdatePackages(&data, params, svc.locals["base_url"].(string))
 
 	return data, &clients.Request{
 		Ok:      true,
@@ -330,28 +260,9 @@ func (server *DownloadService) ProductPackages(params *omnitruck.RequestParams) 
 	}
 }
 
-func (server *DownloadService) ProductMetadata(params *omnitruck.RequestParams) (data omnitruck.PackageMetadata, request *clients.Request) {
-	msg, code, ok := server.ValidateRequest(params)
-	if !ok {
-		return omnitruck.PackageMetadata{}, &clients.Request{
-			Ok:      false,
-			Code:    code,
-			Message: msg,
-		}
-	}
-
-	productStrategyDeps := &strategy.ProductStrategyDeps{
-		DynamoService:     server.DynamoServices(server.DatabaseService),
-		PlatformService:   server.PlatformServices(),
-		OmnitruckService:  server.Omnitruck(),
-		Log:               server.logCtx(),
-		Replicated:        server.Replicated,
-		LicenseClient:     server.LicenseClient,
-		LicenseServiceUrl: server.LicenseServiceUrl,
-		Mode:              server.Mode,
-	}
-	productStrategy := strategy.SelectProductStrategy(params.Product, productStrategyDeps)
-	modeStrategy := strategy.SelectModeStrategy(server.Mode)
+func (svc *DownloadService) ProductMetadata(params *omnitruck.RequestParams) (data omnitruck.PackageMetadata, request *clients.Request) {
+	productStrategy := strategy.SelectProductStrategy(params.Product, svc.ProductStrategyDeps())
+	modeStrategy := strategy.SelectModeStrategy(svc.Mode)
 
 	// Get all versions using product strategy
 	versions, req := productStrategy.GetAllVersions(params)
@@ -381,7 +292,7 @@ func (server *DownloadService) ProductMetadata(params *omnitruck.RequestParams) 
 	data, request = productStrategy.GetMetadata(params)
 
 	// Remap the package url to our download URL
-	url := helpers.GetDownloadUrl(params, server.locals["base_url"].(string))
+	url := helpers.GetDownloadUrl(params, svc.locals["base_url"].(string))
 	data.Url = url
 
 	if request.Ok {
@@ -395,24 +306,14 @@ func (server *DownloadService) ProductMetadata(params *omnitruck.RequestParams) 
 	}
 }
 
-func (server *DownloadService) RelatedProducts(params *omnitruck.RequestParams) (data map[string]interface{}, request *clients.Request) {
-	server.logCtx().Info("Validating related products API for " + params.BOM)
+func (svc *DownloadService) RelatedProducts(params *omnitruck.RequestParams) (data map[string]interface{}, request *clients.Request) {
+	svc.logCtx().Info("Validating related products API for " + params.BOM)
 
-	msg, code, ok := server.ValidateRequest(params)
-	if !ok {
-		server.logCtx().Error("Validation of related products API for "+params.BOM+"failed", msg)
-		return nil, &clients.Request{
-			Ok:      false,
-			Code:    code,
-			Message: msg,
-		}
-	}
-
-	relatedProducts, err := server.DynamoServices(server.DatabaseService).GetRelatedProducts(params)
+	relatedProducts, err := svc.DynamoServices(svc.DatabaseService).GetRelatedProducts(params)
 
 	if err != nil {
 		code, msg := helpers.GetErrorCodeAndMsg(err)
-		server.logCtx().Error("Error while fetching related products for "+params.BOM, err.Error())
+		svc.logCtx().Error("Error while fetching related products for "+params.BOM, err.Error())
 		return nil, &clients.Request{
 			Ok:      false,
 			Code:    code,
@@ -423,7 +324,7 @@ func (server *DownloadService) RelatedProducts(params *omnitruck.RequestParams) 
 	response := map[string]interface{}{
 		"relatedProducts": relatedProducts.Products,
 	}
-	server.logCtx().Info("Returning success response from related products API for " + params.BOM)
+	svc.logCtx().Info("Returning success response from related products API for " + params.BOM)
 	return response, &clients.Request{
 		Ok:      true,
 		Code:    fiber.StatusOK,
@@ -431,30 +332,10 @@ func (server *DownloadService) RelatedProducts(params *omnitruck.RequestParams) 
 	}
 }
 
-func (server *DownloadService) GetFileName(params *omnitruck.RequestParams) (string, *clients.Request) {
-	msg, code, ok := server.ValidateRequest(params)
-	if !ok {
-		server.logCtx().Error("Validation of file name API for " + params.Product + " failed")
-		return "", &clients.Request{
-			Ok:      false,
-			Code:    code,
-			Message: msg,
-		}
-	}
-
+func (svc *DownloadService) GetFileName(params *omnitruck.RequestParams) (string, *clients.Request) {
 	// Two-Level Strategy: select both product and mode strategies
-	productStrategyDeps := &strategy.ProductStrategyDeps{
-		DynamoService:     server.DynamoServices(server.DatabaseService),
-		PlatformService:   server.PlatformServices(),
-		OmnitruckService:  server.Omnitruck(),
-		Log:               server.logCtx(),
-		Replicated:        server.Replicated,
-		LicenseClient:     server.LicenseClient,
-		LicenseServiceUrl: server.LicenseServiceUrl,
-		Mode:              server.Mode,
-	}
-	productStrategy := strategy.SelectProductStrategy(params.Product, productStrategyDeps)
-	modeStrategy := strategy.SelectModeStrategy(server.Mode)
+	productStrategy := strategy.SelectProductStrategy(params.Product, svc.ProductStrategyDeps())
+	modeStrategy := strategy.SelectModeStrategy(svc.Mode)
 
 	// Get all versions using product strategy
 	versions, req := productStrategy.GetAllVersions(params)
@@ -483,7 +364,7 @@ func (server *DownloadService) GetFileName(params *omnitruck.RequestParams) (str
 
 	fileName, err := productStrategy.GetFileName(params)
 	if err != nil {
-		server.logCtx().Error("Error while fetching fileName for "+params.Product, err.Error())
+		svc.logCtx().Error("Error while fetching fileName for "+params.Product, err.Error())
 		return "", &clients.Request{
 			Ok:      false,
 			Code:    fiber.StatusInternalServerError,
@@ -491,7 +372,7 @@ func (server *DownloadService) GetFileName(params *omnitruck.RequestParams) (str
 		}
 	}
 
-	server.logCtx().Info(constants.SUCCESS_RESPONSE_FROM_FILENAME_MSG + params.Product)
+	svc.logCtx().Info(constants.SUCCESS_RESPONSE_FROM_FILENAME_MSG + params.Product)
 	return fileName, &clients.Request{
 		Ok:      true,
 		Code:    fiber.StatusOK,
@@ -499,21 +380,12 @@ func (server *DownloadService) GetFileName(params *omnitruck.RequestParams) (str
 	}
 }
 
-func (server *DownloadService) GetLinuxScript(params *omnitruck.RequestParams) (string, *clients.Request) {
-	msg, code, ok := server.ValidateRequest(params)
-	if !ok {
-		server.logCtx().Error("Validation of download linux script API failed: ", msg)
-		return "", &clients.Request{
-			Ok:      false,
-			Code:    code,
-			Message: msg,
-		}
-	}
-	if server.Mode == models.Opensource {
+func (svc *DownloadService) GetLinuxScript(params *omnitruck.RequestParams) (string, *clients.Request) {
+	if svc.Mode == constants.Opensource {
 		params.LicenseId = ""
 	}
 	filePath := "../../templates/install.sh.tmpl"
-	resp, err := server.TemplateRenderer.GetScript(server.locals["base_url"].(string), params, filePath)
+	resp, err := svc.TemplateRenderer.GetScript(svc.locals["base_url"].(string), params, filePath)
 	if err != nil {
 		return "", &clients.Request{
 			Ok:      false,
@@ -528,21 +400,12 @@ func (server *DownloadService) GetLinuxScript(params *omnitruck.RequestParams) (
 	}
 }
 
-func (server *DownloadService) GetWindowsScript(params *omnitruck.RequestParams) (string, *clients.Request) {
-	msg, code, ok := server.ValidateRequest(params)
-	if !ok {
-		server.logCtx().Error("Validation of download windows script API failed: ", msg)
-		return "", &clients.Request{
-			Ok:      false,
-			Code:    code,
-			Message: msg,
-		}
-	}
-	if server.Mode == models.Opensource {
+func (svc *DownloadService) GetWindowsScript(params *omnitruck.RequestParams) (string, *clients.Request) {
+	if svc.Mode == constants.Opensource {
 		params.LicenseId = ""
 	}
 	filePath := "../../templates/install.ps1.tmpl"
-	resp, err := server.TemplateRenderer.GetScript(server.locals["base_url"].(string), params, filePath)
+	resp, err := svc.TemplateRenderer.GetScript(svc.locals["base_url"].(string), params, filePath)
 	if err != nil {
 		return "", &clients.Request{
 			Ok:      false,
@@ -557,54 +420,39 @@ func (server *DownloadService) GetWindowsScript(params *omnitruck.RequestParams)
 	}
 }
 
-func (server *DownloadService) ProductDownload(params *omnitruck.RequestParams, c *fiber.Ctx) (string, io.ReadCloser, http.Header, string, int, error) {
-	msg, code, ok := server.ValidateRequest(params)
-	if !ok {
-		return "", nil, nil, msg, code, fiber.NewError(code, msg)
-	}
-	server.logCtx().Infof("Recieved product download request for %s", params.Product)
-
+func (svc *DownloadService) ProductDownload(params *omnitruck.RequestParams, c *fiber.Ctx) (string, io.ReadCloser, http.Header, string, int, error) {
+	svc.logCtx().Infof("Received product download request for %s", params.Product)
 	// Two-Level Strategy: select both product and mode strategies
-	productStrategyDeps := &strategy.ProductStrategyDeps{
-		DynamoService:     server.DynamoServices(server.DatabaseService),
-		PlatformService:   server.PlatformServices(),
-		OmnitruckService:  server.Omnitruck(),
-		Log:               server.logCtx(),
-		Replicated:        server.Replicated,
-		LicenseClient:     server.LicenseClient,
-		LicenseServiceUrl: server.LicenseServiceUrl,
-		Mode:              server.Mode,
-	}
-	productStrategy := strategy.SelectProductStrategy(params.Product, productStrategyDeps)
-	modeStrategy := strategy.SelectModeStrategy(server.Mode)
+	productStrategy := strategy.SelectProductStrategy(params.Product, svc.ProductStrategyDeps())
+	modeStrategy := strategy.SelectModeStrategy(svc.Mode)
 
 	// Get all versions using product strategy
 	versions, req := productStrategy.GetAllVersions(params)
 	if !req.Ok || len(versions) == 0 {
 		return "", nil, nil, req.Message, req.Code, fiber.NewError(req.Code, req.Message)
-		//return server.SendError(c, req)
+		//return svc.SendError(c, req)
 	}
 
 	// Filter versions using mode strategy
 	filtered := modeStrategy.FilterVersions(versions, params.Product)
 	if len(filtered) == 0 {
 		return "", nil, nil, "No versions found for this product/mode", fiber.StatusNotFound, fiber.NewError(fiber.StatusNotFound, "No versions found for this product/mode")
-		//return server.SendErrorResponse(c, fiber.StatusNotFound, "No versions found for this product/mode")
+		//return svc.SendErrorResponse(c, fiber.StatusNotFound, "No versions found for this product/mode")
 	}
 
 	// Validate or set version
 	if err := helpers.ValidateOrSetVersion(params, filtered); err != nil {
 		return "", nil, nil, err.Error(), fiber.StatusBadRequest, err
-		//return server.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
+		//return svc.SendErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
 
 	// Download using the product strategy
 	return productStrategy.Download(params, c)
 }
 
-func (server *DownloadService) GetPackageManagers() (data omnitruck.ItemList, request *clients.Request) {
-	server.logCtx().Info("Fetching package managers")
-	packageManagers, err := server.DynamoServices(server.DatabaseService).GetPackageManagers()
+func (svc *DownloadService) GetPackageManagers() (data omnitruck.ItemList, request *clients.Request) {
+	svc.logCtx().Info("Fetching package managers")
+	packageManagers, err := svc.DynamoServices(svc.DatabaseService).GetPackageManagers()
 	if err != nil {
 		code, msg := helpers.GetErrorCodeAndMsg(err)
 		return nil, &clients.Request{
@@ -622,4 +470,17 @@ func (server *DownloadService) GetPackageManagers() (data omnitruck.ItemList, re
 
 func isLatest(v string) bool {
 	return len(v) == 0 || v == "latest"
+}
+
+func (svc *DownloadService) ProductStrategyDeps() *strategy.ProductStrategyDeps {
+	return &strategy.ProductStrategyDeps{
+		DynamoService:     svc.DynamoServices(svc.DatabaseService),
+		PlatformService:   svc.PlatformServices(),
+		OmnitruckService:  svc.Omnitruck(),
+		Log:               svc.logCtx(),
+		Replicated:        svc.Replicated,
+		LicenseClient:     svc.LicenseClient,
+		LicenseServiceUrl: svc.LicenseServiceUrl,
+		Mode:              svc.Mode,
+	}
 }

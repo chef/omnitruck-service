@@ -13,6 +13,7 @@ import (
 	helpers "github.com/chef/omnitruck-service/internal/helper"
 	"github.com/chef/omnitruck-service/internal/services"
 	"github.com/gofiber/fiber/v2"
+	"github.com/samber/do"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -181,6 +182,10 @@ func (h *DownloadsHandler) ProductVersionsHandler(c *fiber.Ctx) error {
 // @Router      /{channel}/{product}/packages [get]
 func (h *DownloadsHandler) ProductPackagesHandler(c *fiber.Ctx) error {
 	params := helpers.GetRequestParams(c)
+	msg, code, ok := h.ValidateRequest(params, c)
+	if !ok {
+		return h.SendErrorResponse(c, code, msg)
+	}
 	downloadService, err := services.NewDownloadService(c, h.Log)
 	if err != nil {
 		return h.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create download service")
@@ -209,6 +214,10 @@ func (h *DownloadsHandler) ProductPackagesHandler(c *fiber.Ctx) error {
 // @Router      /{channel}/{product}/metadata [get]
 func (h *DownloadsHandler) ProductMetadataHandler(c *fiber.Ctx) error {
 	params := helpers.GetRequestParams(c)
+	msg, code, ok := h.ValidateRequest(params, c)
+	if !ok {
+		return h.SendErrorResponse(c, code, msg)
+	}
 	downloadService, err := services.NewDownloadService(c, h.Log)
 	if err != nil {
 		return h.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create download service")
@@ -237,6 +246,10 @@ func (h *DownloadsHandler) ProductMetadataHandler(c *fiber.Ctx) error {
 // @Router      /{channel}/{product}/download [get]
 func (h *DownloadsHandler) ProductDownloadHandler(c *fiber.Ctx) error {
 	params := helpers.GetRequestParams(c)
+	msg, code, ok := h.ValidateRequest(params, c)
+	if !ok {
+		return h.SendErrorResponse(c, code, msg)
+	}
 	downloadService, err := services.NewDownloadService(c, h.Log)
 	if err != nil {
 		return h.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create download service")
@@ -311,6 +324,10 @@ func (h *DownloadsHandler) ProductDownloadHandler(c *fiber.Ctx) error {
 // @Router      /relatedProducts [get]
 func (h *DownloadsHandler) RelatedProductsHandler(c *fiber.Ctx) error {
 	params := helpers.GetRequestParams(c)
+	msg, code, ok := h.ValidateRequest(params, c)
+	if !ok {
+		return h.SendErrorResponse(c, code, msg)
+	}
 	downloadService, err := services.NewDownloadService(c, h.Log)
 	if err != nil {
 		return h.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create download service")
@@ -337,6 +354,10 @@ func (h *DownloadsHandler) RelatedProductsHandler(c *fiber.Ctx) error {
 // @Router      /{channel}/{product}/fileName [get]
 func (h *DownloadsHandler) FileNameHandler(c *fiber.Ctx) error {
 	params := helpers.GetRequestParams(c)
+	msg, code, ok := h.ValidateRequest(params, c)
+	if !ok {
+		return h.SendErrorResponse(c, code, msg)
+	}
 	downloadService, err := services.NewDownloadService(c, h.Log)
 	if err != nil {
 		return h.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create download service")
@@ -359,6 +380,10 @@ func (h *DownloadsHandler) FileNameHandler(c *fiber.Ctx) error {
 // @Router      /install.sh [get]
 func (h *DownloadsHandler) DownloadLinuxScript(c *fiber.Ctx) error {
 	params := helpers.GetRequestParams(c)
+	msg, code, ok := h.ValidateRequest(params, c)
+	if !ok {
+		return h.SendErrorResponse(c, code, msg)
+	}
 	c.Set("Content-Type", "application/x-sh")
 	c.Set("Content-Disposition", "attachment;filename=install.sh")
 	downloadService, err := services.NewDownloadService(c, h.Log)
@@ -381,6 +406,10 @@ func (h *DownloadsHandler) DownloadLinuxScript(c *fiber.Ctx) error {
 // @Router      /install.ps1 [get]
 func (h *DownloadsHandler) DownloadWindowsScript(c *fiber.Ctx) error {
 	params := helpers.GetRequestParams(c)
+	msg, code, ok := h.ValidateRequest(params, c)
+	if !ok {
+		return h.SendErrorResponse(c, code, msg)
+	}
 	c.Set(fiber.HeaderContentType, fiber.MIMETextPlainCharsetUTF8)
 	c.Set("Content-Disposition", "attachment;filename=install.ps1")
 
@@ -411,4 +440,32 @@ func (h *DownloadsHandler) PackageManagersHandler(c *fiber.Ctx) error {
 	} else {
 		return h.SendResponse(c, packageManagers)
 	}
+}
+
+func (h *DownloadsHandler) ValidateRequest(params *omnitruck.RequestParams, c *fiber.Ctx) (string, int, bool) {
+	context := omnitruck.Context{
+		License: h.validLicense(c),
+	}
+
+	reqInjectorI := c.Locals("reqinjector")
+	reqInjector, ok := reqInjectorI.(*do.Injector)
+	if !ok {
+		return "Failed to retrieve request injector", fiber.StatusInternalServerError, false
+	}
+
+	validator := do.MustInvokeNamed[omnitruck.RequestValidator](reqInjector, "validator")
+
+	errors := validator.Params(params, context)
+	if errors != nil {
+		msgs, code := validator.ErrorMessages(errors)
+
+		return msgs, code, false
+	}
+
+	return "", 0, true
+}
+
+func (h *DownloadsHandler) validLicense(c *fiber.Ctx) bool {
+	v := c.Locals("valid_license")
+	return v != nil && v.(bool)
 }

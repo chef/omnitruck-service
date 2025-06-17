@@ -243,7 +243,7 @@ func (svc *DynamoServices) VersionAll(params *RequestParams) ([]ProductVersion, 
 		return productVersions, fiber.NewError(fiber.StatusInternalServerError, utils.FetchVersionsError)
 	}
 	if len(versions) == 0 {
-		svc.log.Error("Recieved empty version list while fetching Versions")
+		svc.log.Error("Received empty version list while fetching Versions")
 		return productVersions, fiber.NewError(fiber.StatusBadRequest, utils.BadRequestError)
 	}
 

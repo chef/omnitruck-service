@@ -11,8 +11,8 @@ import (
 	"sync"
 
 	"github.com/chef/omnitruck-service/config"
+	"github.com/chef/omnitruck-service/constants"
 	"github.com/chef/omnitruck-service/httpserver"
-	"github.com/chef/omnitruck-service/models"
 	"github.com/chef/omnitruck-service/utils/awsutils"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -66,7 +66,7 @@ to quickly create a Cobra application.`,
 				Name:          cliConfig.Opensource.Name,
 				Listen:        cliConfig.Opensource.Listen,
 				Log:           logger.WithField("pkg", cliConfig.Opensource.Name),
-				Mode:          models.Opensource,
+				Mode:          constants.Opensource,
 				ServiceConfig: serviceConfig,
 			})
 			os_api.Start(&wg)
@@ -76,7 +76,7 @@ to quickly create a Cobra application.`,
 				Name:          cliConfig.Trial.Name,
 				Listen:        cliConfig.Trial.Listen,
 				Log:           logger.WithField("pkg", cliConfig.Trial.Name),
-				Mode:          models.Trial,
+				Mode:          constants.Trial,
 				ServiceConfig: serviceConfig,
 			})
 			trial_api.Start(&wg)
@@ -86,7 +86,7 @@ to quickly create a Cobra application.`,
 				Name:          cliConfig.Commercial.Name,
 				Listen:        cliConfig.Commercial.Listen,
 				Log:           logger.WithField("pkg", cliConfig.Commercial.Name),
-				Mode:          models.Commercial,
+				Mode:          constants.Commercial,
 				ServiceConfig: serviceConfig,
 			})
 			commercial_api.Start(&wg)

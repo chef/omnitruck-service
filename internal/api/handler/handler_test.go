@@ -11,6 +11,7 @@ import (
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
 	"github.com/chef/omnitruck-service/clients/omnitruck/replicated"
+	"github.com/chef/omnitruck-service/constants"
 	"github.com/chef/omnitruck-service/dboperations"
 	_ "github.com/chef/omnitruck-service/docs"
 	"github.com/chef/omnitruck-service/internal/services"
@@ -30,7 +31,7 @@ func testInjector(service services.DownloadService) func(*fiber.Ctx) error {
 		do.ProvideNamedValue[template.TemplateRender](reqInjector, "templateRenderer", service.TemplateRenderer)
 		do.ProvideNamedValue[clients.ILicense](reqInjector, "licenseClient", service.LicenseClient)
 		do.ProvideNamedValue[dboperations.IDbOperations](reqInjector, "dbService", service.DatabaseService)
-		do.ProvideNamedValue[models.ApiType](reqInjector, "mode", service.Mode)
+		do.ProvideNamedValue[constants.ApiType](reqInjector, "mode", service.Mode)
 		do.ProvideNamedValue[string](reqInjector, "licenseServiceUrl", service.LicenseServiceUrl)
 
 		// Inject mock replicated dependency
@@ -114,7 +115,7 @@ func TestRelatedProductsHandler(t *testing.T) {
 			handler := NewDownloadsHandler(log)
 			service := services.DownloadService{
 				DatabaseService: mockDbService,
-				Mode:            models.Opensource, // Use Opensource for this test
+				Mode:            constants.Opensource, // Use Opensource for this test
 			}
 			app.Use(testInjector(service))
 
@@ -140,7 +141,7 @@ func TestLatestVersionsHandler(t *testing.T) {
 	tests := []struct {
 		name             string
 		requestPath      string
-		serverMode       models.ApiType
+		serverMode       constants.ApiType
 		expectedStatus   int
 		expectedResponse string
 		version          string
@@ -151,7 +152,7 @@ func TestLatestVersionsHandler(t *testing.T) {
 		{
 			name:             "success for opensource",
 			requestPath:      "/stable/habitat/versions/latest",
-			serverMode:       models.Opensource,
+			serverMode:       constants.Opensource,
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `"0.9.3"`,
 			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0", "1.0.0"},
@@ -160,7 +161,7 @@ func TestLatestVersionsHandler(t *testing.T) {
 		{
 			name:             "chef-360 success",
 			requestPath:      "/stable/chef-360/versions/latest",
-			serverMode:       models.Commercial,
+			serverMode:       constants.Commercial,
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `"latest"`,
 			versions:         []string{"latest"},
@@ -169,7 +170,7 @@ func TestLatestVersionsHandler(t *testing.T) {
 		{
 			name:             "failure for chef-360 when opensource is the server type",
 			requestPath:      "/stable/chef-360/versions/latest",
-			serverMode:       models.Opensource,
+			serverMode:       constants.Opensource,
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"chef-360 not available for the trial and opensource", "status_text":"Bad Request"}`,
 			versions:         []string{},
@@ -178,7 +179,7 @@ func TestLatestVersionsHandler(t *testing.T) {
 		{
 			name:             "failure for chef-360 when trial is the server type",
 			requestPath:      "/stable/chef-360/versions/latest",
-			serverMode:       models.Trial,
+			serverMode:       constants.Trial,
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"chef-360 not available for the trial and opensource", "status_text":"Bad Request"}`,
 			versions:         []string{},
@@ -187,7 +188,7 @@ func TestLatestVersionsHandler(t *testing.T) {
 		{
 			name:             "success for trial",
 			requestPath:      "/stable/habitat/versions/latest",
-			serverMode:       models.Trial,
+			serverMode:       constants.Trial,
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `"1.0.0"`,
 			version:          "1.0.0",
@@ -198,7 +199,7 @@ func TestLatestVersionsHandler(t *testing.T) {
 		{
 			name:             "failure validation",
 			requestPath:      "/stale/automate/versions/latest",
-			serverMode:       models.Trial,
+			serverMode:       constants.Trial,
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"Channel can only be stable or current", "status_text":"Bad Request"}`,
 			version:          "latest",
@@ -255,7 +256,7 @@ func TestProductVersionsHandler(t *testing.T) {
 	tests := []struct {
 		name             string
 		requestPath      string
-		serverMode       models.ApiType
+		serverMode       constants.ApiType
 		expectedStatus   int
 		expectedResponse string
 		versions         []string
@@ -264,7 +265,7 @@ func TestProductVersionsHandler(t *testing.T) {
 		{
 			name:             "success for opensource",
 			requestPath:      "/stable/habitat/versions/all",
-			serverMode:       models.Opensource,
+			serverMode:       constants.Opensource,
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `["0.3.2", "0.7.11", "0.9.0", "0.9.3"]`,
 			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0", "1.0.0"},
@@ -273,7 +274,7 @@ func TestProductVersionsHandler(t *testing.T) {
 		{
 			name:             "success for chef-360",
 			requestPath:      "/stable/chef-360/versions/all",
-			serverMode:       models.Commercial,
+			serverMode:       constants.Commercial,
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `["latest"]`,
 			versions:         []string{"latest"},
@@ -282,7 +283,7 @@ func TestProductVersionsHandler(t *testing.T) {
 		{
 			name:             "failure for chef-360 when server is not commercial",
 			requestPath:      "/stable/chef-360/versions/all",
-			serverMode:       models.Trial,
+			serverMode:       constants.Trial,
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"chef-360 not available for the trial and opensource", "status_text":"Bad Request"}`,
 			versions:         []string{},
@@ -291,7 +292,7 @@ func TestProductVersionsHandler(t *testing.T) {
 		{
 			name:             "success for trial",
 			requestPath:      "/stable/habitat/versions/all",
-			serverMode:       models.Trial,
+			serverMode:       constants.Trial,
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `["1.0.0"]`,
 			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0", "1.0.0"},
@@ -300,7 +301,7 @@ func TestProductVersionsHandler(t *testing.T) {
 		{
 			name:             "failure validation",
 			requestPath:      "/stale/automate/versions/all",
-			serverMode:       models.Trial,
+			serverMode:       constants.Trial,
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"Channel can only be stable or current", "status_text":"Bad Request"}`,
 			versions:         []string{"latest"},
@@ -351,7 +352,7 @@ func TestProductMetadataHandler(t *testing.T) {
 	tests := []struct {
 		name             string
 		requestPath      string
-		serverMode       models.ApiType
+		serverMode       constants.ApiType
 		expectedStatus   int
 		expectedResponse string
 		metadata         models.MetaData
@@ -363,7 +364,7 @@ func TestProductMetadataHandler(t *testing.T) {
 	}{
 		{
 			name:             "automate success",
-			serverMode:       models.Trial,
+			serverMode:       constants.Trial,
 			requestPath:      "/stable/automate/metadata?p=linux&m=amd64&eol=false&v=latest",
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"sha1": "","sha256": "1234","url": "http://example.com/stable/automate/download?eol=false&m=amd64&p=linux&v=latest","version": "latest"}`,
@@ -383,7 +384,7 @@ func TestProductMetadataHandler(t *testing.T) {
 		},
 		{
 			name:             "chef-360 success",
-			serverMode:       models.Commercial,
+			serverMode:       constants.Commercial,
 			requestPath:      "/stable/chef-360/metadata?p=ubuntu&pv=20.04&m=x86_64&v=latest&eol=false&license_id=viv2c0a2-111f-2caf-1fa2-1211fe1212d1",
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"sha1":"", "sha256":"", "url":"http://example.com/stable/chef-360/download?eol=false&license_id=viv2c0a2-111f-2caf-1fa2-1211fe1212d1&m=x86_64&p=ubuntu&pv=20.04&v=latest", "version":"latest"}`,
@@ -403,7 +404,7 @@ func TestProductMetadataHandler(t *testing.T) {
 		},
 		{
 			name:             "chef-360 fails on trial server",
-			serverMode:       models.Trial,
+			serverMode:       constants.Trial,
 			requestPath:      "/stable/chef-360/metadata?p=ubuntu&pv=20.04&m=x86_64&v=latest&eol=false&license_id=viv2c0a2-111f-2caf-1fa2-1211fe1212d1",
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"chef-360 not available for the trial and opensource", "status_text":"Bad Request"}`,
@@ -416,7 +417,7 @@ func TestProductMetadataHandler(t *testing.T) {
 		},
 		{
 			name:             "platform parameter missing",
-			serverMode:       models.Trial,
+			serverMode:       constants.Trial,
 			requestPath:      "/stable/automate/metadata?&m=amd64&eol=false&v=latest",
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"Platfrom (p) params cannot be empty", "status_text":"Bad Request"}`,
@@ -429,7 +430,7 @@ func TestProductMetadataHandler(t *testing.T) {
 		},
 		{
 			name:             "automate parameter incorrect",
-			serverMode:       models.Trial,
+			serverMode:       constants.Trial,
 			requestPath:      "/stable/automate/metadata?p=linux&m=x86&eol=false",
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"Product information not found. Please check the input parameters.", "status_text":"Bad Request"}`,
@@ -440,10 +441,10 @@ func TestProductMetadataHandler(t *testing.T) {
 		},
 		{
 			name:             "automate not latest version for trial server",
-			serverMode:       models.Trial,
+			serverMode:       constants.Trial,
 			requestPath:      "/stable/automate/metadata?p=linux&m=x86_64&v=1.2",
 			expectedStatus:   fiber.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"requested version is not latest", "status_text":"Bad Request"}`,
+			expectedResponse: `{"code":400, "message":"the requested version is not supported on the selected persona or channel", "status_text":"Bad Request"}`,
 			metadata:         models.MetaData{},
 			err:              errors.New("ResourceNotFoundException: Requested resource not found"),
 			version:          "latest",
@@ -453,18 +454,19 @@ func TestProductMetadataHandler(t *testing.T) {
 		},
 		{
 			name:             "automate db connection error",
-			serverMode:       models.Trial,
+			serverMode:       constants.Trial,
 			requestPath:      "/stable/automate/metadata?p=linux&m=x86_64&eol=false",
 			expectedStatus:   fiber.StatusInternalServerError,
 			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
 			metadata:         models.MetaData{},
 			err:              errors.New("ResourceNotFoundException: Requested resource not found"),
-			versions:         []string{},
+			version:          "latest",
+			versions:         []string{"latest"},
 			versions_err:     nil,
 		},
 		{
 			name:             "opensource check success",
-			serverMode:       models.Opensource,
+			serverMode:       constants.Opensource,
 			requestPath:      "/stable/habitat/metadata?p=linux&m=x86_64&eol=false",
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"sha1":"", "sha256":"abcd", "url":"http://example.com/stable/habitat/download?eol=false&m=x86_64&p=linux&v=0.9.3", "version":"0.9.3"}`,
@@ -484,10 +486,10 @@ func TestProductMetadataHandler(t *testing.T) {
 		},
 		{
 			name:             "opensource check failure",
-			serverMode:       models.Opensource,
+			serverMode:       constants.Opensource,
 			requestPath:      "/stable/habitat/metadata?p=linux&m=x86_64&eol=false",
 			expectedStatus:   fiber.StatusInternalServerError,
-			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
+			expectedResponse: `{"code":500, "message":"Error while fetching product versions", "status_text":"Internal Server Error"}`,
 			metadata:         models.MetaData{},
 			err:              nil,
 			version:          "",
@@ -546,7 +548,7 @@ func TestProductMetadataHandler(t *testing.T) {
 func TestProductPackagesHandler(t *testing.T) {
 	tests := []struct {
 		name             string
-		serverMode       models.ApiType
+		serverMode       constants.ApiType
 		requestPath      string
 		expectedStatus   int
 		expectedResponse string
@@ -559,7 +561,7 @@ func TestProductPackagesHandler(t *testing.T) {
 	}{
 		{
 			name:             "success",
-			serverMode:       models.Trial,
+			serverMode:       constants.Trial,
 			requestPath:      "/stable/automate/packages?eol=false",
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"linux": {"pv": {"amd64": {"sha1": "","sha256": "abcd","url": "http://example.com/stable/automate/download?eol=false&m=amd64&p=linux&v=latest","version": "latest"}}}}`,
@@ -585,10 +587,10 @@ func TestProductPackagesHandler(t *testing.T) {
 		},
 		{
 			name:             "version is not latest",
-			serverMode:       models.Trial,
+			serverMode:       constants.Trial,
 			requestPath:      "/stable/automate/packages?eol=false&v=1",
 			expectedStatus:   fiber.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"requested version is not latest", "status_text":"Bad Request"}`,
+			expectedResponse: `{"code":400, "message":"the requested version is not supported on the selected persona or channel", "status_text":"Bad Request"}`,
 			details:          models.ProductDetails{},
 			err:              nil,
 			version:          "latest",
@@ -598,7 +600,7 @@ func TestProductPackagesHandler(t *testing.T) {
 		},
 		{
 			name:             "chef-360 failure for trial server",
-			serverMode:       models.Trial,
+			serverMode:       constants.Trial,
 			requestPath:      "/stable/chef-360/packages?eol=false&v=latest",
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"chef-360 not available for the trial and opensource", "status_text":"Bad Request"}`,
@@ -611,7 +613,7 @@ func TestProductPackagesHandler(t *testing.T) {
 		},
 		{
 			name:             "chef-360 success",
-			serverMode:       models.Commercial,
+			serverMode:       constants.Commercial,
 			requestPath:      "/stable/chef-360/packages?eol=false&v=latest",
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"linux": {"pv": {"amd64": {"sha1": "","sha256": "","url": "http://example.com/stable/chef-360/download?eol=false&m=amd64&p=linux&v=latest","version": "latest"}}}}`,
@@ -637,7 +639,7 @@ func TestProductPackagesHandler(t *testing.T) {
 		},
 		{
 			name:             "db connection  error",
-			serverMode:       models.Trial,
+			serverMode:       constants.Trial,
 			requestPath:      "/stable/automate/packages?eol=false",
 			expectedStatus:   fiber.StatusInternalServerError,
 			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
@@ -650,7 +652,7 @@ func TestProductPackagesHandler(t *testing.T) {
 		},
 		{
 			name:             "opensource check success",
-			serverMode:       models.Opensource,
+			serverMode:       constants.Opensource,
 			requestPath:      "/stable/habitat/packages?eol=false",
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"linux": {"pv": {"x86_64": {"sha1":"", "sha256":"abcd", "url":"http://example.com/stable/habitat/download?eol=false&m=x86_64&p=linux&v=0.9.3", "version":"0.9.3"}}}}`,
@@ -674,10 +676,10 @@ func TestProductPackagesHandler(t *testing.T) {
 		},
 		{
 			name:             "opensource check failure",
-			serverMode:       models.Opensource,
+			serverMode:       constants.Opensource,
 			requestPath:      "/stable/habitat/packages?eol=false",
 			expectedStatus:   fiber.StatusInternalServerError,
-			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
+			expectedResponse: `{"code":500, "message":"Error while fetching product versions", "status_text":"Internal Server Error"}`,
 			details:          models.ProductDetails{},
 			err:              nil,
 			version:          "",
@@ -687,7 +689,7 @@ func TestProductPackagesHandler(t *testing.T) {
 		},
 		{
 			name:             "empty metadate info",
-			serverMode:       models.Trial,
+			serverMode:       constants.Trial,
 			requestPath:      "/stable/habitat/packages?eol=false",
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"Product information not found. Please check the input parameters.", "status_text":"Bad Request"}`,
@@ -704,7 +706,7 @@ func TestProductPackagesHandler(t *testing.T) {
 		},
 		{
 			name:             "opensource check success",
-			serverMode:       models.Opensource,
+			serverMode:       constants.Opensource,
 			requestPath:      "/stable/habitat/packages?eol=false&v=0.3.2",
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"linux": {"pv": {"x86_64": {"sha1":"", "sha256":"abcd", "url":"http://example.com/stable/habitat/download?eol=false&m=x86_64&p=linux&v=0.3.2", "version":"0.3.2"}}}}`,
@@ -776,7 +778,7 @@ func TestFileNameHandler(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		serverMode       models.ApiType
+		serverMode       constants.ApiType
 		requestPath      string
 		expectedStatus   int
 		expectedResponse string
@@ -789,19 +791,19 @@ func TestFileNameHandler(t *testing.T) {
 	}{
 		{
 			name:             "AUTOMATE_SUCCESS",
-			serverMode:       models.Trial,
+			serverMode:       constants.Trial,
 			requestPath:      "/current/automate/fileName?p=linux&pv=16.04&m=x86_64&v=latest",
 			expectedStatus:   http.StatusOK,
 			expectedResponse: `{"fileName":"automate_4.7.52-1_amd64.deb"}`,
 			metadata:         models.MetaData{FileName: "automate_4.7.52-1_amd64.deb"},
 			metadata_err:     nil,
 			version_err:      nil,
-			versions:         []string{},
+			versions:         []string{"latest"},
 			versions_err:     nil,
 		},
 		{
 			name:             "HABITAT_SUCCESS",
-			serverMode:       models.Opensource,
+			serverMode:       constants.Opensource,
 			requestPath:      "/current/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=latest",
 			expectedStatus:   http.StatusOK,
 			expectedResponse: `{"fileName":"hab-x86_64-linux.tar.gz"}`,
@@ -819,21 +821,23 @@ func TestFileNameHandler(t *testing.T) {
 			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
 			metadata:         models.MetaData{},
 			version_err:      errors.New("Unable to get latest version of automate"),
+			versions:         []string{"latest"},
 		},
 		{
 			name:             "failure db connection while fetching latest version",
-			serverMode:       models.Trial,
+			serverMode:       constants.Trial,
 			requestPath:      "/current/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=1.6.652",
 			expectedStatus:   http.StatusInternalServerError,
-			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
+			expectedResponse: `{"code":500, "message":"Error while fetching product versions", "status_text":"Internal Server Error"}`,
 			metadata:         models.MetaData{},
 			metadata_err:     nil,
 			version:          "",
-			version_err:      errors.New("Unable to get latest version of habitat"),
+			versions_err:     errors.New("Unable to get latest version of habitat"),
+			versions:         []string{"1.6.652"},
 		},
 		{
 			name:             "failure channel is not stable/current",
-			serverMode:       models.Trial,
+			serverMode:       constants.Trial,
 			requestPath:      "/curret/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=1.6.652",
 			expectedStatus:   http.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"Channel can only be stable or current", "status_text":"Bad Request"}`,
@@ -844,7 +848,7 @@ func TestFileNameHandler(t *testing.T) {
 		},
 		{
 			name:             "failure db connection while fetching filename",
-			serverMode:       models.Trial,
+			serverMode:       constants.Trial,
 			requestPath:      "/current/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=1.6.652",
 			expectedStatus:   http.StatusInternalServerError,
 			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
@@ -852,21 +856,23 @@ func TestFileNameHandler(t *testing.T) {
 			metadata_err:     errors.New("Error while fetching file name"),
 			version_err:      nil,
 			version:          "1.6.652",
+			versions:         []string{"1.6.652", "1.6.651"},
 		},
 		{
 			name:             "chef-360 as a product is given",
-			serverMode:       models.Commercial,
+			serverMode:       constants.Commercial,
 			expectedStatus:   http.StatusOK,
-			requestPath:      "/current/chef-360/fileName?p=linux&pv=20.04&m=x86_64&v=1.2&license_id=viv2c0a2-111f-2caf-1fa2-1211fe1212d1",
-			expectedResponse: `{"fileName":"chef-360.zip"}`,
+			requestPath:      "/current/chef-360/fileName?p=linux&pv=20.04&m=x86_64&v=latest&license_id=viv2c0a2-111f-2caf-1fa2-1211fe1212d1",
+			expectedResponse: `{"fileName":"chef-360.tar.gz"}`,
 			metadata:         models.MetaData{},
 			metadata_err:     nil,
 			version:          "latest",
 			version_err:      nil,
+			versions:         []string{"latest"},
 		},
 		{
 			name:             "chef-360 trial is not supported",
-			serverMode:       models.Trial,
+			serverMode:       constants.Trial,
 			expectedStatus:   http.StatusBadRequest,
 			requestPath:      "/current/chef-360/fileName?p=linux&pv=20.04&m=x86_64&v=1.2&license_id=viv2c0a2-111f-2caf-1fa2-1211fe1212d1",
 			expectedResponse: `{"code":400, "message":"chef-360 not available for the trial and opensource", "status_text":"Bad Request"}`,
@@ -877,10 +883,10 @@ func TestFileNameHandler(t *testing.T) {
 		},
 		{
 			name:             "haitat opensource verion not supported ",
-			serverMode:       models.Opensource,
+			serverMode:       constants.Opensource,
 			requestPath:      "/current/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=0.79.0",
 			expectedStatus:   http.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"Version 0.79.0 not support on this persona.", "status_text":"Bad Request"}`,
+			expectedResponse: `{"code":400, "message":"the requested version is not supported on the selected persona or channel", "status_text":"Bad Request"}`,
 			metadata:         models.MetaData{},
 			metadata_err:     errors.New("Error while fetching file name"),
 			version_err:      nil,
@@ -890,10 +896,10 @@ func TestFileNameHandler(t *testing.T) {
 		},
 		{
 			name:             "haitat opensource version fetching error",
-			serverMode:       models.Opensource,
+			serverMode:       constants.Opensource,
 			requestPath:      "/current/habitat/fileName?p=linux&pv=16.04&m=x86_64&v=0.79.0",
 			expectedStatus:   http.StatusInternalServerError,
-			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
+			expectedResponse: `{"code":500, "message":"Error while fetching product versions", "status_text":"Internal Server Error"}`,
 			metadata:         models.MetaData{},
 			metadata_err:     errors.New("Error while fetching file name"),
 			version_err:      nil,
@@ -964,7 +970,7 @@ func TestFileNameHandler(t *testing.T) {
 func TestDownloadLinuxScriptHandler(t *testing.T) {
 	tests := []struct {
 		name             string
-		serverMode       models.ApiType
+		serverMode       constants.ApiType
 		mockTemplate     func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error)
 		requestPath      string
 		expectedStatus   int
@@ -1025,7 +1031,7 @@ func TestDownloadLinuxScriptHandler(t *testing.T) {
 func TestDownloadWindowsScriptHandler(t *testing.T) {
 	tests := []struct {
 		name             string
-		serverMode       models.ApiType
+		serverMode       constants.ApiType
 		mockTemplate     func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error)
 		requestPath      string
 		expectedStatus   int
@@ -1488,7 +1494,7 @@ func TestDownloadWindowsScriptHandler(t *testing.T) {
 // 			log := logger.NewLogrusStandardLogger().WithField("requestId", "req01")
 // 			handler := NewDownloadsHandler(log)
 // 			service := services.DownloadService{
-// 				Mode:             models.Commercial,
+// 				Mode:             constants.Commercial,
 // 				Replicated:       tt.fields.Replicated,
 // 				TemplateRenderer: template.NewTemplateRender(),
 // 				Validator:        omnitruck.NewValidator(),
@@ -1526,7 +1532,7 @@ func TestPackageManagersHandler(t *testing.T) {
 		mockErr          error
 		expectedStatus   int
 		expectedResponse string
-		mode             models.ApiType
+		mode             constants.ApiType
 	}{
 		{
 			name:             "Success - package managers fetched",
@@ -1534,7 +1540,7 @@ func TestPackageManagersHandler(t *testing.T) {
 			mockErr:          nil,
 			expectedStatus:   http.StatusOK,
 			expectedResponse: `["deb","tar","rpm"]`,
-			mode:             models.Commercial,
+			mode:             constants.Commercial,
 		},
 		{
 			name:             "Error - DB call fails",
@@ -1542,7 +1548,7 @@ func TestPackageManagersHandler(t *testing.T) {
 			mockErr:          errors.New("db failure"),
 			expectedStatus:   http.StatusInternalServerError,
 			expectedResponse: `{"code":500,"message":"Error while fetching the information for the product from DB.","status_text":"Internal Server Error"}`,
-			mode:             models.Commercial,
+			mode:             constants.Commercial,
 		},
 	}
 
@@ -1586,56 +1592,56 @@ func TestPackageManagersHandler(t *testing.T) {
 func TestProductsHandler(t *testing.T) {
 	tests := []struct {
 		name             string
-		serverMode       models.ApiType
+		serverMode       constants.ApiType
 		eolParam         string
 		expectedStatus   int
 		expectedContains []string
 	}{
 		{
-			name:             "models.Opensource mode filters products",
-			serverMode:       models.Opensource,
+			name:             "constants.Opensource mode filters products",
+			serverMode:       constants.Opensource,
 			eolParam:         "false",
 			expectedStatus:   fiber.StatusOK,
 			expectedContains: []string{"habitat"},
 		},
 		{
-			name:             "models.Trial mode adds enterprise product",
-			serverMode:       models.Trial,
+			name:             "constants.Trial mode adds enterprise product",
+			serverMode:       constants.Trial,
 			eolParam:         "false",
 			expectedStatus:   fiber.StatusOK,
 			expectedContains: []string{"Chef Infra Client Enterprise"},
 		},
 		{
-			name:             "models.Commercial mode adds products",
-			serverMode:       models.Commercial,
+			name:             "constants.Commercial mode adds products",
+			serverMode:       constants.Commercial,
 			eolParam:         "false",
 			expectedStatus:   fiber.StatusOK,
 			expectedContains: []string{"chef-360", "chef-ice"},
 		},
 		{
-			name:             "models.Trial mode with eol true includes Chef Infra Client Enterprise and automate-1",
-			serverMode:       models.Trial,
+			name:             "constants.Trial mode with eol true includes Chef Infra Client Enterprise and automate-1",
+			serverMode:       constants.Trial,
 			eolParam:         "true",
 			expectedStatus:   fiber.StatusOK,
 			expectedContains: []string{"Chef Infra Client Enterprise", "automate-1"},
 		},
 		{
-			name:             "models.Commercial mode with eol true includes automate-1",
-			serverMode:       models.Commercial,
+			name:             "constants.Commercial mode with eol true includes automate-1",
+			serverMode:       constants.Commercial,
 			eolParam:         "true",
 			expectedStatus:   fiber.StatusOK,
 			expectedContains: []string{"chef-360", "chef-ice", "automate-1"},
 		},
 		{
-			name:             "models.Trial mode returns formatted products",
-			serverMode:       models.Trial,
+			name:             "constants.Trial mode returns formatted products",
+			serverMode:       constants.Trial,
 			eolParam:         "false",
 			expectedStatus:   fiber.StatusOK,
 			expectedContains: []string{"automate:Chef Automate", "chef:Chef Infra Client", "chef-server:Chef Infra Server", "chef-workstation:Chef Workstation", "habitat:Chef Habitat", "inspec:InSpec", "chef-ice:Chef Infra Client Enterprise"},
 		},
 		{
-			name:             "models.Commercial mode returns full product list",
-			serverMode:       models.Commercial,
+			name:             "constants.Commercial mode returns full product list",
+			serverMode:       constants.Commercial,
 			eolParam:         "false",
 			expectedStatus:   fiber.StatusOK,
 			expectedContains: []string{"automate", "chef", "chef-backend", "chef-server", "chef-workstation", "habitat", "inspec", "manage", "supermarket", "chef-360", "chef-ice"},

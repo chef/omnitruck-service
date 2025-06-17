@@ -66,7 +66,7 @@ func ValidateOrSetVersion(params *omnitruck.RequestParams, filtered []omnitruck.
 				return nil
 			}
 		}
-		return fmt.Errorf("requested version is not latest")
+		return fmt.Errorf("the requested version is not supported on the selected persona or channel")
 	}
 	// Use the latest version from filtered list if not provided
 	params.Version = string(filtered[len(filtered)-1])
