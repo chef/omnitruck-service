@@ -31,17 +31,10 @@ type DownloadService struct {
 	locals            map[string]interface{}
 }
 
-func NewDownloadService(c *fiber.Ctx, log *log.Entry) (*DownloadService, error) {
+func NewDownloadService(locals map[string]interface{}, log *log.Entry, reqInjector *do.Injector) (*DownloadService, error) {
 	service := DownloadService{}
-	service.SetLocals(c)
+	service.locals = locals
 	service.Log = log
-	// Retrieve the injector from the Fiber context
-	reqInjectorI := c.Locals("reqinjector")
-	reqInjector, ok := reqInjectorI.(*do.Injector)
-	if !ok {
-		return nil, fiber.NewError(fiber.StatusInternalServerError, "Failed to retrieve request injector")
-	}
-
 	validator := do.MustInvokeNamed[omnitruck.RequestValidator](reqInjector, "validator")
 	databaseService := do.MustInvokeNamed[dboperations.IDbOperations](reqInjector, "dbService")
 	templateRenderer := do.MustInvokeNamed[template.TemplateRender](reqInjector, "templateRenderer")
@@ -57,37 +50,6 @@ func NewDownloadService(c *fiber.Ctx, log *log.Entry) (*DownloadService, error) 
 	service.LicenseServiceUrl = licenseServiceUrl
 	service.Mode = mode
 	return &service, nil
-}
-func (svc *DownloadService) SetLocals(c *fiber.Ctx) {
-	locals := map[string]interface{}{}
-	if c.Locals("valid_license") != nil {
-		requestId := c.Locals("valid_license").(bool)
-		locals["valid_license"] = requestId
-
-	} else {
-		locals["valid_license"] = false
-	}
-
-	if c.Locals("request_id") != nil {
-		requestId := c.Locals("request_id").(string)
-		locals["request_id"] = requestId
-
-	} else {
-		locals["request_id"] = ""
-	}
-	if c.Locals("base_url") != nil {
-		baseUrl := c.Locals("base_url").(string)
-		locals["base_url"] = baseUrl
-	} else {
-		locals["base_url"] = ""
-	}
-	if c.Locals("license_id") != nil {
-		licenseId := c.Locals("license_id").(string)
-		locals["license_id"] = licenseId
-	} else {
-		locals["license_id"] = ""
-	}
-	svc.locals = locals
 }
 
 func (svc *DownloadService) Omnitruck() *omnitruck.Omnitruck {
