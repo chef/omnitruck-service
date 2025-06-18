@@ -15,11 +15,17 @@ import (
 	"github.com/gofiber/swagger"
 	"github.com/samber/do"
 )
+// @title        Licensed Omnitruck API
+// @version      1.0
+// @description  Licensed Omnitruck API
+// @license.name Apache 2.0
+// @license.url  http://www.apache.org/licenses/LICENSE-2.0.html
 
 // routes sets up all HTTP routes for the ApiService
 func (server *ApiServer) buildRouter() {
+	server.App.Static("/swagger", "./docs")
 	server.App.Get("/swagger/*", swagger.New(swagger.Config{
-		InstanceName: "OmnitruckApi",
+		URL: "/swagger/OmnitruckApi_openapi3.json",
 	}))
 
 	server.App.Static("/", "./static", fiber.Static{
