@@ -1,6 +1,6 @@
 package handler
 
-//TODO: Remove this file when the new handler is fully implemented and tested.
+//TODO: Remove this file when the new handler is fully implemented and tested..
 
 // import (
 // 	"bufio"
