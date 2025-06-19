@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.62 -->
-## [0.0.62](https://github.com/chef/omnitruck-service/tree/0.0.62) (2025-06-12)
+<!-- latest_release 0.0.63 -->
+## [0.0.63](https://github.com/chef/omnitruck-service/tree/0.0.63) (2025-06-19)
 
 #### Merged Pull Requests
-- Lambda script updating database as per S3 [#74](https://github.com/chef/omnitruck-service/pull/74) ([vviveksharma](https://github.com/vviveksharma))
+- Refactoring Downloads service [#80](https://github.com/chef/omnitruck-service/pull/80) ([sandhi18](https://github.com/sandhi18))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Refactoring Downloads service [#80](https://github.com/chef/omnitruck-service/pull/80) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.63 -->
 - Lambda script updating database as per S3 [#74](https://github.com/chef/omnitruck-service/pull/74) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.62 -->
 - Package-managers API is created which will list all package-managers [#77](https://github.com/chef/omnitruck-service/pull/77) ([swathi-s3](https://github.com/swathi-s3)) <!-- 0.0.61 -->
 - Add chef-ice to products list for commercial and trial modes [#73](https://github.com/chef/omnitruck-service/pull/73) ([swathi-s3](https://github.com/swathi-s3)) <!-- 0.0.60 -->
