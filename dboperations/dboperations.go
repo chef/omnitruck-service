@@ -139,6 +139,7 @@ func (dbo *DbOperationsService) GetMetaData(partitionValue string, sortValue str
 		}
 		return &response, nil
 	}
+
 	return nil, nil
 }
 
