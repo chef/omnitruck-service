@@ -1,4 +1,4 @@
-package services
+package helpers
 
 import (
 	"reflect"
@@ -38,7 +38,7 @@ func Test_buildEndpointUrl(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := buildEndpointUrl(tt.args.baseUrl, tt.args.endpoint, &tt.args.params).String(); !reflect.DeepEqual(got, tt.want) {
+			if got := BuildEndpointUrl(tt.args.baseUrl, tt.args.endpoint, &tt.args.params).String(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("buildEndpointUrl() = %+v, want %+v", got, tt.want)
 			}
 		})
@@ -94,7 +94,7 @@ func Test_getDownloadUrl(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := getDownloadUrl(getRequestParams(tt.args), tt.args); got != tt.want {
+			if got := GetDownloadUrl(GetRequestParams(tt.args), "https://commercial.chef.io"); got != tt.want {
 				t.Errorf("getDownloadUrl() = %v, want %v", got, tt.want)
 			}
 		})
@@ -140,7 +140,7 @@ func Test_getRequestParams(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := getRequestParams(tt.ctx); !reflect.DeepEqual(got, tt.want) {
+			if got := GetRequestParams(tt.ctx); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getRequestParams() = %v, want %v", got, tt.want)
 			}
 		})
@@ -237,7 +237,7 @@ func TestVerifyRequestType(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := verifyRequestType(tt.args.params)
+			got := VerifyRequestType(tt.args.params)
 			assert.Equal(t, got, tt.want)
 		})
 	}

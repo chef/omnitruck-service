@@ -1,8 +1,6 @@
-package services
+package httpserver
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
@@ -12,6 +10,7 @@ import (
 	"github.com/chef/omnitruck-service/clients/omnitruck"
 	"github.com/chef/omnitruck-service/clients/omnitruck/replicated"
 	"github.com/chef/omnitruck-service/config"
+	"github.com/chef/omnitruck-service/constants"
 	"github.com/chef/omnitruck-service/dboperations"
 	logrus "github.com/chef/omnitruck-service/logger"
 	dbconnection "github.com/chef/omnitruck-service/middleware/db"
@@ -26,25 +25,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type ApiType int
-
-const (
-	Trial ApiType = iota
-	Opensource
-	Commercial
-)
-
-type ErrorResponse struct {
-	Code       int    `json:"code"`
-	StatusText string `json:"status_text"`
-	Message    string `json:"message"`
-} //@name ErrorResponse
-
 type Config struct {
 	Name          string
 	Listen        string
 	Log           *log.Entry
-	Mode          ApiType
+	Mode          constants.ApiType
 	ServiceConfig config.ServiceConfig
 }
 
@@ -54,27 +39,28 @@ type Service interface {
 	Stop() error
 }
 
-type ApiService struct {
+type ApiServer struct {
 	sync.Mutex
 	Config           Config
 	Log              *log.Entry
 	App              *fiber.App
 	Validator        omnitruck.RequestValidator
-	Mode             ApiType
+	Mode             constants.ApiType
 	DatabaseService  dboperations.IDbOperations
 	TemplateRenderer template.TemplateRender
 	Replicated       replicated.IReplicated
 	LicenseClient    clients.ILicense
+	locals           map[string]interface{}
 }
 
-func New(c Config) *ApiService {
-	service := ApiService{}
+func New(c Config) *ApiServer {
+	service := ApiServer{}
 	service.Initialize(c)
 
 	return &service
 }
 
-func (server *ApiService) Initialize(c Config) *ApiService {
+func (server *ApiServer) Initialize(c Config) *ApiServer {
 	server.Log = c.Log
 	server.Config = c
 	server.Validator = omnitruck.NewValidator()
@@ -94,7 +80,7 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 		Views:                 engine,
 	})
 
-	if c.Mode == Trial || c.Mode == Opensource {
+	if c.Mode == constants.Trial || c.Mode == constants.Opensource {
 		channel := omnitruck.ContainsValidator{
 			Field:      "Channel",
 			Values:     []string{"stable"},
@@ -118,7 +104,7 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	// 	server.Validator.Add(&version)
 	// }
 
-	if c.Mode == Trial || c.Mode == Commercial {
+	if c.Mode == constants.Trial || c.Mode == constants.Commercial {
 		server.Log.Info("Adding EOL Validator")
 		eolversion := omnitruck.EolVersionValidator{}
 		server.Validator.Add(&eolversion)
@@ -127,14 +113,14 @@ func (server *ApiService) Initialize(c Config) *ApiService {
 	return server
 }
 
-func (server *ApiService) Start(wg *sync.WaitGroup) error {
+func (server *ApiServer) Start(wg *sync.WaitGroup) error {
 	wg.Add(1)
 	go server.StartService()
 
 	return nil
 }
 
-func (server *ApiService) StartService() {
+func (server *ApiServer) StartService() {
 	// Setup io writer for the logger
 	// Needs to be in the method where we start the service
 	// So the io writer will be closed when the service ends
@@ -172,7 +158,7 @@ func (server *ApiService) StartService() {
 
 	server.App.Use(license.New(license.Config{
 		URL:      server.Config.ServiceConfig.LicenseServiceUrl,
-		Required: server.Config.Mode == Commercial,
+		Required: server.Config.Mode == constants.Commercial,
 		Next: func(c *fiber.Ctx) bool {
 			switch c.Path() {
 			case "/status":
@@ -202,98 +188,11 @@ func (server *ApiService) StartService() {
 	}
 }
 
-func (server *ApiService) Omnitruck(c *fiber.Ctx) *omnitruck.Omnitruck {
-	client := omnitruck.New(server.logCtx(c))
-
-	return &client
-}
-
-func (server *ApiService) DynamoServices(db dboperations.IDbOperations, c *fiber.Ctx) *omnitruck.DynamoServices {
-	service := omnitruck.NewDynamoServices(db, server.logCtx(c))
-
-	return &service
-}
-
-func (server *ApiService) PlatformServices(c *fiber.Ctx) *omnitruck.PlatformServices {
-	service := omnitruck.NewPlatformServices(server.logCtx(c))
-	return &service
-}
-
-func (server *ApiService) ReplicatedService(config config.ReplicatedConfig, log logrus.Logger) replicated.IReplicated {
-	service := replicated.NewReplicatedImpl(config, log)
-	return service
-}
-
-func (server *ApiService) logCtx(c *fiber.Ctx) *log.Entry {
-	return server.Log.WithField("license_id", c.Locals("license_id"))
-}
-
-func (server *ApiService) validLicense(c *fiber.Ctx) bool {
-	v := c.Locals("valid_license")
-	return v != nil && v.(bool)
-}
-
-func (server *ApiService) ValidateRequest(params *omnitruck.RequestParams, c *fiber.Ctx) (error, bool) {
-	server.logCtx(c).Debugf("Validating request %+v", params)
-	context := omnitruck.Context{
-		License: server.validLicense(c),
-	}
-
-	errors := server.Validator.Params(params, context)
-	if errors != nil {
-		msgs, code := server.Validator.ErrorMessages(errors)
-
-		server.logCtx(c).WithField("errors", msgs).Error("Error validating request")
-		return c.Status(code).JSON(ErrorResponse{
-			Code:       code,
-			StatusText: http.StatusText(code),
-			Message:    msgs,
-		}), false
-	}
-
-	return nil, true
-}
-
-func (server *ApiService) JSON(c *fiber.Ctx, data interface{}) error {
-	var resultBytes bytes.Buffer
-	enc := json.NewEncoder(&resultBytes)
-	enc.SetEscapeHTML(false)
-	err := enc.Encode(data)
-	c.Context().Response.SetBodyRaw(resultBytes.Bytes())
-	c.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSONCharsetUTF8)
-	return err
-}
-
-func (server *ApiService) SendResponse(c *fiber.Ctx, data interface{}) error {
-	return server.JSON(c, data)
-}
-
-func (server *ApiService) SendError(c *fiber.Ctx, request *clients.Request) error {
-
-	return c.Status(request.Code).JSON(ErrorResponse{
-		Code:       request.Code,
-		StatusText: http.StatusText(request.Code),
-		Message:    request.Message,
-	})
-}
-
-func (server *ApiService) SendErrorResponse(c *fiber.Ctx, code int, msg string) error {
-	return c.Status(code).JSON(ErrorResponse{
-		Code:       code,
-		StatusText: http.StatusText(code),
-		Message:    msg,
-	})
-}
-
-func (server *ApiService) HealthCheck(c *fiber.Ctx) error {
+func (server *ApiServer) HealthCheck(c *fiber.Ctx) error {
 	res := map[string]interface{}{
 		"name": server.Config.Name,
 		"data": "Server is up and running",
 	}
 
 	return c.JSON(res)
-}
-
-func isLatest(v string) bool {
-	return len(v) == 0 || v == "latest"
 }
