@@ -81,7 +81,7 @@ func (svc *DownloadService) SetLocals(c *fiber.Ctx) {
 		baseUrl := c.Locals("base_url").(string)
 		locals["base_url"] = baseUrl
 	} else {
-		locals["base_url"] = ""
+		locals["base_url"] = c.BaseURL()
 	}
 	if c.Locals("license_id") != nil {
 		licenseId := c.Locals("license_id").(string)
@@ -408,7 +408,6 @@ func (svc *DownloadService) ProductDownload(params *omnitruck.RequestParams, c *
 		//return svc.SendErrorResponse(c, fiber.StatusNotFound, "No versions found for this product/mode")
 	}
 
-
 	// Validate or set version
 	if err := helpers.ValidateOrSetVersion(params, filtered); err != nil {
 		return "", nil, nil, err.Error(), fiber.StatusBadRequest, err
@@ -456,19 +455,19 @@ func (svc *DownloadService) ProductStrategyDeps() *strategy.ProductStrategyDeps 
 }
 
 func (svc *DownloadService) getFilteredVersions(params *omnitruck.RequestParams) ([]omnitruck.ProductVersion, *clients.Request) {
-    productStrategy := strategy.SelectProductStrategy(params.Product, params.Channel, svc.ProductStrategyDeps())
-    modeStrategy := strategy.SelectModeStrategy(svc.Mode)
-    versions, req := productStrategy.GetAllVersions(params)
-    if !req.Ok || len(versions) == 0 {
-        return nil, req
-    }
-    filtered := modeStrategy.FilterVersions(versions, params.Product)
-    if len(filtered) == 0 {
-        return nil, &clients.Request{
-            Ok:      false,
-            Code:    fiber.StatusNotFound,
-            Message: "No versions found for this product/mode",
-        }
-    }
-    return filtered, nil
+	productStrategy := strategy.SelectProductStrategy(params.Product, params.Channel, svc.ProductStrategyDeps())
+	modeStrategy := strategy.SelectModeStrategy(svc.Mode)
+	versions, req := productStrategy.GetAllVersions(params)
+	if !req.Ok || len(versions) == 0 {
+		return nil, req
+	}
+	filtered := modeStrategy.FilterVersions(versions, params.Product)
+	if len(filtered) == 0 {
+		return nil, &clients.Request{
+			Ok:      false,
+			Code:    fiber.StatusBadRequest,
+			Message: "No versions found for this product/mode",
+		}
+	}
+	return filtered, nil
 }
