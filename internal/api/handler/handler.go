@@ -148,6 +148,10 @@ func (h *DownloadsHandler) ArchitecturesHandler(c *fiber.Ctx) error {
 // @Router      /{channel}/{product}/versions/latest [get]
 func (h *DownloadsHandler) LatestVersionHandler(c *fiber.Ctx) error {
 	params := helpers.GetRequestParams(c)
+	msg, code, ok := h.ValidateRequest(params, c)
+	if !ok {
+		return h.SendErrorResponse(c, code, msg)
+	}
 	params.Version = "latest"
 
 	downloadService, err := services.NewDownloadService(c, h.Log)
@@ -177,6 +181,10 @@ func (h *DownloadsHandler) LatestVersionHandler(c *fiber.Ctx) error {
 // @Router      /{channel}/{product}/versions/all [get]
 func (h *DownloadsHandler) ProductVersionsHandler(c *fiber.Ctx) error {
 	params := helpers.GetRequestParams(c)
+	msg, code, ok := h.ValidateRequest(params, c)
+	if !ok {
+		return h.SendErrorResponse(c, code, msg)
+	}
 	downloadService, err := services.NewDownloadService(c, h.Log)
 	if err != nil {
 		return h.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create download service")

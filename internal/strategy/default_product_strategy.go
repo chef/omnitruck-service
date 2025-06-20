@@ -44,7 +44,7 @@ func (s *DefaultProductStrategy) GetMetadata(params *omnitruck.RequestParams) (o
 	return data, request
 }
 
-func (s *DefaultProductStrategy) Download(params *omnitruck.RequestParams, c *fiber.Ctx) (url string, resp io.ReadCloser, header http.Header, msg string, code int, err error) {
+func (s *DefaultProductStrategy) Download(params *omnitruck.RequestParams) (url string, resp io.ReadCloser, header http.Header, msg string, code int, err error) {
 	var data omnitruck.PackageMetadata
 	request := s.OmnitruckService.ProductDownload(params).ParseData(&data)
 	if !request.Ok {

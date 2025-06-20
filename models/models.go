@@ -70,3 +70,20 @@ type EntitlementValues struct {
 	Name      string `json:"name"`
 	Value     string `json:"value"`
 }
+
+type PackageDetails struct {
+	Product  string              `json:"product"`
+	Version  string              `json:"version"`
+	Metadata map[string]Platform `json:"metadata"`
+}
+
+type Platform map[string]Architecture
+
+type Architecture map[string]PackageType
+
+type PackageType struct {
+	Filename       string `json:"filename"`
+	InstallMessage string `json:"install-message"`
+	SHA1           string `json:"sha1"`
+	SHA256         string `json:"sha256"`
+}
