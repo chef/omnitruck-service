@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.63 -->
-## [0.0.63](https://github.com/chef/omnitruck-service/tree/0.0.63) (2025-06-19)
+<!-- latest_release 0.0.64 -->
+## [0.0.64](https://github.com/chef/omnitruck-service/tree/0.0.64) (2025-06-20)
 
 #### Merged Pull Requests
-- Refactoring Downloads service [#80](https://github.com/chef/omnitruck-service/pull/80) ([sandhi18](https://github.com/sandhi18))
+- Common change for db operations [#87](https://github.com/chef/omnitruck-service/pull/87) ([vipin230](https://github.com/vipin230))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Common change for db operations [#87](https://github.com/chef/omnitruck-service/pull/87) ([vipin230](https://github.com/vipin230)) <!-- 0.0.64 -->
 - Refactoring Downloads service [#80](https://github.com/chef/omnitruck-service/pull/80) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.63 -->
 - Lambda script updating database as per S3 [#74](https://github.com/chef/omnitruck-service/pull/74) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.62 -->
 - Package-managers API is created which will list all package-managers [#77](https://github.com/chef/omnitruck-service/pull/77) ([swathi-s3](https://github.com/swathi-s3)) <!-- 0.0.61 -->
