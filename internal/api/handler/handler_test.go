@@ -376,12 +376,12 @@ func TestProductMetadataHandler(t *testing.T) {
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"sha1": "","sha256": "1234","url": "http://example.com/stable/automate/download?eol=false&m=amd64&p=linux&v=latest","version": "latest"}`,
 			metadata: models.MetaData{
-				Architecture:     "amd64",
-				FileName:         "",
-				Platform:         "linux",
-				Platform_Version: "",
-				SHA1:             "",
-				SHA256:           "1234",
+				Architecture:    "amd64",
+				FileName:        "",
+				Platform:        "linux",
+				PlatformVersion: "",
+				SHA1:            "",
+				SHA256:          "1234",
 			},
 			err:          nil,
 			version:      "latest",
@@ -396,12 +396,12 @@ func TestProductMetadataHandler(t *testing.T) {
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"sha1":"", "sha256":"", "url":"http://example.com/stable/chef-360/download?eol=false&license_id=viv2c0a2-111f-2caf-1fa2-1211fe1212d1&m=x86_64&p=ubuntu&pv=20.04&v=latest", "version":"latest"}`,
 			metadata: models.MetaData{
-				Architecture:     "amd64",
-				FileName:         "",
-				Platform:         "linux",
-				Platform_Version: "",
-				SHA1:             "",
-				SHA256:           "",
+				Architecture:    "amd64",
+				FileName:        "",
+				Platform:        "linux",
+				PlatformVersion: "",
+				SHA1:            "",
+				SHA256:          "",
 			},
 			err:          nil,
 			version:      "",
@@ -478,12 +478,12 @@ func TestProductMetadataHandler(t *testing.T) {
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"sha1":"", "sha256":"abcd", "url":"http://example.com/stable/habitat/download?eol=false&m=x86_64&p=linux&v=0.9.3", "version":"0.9.3"}`,
 			metadata: models.MetaData{
-				Architecture:     "x86_64",
-				FileName:         "",
-				Platform:         "linux",
-				Platform_Version: "",
-				SHA1:             "",
-				SHA256:           "abcd",
+				Architecture:    "x86_64",
+				FileName:        "",
+				Platform:        "linux",
+				PlatformVersion: "",
+				SHA1:            "",
+				SHA256:          "abcd",
 			},
 			err:          nil,
 			version:      "",
@@ -504,6 +504,52 @@ func TestProductMetadataHandler(t *testing.T) {
 			versions:         []string{},
 			versions_err:     errors.New("ResourceNotFoundException: Requested resource not found"),
 		},
+		{
+			name:             "package manager parameter missing",
+			serverMode:       constants.Trial,
+			requestPath:      "/stable/chef-ice/metadata?p=linux&m=amd64&eol=false&v=latest",
+			expectedStatus:   fiber.StatusBadRequest,
+			expectedResponse: `{"code":400, "message":"Package Manager (pm) params cannot be empty", "status_text":"Bad Request"}`,
+			metadata:         models.MetaData{},
+			err:              nil,
+			version:          "latest",
+			version_err:      nil,
+			versions:         []string{"latest"},
+			versions_err:     nil,
+		},
+		{
+			name:             "chef-ice success",
+			serverMode:       constants.Trial,
+			requestPath:      "/stable/chef-ice/metadata?p=linux&m=amd64&pm=deb&eol=false&v=latest",
+			expectedStatus:   fiber.StatusOK,
+			expectedResponse: `{"sha1":"", "sha256":"abcd", "url":"http://example.com/stable/chef-ice/download?eol=false&m=amd64&p=linux&v=latest", "version":"latest"}`,
+			metadata: models.MetaData{
+				Architecture:   "amd64",
+				Platform:       "linux",
+				PackageManager: "deb",
+				SHA1:           "",
+				SHA256:         "abcd",
+				FileName:       "",
+			},
+			err:          nil,
+			version:      "latest",
+			version_err:  nil,
+			versions:     []string{"latest"},
+			versions_err: nil,
+		},
+		{
+			name:             "chef-ice failure for opensource server",
+			serverMode:       constants.Opensource,
+			requestPath:      "/stable/chef-ice/metadata?p=linux&m=amd64&pm=deb&eol=false&v=latest",
+			expectedStatus:   fiber.StatusBadRequest,
+			expectedResponse: `{"code":400, "message":"No versions found for this product/mode", "status_text":"Bad Request"}`,
+			metadata:         models.MetaData{},
+			err:              nil,
+			version:          "latest",
+			version_err:      nil,
+			versions:         []string{"latest"},
+			versions_err:     nil,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -513,7 +559,7 @@ func TestProductMetadataHandler(t *testing.T) {
 				return c.Next()
 			})
 			mockDbService := new(dboperations.MockIDbOperations)
-			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture string) (interface{}, error) {
+			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture, packageManager string) (*models.MetaData, error) {
 				return &test.metadata, test.err
 			}
 			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
@@ -579,12 +625,12 @@ func TestProductPackagesHandler(t *testing.T) {
 				Version: "latest",
 				MetaData: []models.MetaData{
 					{
-						Architecture:     "amd64",
-						FileName:         "",
-						Platform:         "linux",
-						Platform_Version: "",
-						SHA1:             "",
-						SHA256:           "abcd",
+						Architecture:    "amd64",
+						FileName:        "",
+						Platform:        "linux",
+						PlatformVersion: "",
+						SHA1:            "",
+						SHA256:          "abcd",
 					},
 				},
 			},
@@ -631,12 +677,12 @@ func TestProductPackagesHandler(t *testing.T) {
 				Version: "latest",
 				MetaData: []models.MetaData{
 					{
-						Architecture:     "amd64",
-						FileName:         "",
-						Platform:         "linux",
-						Platform_Version: "",
-						SHA1:             "",
-						SHA256:           "",
+						Architecture:    "amd64",
+						FileName:        "",
+						Platform:        "linux",
+						PlatformVersion: "",
+						SHA1:            "",
+						SHA256:          "",
 					},
 				},
 			},
@@ -669,12 +715,12 @@ func TestProductPackagesHandler(t *testing.T) {
 				Product: "habitat",
 				Version: "0.9.3",
 				MetaData: []models.MetaData{{
-					Architecture:     "x86_64",
-					FileName:         "",
-					Platform:         "linux",
-					Platform_Version: "",
-					SHA1:             "",
-					SHA256:           "abcd",
+					Architecture:    "x86_64",
+					FileName:        "",
+					Platform:        "linux",
+					PlatformVersion: "",
+					SHA1:            "",
+					SHA256:          "abcd",
 				}},
 			},
 			err:          nil,
@@ -723,12 +769,12 @@ func TestProductPackagesHandler(t *testing.T) {
 				Product: "habitat",
 				Version: "0.3.2",
 				MetaData: []models.MetaData{{
-					Architecture:     "x86_64",
-					FileName:         "",
-					Platform:         "linux",
-					Platform_Version: "",
-					SHA1:             "",
-					SHA256:           "abcd",
+					Architecture:    "x86_64",
+					FileName:        "",
+					Platform:        "linux",
+					PlatformVersion: "",
+					SHA1:            "",
+					SHA256:          "abcd",
 				}},
 			},
 			err:          nil,
@@ -971,7 +1017,7 @@ func TestFileNameHandler(t *testing.T) {
 				})
 				mockDbService := new(dboperations.MockIDbOperations)
 
-				mockDbService.GetMetaDatafunc = func(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (interface{}, error) {
+				mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture, packageManager string) (*models.MetaData, error) {
 					return &test.metadata, test.metadata_err
 				}
 				mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {

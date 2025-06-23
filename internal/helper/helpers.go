@@ -33,6 +33,7 @@ func GetRequestParams(c omnitruck.FiberContext) *omnitruck.RequestParams {
 		Platform:        c.Query("p"),
 		PlatformVersion: c.Query("pv"),
 		Architecture:    c.Query("m"),
+		PackageManager:  c.Query("pm"),
 		LicenseId:       c.Query("license_id"),
 		Eol:             c.Query("eol", "false"),
 		BOM:             c.Query(("bom")),

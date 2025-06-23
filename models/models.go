@@ -13,12 +13,13 @@ type ProductDetails struct {
 }
 
 type MetaData struct {
-	Architecture     string `json:"architecture"`
-	FileName         string `json:"filename"`
-	Platform         string `json:"platform"`
-	Platform_Version string `json:"platform_version"`
-	SHA1             string `json:"sha1"`
-	SHA256           string `json:"sha256"`
+	Architecture    string `json:"architecture"`
+	FileName        string `json:"filename"`
+	Platform        string `json:"platform"`
+	PlatformVersion string `json:"platform_version"`
+	PackageManager  string `json:"package_manager"`
+	SHA1            string `json:"sha1"`
+	SHA256          string `json:"sha256"`
 }
 
 type RelatedProducts struct {

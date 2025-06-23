@@ -46,6 +46,7 @@ type RequestParams struct {
 	Version         string
 	Platform        string
 	PlatformVersion string
+	PackageManager  string
 	Architecture    string
 	Eol             string
 	LicenseId       string
@@ -59,6 +60,7 @@ type RequestParamsFlags struct {
 	Version         bool
 	Platform        bool
 	PlatformVersion bool
+	PackageManager  bool
 	Architecture    bool
 	Eol             bool
 	LicenseId       bool
@@ -92,6 +94,9 @@ func (rp *RequestParams) UrlParams() url.Values {
 	}
 	if len(rp.Architecture) > 0 {
 		v.Add("m", rp.Architecture)
+	}
+	if len(rp.PackageManager) > 0 {
+		v.Add("pm", rp.PackageManager)
 	}
 	if len(rp.Eol) > 0 {
 		v.Add("eol", rp.Eol)
@@ -288,6 +293,12 @@ func ValidateRequest(p *RequestParams, flags RequestParamsFlags) *clients.Reques
 	if flags.PlatformVersion {
 		if p.PlatformVersion == "" {
 			request.Failure(fiber.StatusBadRequest, utils.PlatformVersionParamsError)
+			return &request
+		}
+	}
+	if flags.PackageManager {
+		if p.PackageManager == "" {
+			request.Failure(fiber.StatusBadRequest, utils.PackageManagerParamsError)
 			return &request
 		}
 	}
