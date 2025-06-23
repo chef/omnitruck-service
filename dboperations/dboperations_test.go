@@ -2,6 +2,7 @@ package dboperations
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -60,9 +61,15 @@ func TestGetPackagesSuccess(t *testing.T) {
 						}, nil
 					},
 				},
+				dbModelType: reflect.TypeOf(models.ProductDetails{}),
 			}
 			got, _ := ser.GetPackages(tt.args.partitionValue, tt.args.sortValue)
-			assert.Equal(t, got, tt.want)
+			// The GetPackages method returns a pointer to ProductDetails, so we need to compare the dereferenced value
+			if pd, ok := got.(*models.ProductDetails); ok {
+				assert.Equal(t, tt.want, pd)
+			} else {
+				t.Errorf("expected *models.ProductDetails, got %T", got)
+			}
 		})
 	}
 }
@@ -105,6 +112,11 @@ func TestGetPackagesFailure(t *testing.T) {
 	}
 }
 
+const (
+	version4054 = "4.0.54"
+	version4091 = "4.0.91"
+)
+
 func TestGetVersionAllSuccess(t *testing.T) {
 	type args struct {
 		partitionValue string
@@ -121,8 +133,8 @@ func TestGetVersionAllSuccess(t *testing.T) {
 				partitionValue: "autoamte",
 			},
 			want: []string{
-				"4.0.54",
-				"4.0.91",
+				version4054,
+				version4091,
 			},
 			wantErr: false,
 		},
@@ -136,16 +148,17 @@ func TestGetVersionAllSuccess(t *testing.T) {
 							Items: []map[string]*dynamodb.AttributeValue{
 								{
 									"product": {S: aws.String("automate")},
-									"version": {S: aws.String("4.0.54")},
+									"version": {S: aws.String(version4054)},
 								},
 								{
 									"product": {S: aws.String("automate")},
-									"version": {S: aws.String("4.0.91")},
+									"version": {S: aws.String(version4091)},
 								},
 							},
 						}, nil
 					},
 				},
+				dbModelType: reflect.TypeOf(models.ProductDetails{}),
 			}
 			got, _ := ser.GetVersionAll(tt.args.partitionValue)
 			assert.Equal(t, got, tt.want)
@@ -259,6 +272,7 @@ func TestGetMetaDataSuccess(t *testing.T) {
 						}, nil
 					},
 				},
+				dbModelType: reflect.TypeOf(models.ProductDetails{}),
 			}
 			got, _ := ser.GetMetaData(tt.args.partitionValue, tt.args.sortValue, tt.args.platform, tt.args.platformVersion, tt.args.architecture)
 			assert.Equal(t, tt.want, got)
@@ -307,7 +321,7 @@ func TestGetMetaDataFailure(t *testing.T) {
 				},
 			}
 			got, err := ser.GetMetaData(tt.args.partitionValue, tt.args.sortValue, tt.args.platform, tt.args.platformVersion, tt.args.architecture)
-			assert.Equal(t, tt.want, got)
+			assert.Nil(t, got)
 			assert.Equal(t, tt.wantErr.Error(), err.Error())
 		})
 	}
@@ -356,6 +370,7 @@ func TestGetVersionLatestSuccess(t *testing.T) {
 						}, nil
 					},
 				},
+				dbModelType: reflect.TypeOf(models.ProductDetails{}),
 			}
 			got, _ := ser.GetVersionLatest(tt.args.partitionValue)
 			assert.Equal(t, tt.want, got)
