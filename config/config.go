@@ -19,7 +19,15 @@ type ReplicatedConfig struct {
 }
 
 type AWSConfig struct {
-	Region    string `json:"region"`
-	AccessKey string `json:"access_key"`
-	SecretKey string `json:"secret_access_key"`
+	Region    string   `json:"region"`
+	AccessKey string   `json:"access_key"`
+	SecretKey string   `json:"secret_access_key"`
+	S3Config  S3Config `json:"s3_config"`
+}
+
+type S3Config struct {
+	Bucket      string `json:"bucket"`
+	RoleArn     string `json:"role_arn"`
+	StablePath  string `json:"stable_path"`
+	CurrentPath string `json:"current_path"`
 }

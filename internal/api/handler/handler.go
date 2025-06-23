@@ -310,7 +310,6 @@ func (h *DownloadsHandler) ProductDownloadHandler(c *fiber.Ctx) error {
 		// Set Headers
 		c.Set(fiber.HeaderContentType, constants.OCTET_STREAM)
 		c.Set(fiber.HeaderContentLength, header.Get(fiber.HeaderContentLength))
-		c.Set(fiber.HeaderContentDisposition, constants.PLATFORM_SERVICE_CONTENT_DISPOSITION)
 		c.Set(fiber.HeaderTransferEncoding, constants.CHUNKED)
 
 		c.Status(200).Context().SetBodyStreamWriter(func(w *bufio.Writer) {

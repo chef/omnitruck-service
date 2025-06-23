@@ -5,8 +5,8 @@ const (
 	PRODUCT_PARTITION_KEY                = "product"
 	PRODUCT_SORT_KEY                     = "version"
 	AUTOMATE_PRODUCT                     = "automate"
-	CHEF_INFRA_PRODUCT                   = "chef-ice"
 	HABITAT_PRODUCT                      = "habitat"
+	CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT = "chef-ice"
 	LATEST                               = "latest"
 	PLATFORM_SERVICE                     = "chef-360"
 	PLATFORM_SERVICE_PRODUCT             = "chef-360"
@@ -18,6 +18,10 @@ const (
 	CURRENT_CHANNEL                      = "current"
 	STABLE_CHANNEL                       = "stable"
 	PLATFORM_VERSION_KEY                 = "pv"
+	DOWNLOAD_URL                         = "https://packages.chef.io/files/%s/%s/%s/%s"
+	CHEF_AUTOMATE_CLI                    = "chef-automate-cli"
+	AUTOMATE_CLI_VERSION                 = "latest"
+	AUTOMATE_CHANNEL                     = "current"
 	DUMMY_PACKAGE_MANAGER                = "pm"
 )
 

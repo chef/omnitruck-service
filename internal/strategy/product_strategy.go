@@ -51,13 +51,17 @@ func SelectProductStrategy(product string, channel string, deps *ProductStrategy
 			LicenseServiceUrl: deps.LicenseServiceUrl,
 			Mode:              deps.Mode,
 		}
-	case constants.CHEF_INFRA_PRODUCT:
+	case constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT:
 		if channel == constants.CURRENT_CHANNEL {
 			deps.DynamoService.SetDbInfo(deps.Config.PackageDetailsCurrentTable, reflect.TypeOf(models.PackageDetails{}))
 		} else {
 			deps.DynamoService.SetDbInfo(deps.Config.PackageDetailsStableTable, reflect.TypeOf(models.PackageDetails{}))
 		}
-		return &InfraProductStrategy{DynamoService: deps.DynamoService, Log: deps.Log}
+		return &InfraProductStrategy{
+			DynamoService: deps.DynamoService,
+			Log:           deps.Log,
+			AWSConfig:     deps.Config.AWSConfig,
+		}
 	default:
 		return &DefaultProductStrategy{OmnitruckService: deps.OmnitruckService}
 	}

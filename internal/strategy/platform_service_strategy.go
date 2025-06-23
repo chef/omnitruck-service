@@ -139,7 +139,9 @@ func (s *PlatformServiceStrategy) DownloadChefPlatform(params *omnitruck.Request
 		//return server.SendErrorResponse(c, http.StatusInternalServerError, constants.REPLICATED_DOWNLOAD_ERROR)
 	}
 	s.Log.Info("Successfully downloaded from replicated")
-	return "", downloadResp.Body, downloadResp.Header, "", downloadResp.StatusCode, nil
+	headers := downloadResp.Header
+	headers.Set("Content-Disposition", constants.PLATFORM_SERVICE_CONTENT_DISPOSITION)
+	return "", downloadResp.Body, headers, "", downloadResp.StatusCode, nil
 }
 
 func (s *PlatformServiceStrategy) GetFileName(params *omnitruck.RequestParams) (string, error) {

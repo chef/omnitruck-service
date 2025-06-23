@@ -6,6 +6,7 @@ import (
 
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
+	"github.com/chef/omnitruck-service/constants"
 	helpers "github.com/chef/omnitruck-service/internal/helper"
 	"github.com/gofiber/fiber/v2"
 	log "github.com/sirupsen/logrus"
@@ -59,6 +60,7 @@ func (s *DefaultProductStrategy) Download(params *omnitruck.RequestParams) (url 
 
 func (s *DefaultProductStrategy) GetFileName(params *omnitruck.RequestParams) (string, error) {
 	var data omnitruck.PackageMetadata
+	params.PackageManager = constants.DUMMY_PACKAGE_MANAGER
 	request := s.OmnitruckService.ProductMetadata(params).ParseData(&data)
 	if !request.Ok {
 		return "", fiber.NewError(request.Code, request.Message)
