@@ -5,12 +5,14 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
 	"github.com/chef/omnitruck-service/clients/omnitruck/replicated"
+	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/constants"
 	"github.com/chef/omnitruck-service/dboperations"
 	_ "github.com/chef/omnitruck-service/docs"
@@ -33,6 +35,7 @@ func testInjector(service services.DownloadService) func(*fiber.Ctx) error {
 		do.ProvideNamedValue[dboperations.IDbOperations](reqInjector, "dbService", service.DatabaseService)
 		do.ProvideNamedValue[constants.ApiType](reqInjector, "mode", service.Mode)
 		do.ProvideNamedValue[string](reqInjector, "licenseServiceUrl", service.LicenseServiceUrl)
+		do.ProvideNamedValue[config.ServiceConfig](reqInjector, "config", service.Config)
 
 		// Inject mock replicated dependency
 		mockReplicated := &replicated.MockReplicated{
@@ -222,6 +225,8 @@ func TestLatestVersionsHandler(t *testing.T) {
 			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
 				return test.version, test.version_err
 			}
+			mockDbService.SetDbInfofunc = func(tableName string, dbModel reflect.Type) {
+			}
 
 			log := logrus.NewEntry(logrus.New())
 			handler := NewDownloadsHandler(log)
@@ -318,6 +323,8 @@ func TestProductVersionsHandler(t *testing.T) {
 			mockDbService := new(dboperations.MockIDbOperations)
 			mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
 				return test.versions, test.versions_err
+			}
+			mockDbService.SetDbInfofunc = func(tableName string, dbModel reflect.Type) {
 			}
 
 			log := logrus.NewEntry(logrus.New())
@@ -514,6 +521,8 @@ func TestProductMetadataHandler(t *testing.T) {
 			}
 			mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
 				return test.versions, test.versions_err
+			}
+			mockDbService.SetDbInfofunc = func(tableName string, dbModel reflect.Type) {
 			}
 
 			log := logrus.NewEntry(logrus.New())
@@ -746,6 +755,8 @@ func TestProductPackagesHandler(t *testing.T) {
 			mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
 				return test.versions, test.versions_err
 			}
+			mockDbService.SetDbInfofunc = func(tableName string, dbModel reflect.Type) {
+			}
 			log := logrus.NewEntry(logrus.New())
 			handler := NewDownloadsHandler(log)
 			service := services.DownloadService{
@@ -930,6 +941,8 @@ func TestFileNameHandler(t *testing.T) {
 				}
 				mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
 					return test.versions, test.versions_err
+				}
+				mockDbService.SetDbInfofunc = func(tableName string, dbModel reflect.Type) {
 				}
 
 				log := logrus.NewEntry(logrus.New())
