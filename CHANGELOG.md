@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.65 -->
-## [0.0.65](https://github.com/chef/omnitruck-service/tree/0.0.65) (2025-06-20)
+<!-- latest_release 0.0.66 -->
+## [0.0.66](https://github.com/chef/omnitruck-service/tree/0.0.66) (2025-06-23)
 
 #### Merged Pull Requests
-- Fixed error code and baseUrl [#88](https://github.com/chef/omnitruck-service/pull/88) ([swathi-s3](https://github.com/swathi-s3))
+- Fix breaking test [#92](https://github.com/chef/omnitruck-service/pull/92) ([rishabhjhs](https://github.com/rishabhjhs))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Fix breaking test [#92](https://github.com/chef/omnitruck-service/pull/92) ([rishabhjhs](https://github.com/rishabhjhs)) <!-- 0.0.66 -->
 - Fixed error code and baseUrl [#88](https://github.com/chef/omnitruck-service/pull/88) ([swathi-s3](https://github.com/swathi-s3)) <!-- 0.0.65 -->
 - Common change for db operations [#87](https://github.com/chef/omnitruck-service/pull/87) ([vipin230](https://github.com/vipin230)) <!-- 0.0.64 -->
 - Refactoring Downloads service [#80](https://github.com/chef/omnitruck-service/pull/80) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.63 -->
