@@ -13,6 +13,8 @@ import (
 	helpers "github.com/chef/omnitruck-service/internal/helper"
 	"github.com/chef/omnitruck-service/internal/strategy"
 	"github.com/chef/omnitruck-service/logger"
+	dbconnection "github.com/chef/omnitruck-service/middleware/db"
+	"github.com/chef/omnitruck-service/utils/awsutils"
 	"github.com/chef/omnitruck-service/utils/template"
 	"github.com/gofiber/fiber/v2"
 	"github.com/samber/do"
@@ -43,20 +45,13 @@ func NewDownloadService(c *fiber.Ctx, log *log.Entry) (*DownloadService, error) 
 		return nil, fiber.NewError(fiber.StatusInternalServerError, "Failed to retrieve request injector")
 	}
 
-	validator := do.MustInvokeNamed[omnitruck.RequestValidator](reqInjector, "validator")
-	databaseService := do.MustInvokeNamed[dboperations.IDbOperations](reqInjector, "dbService")
-	templateRenderer := do.MustInvokeNamed[template.TemplateRender](reqInjector, "templateRenderer")
-	replicatedService := do.MustInvokeNamed[replicated.IReplicated](reqInjector, "replicated")
-	licenseClient := do.MustInvokeNamed[clients.ILicense](reqInjector, "licenseClient")
-	mode := do.MustInvokeNamed[constants.ApiType](reqInjector, "mode")
 	config := do.MustInvokeNamed[config.ServiceConfig](reqInjector, "config")
-	service.Validator = validator
-	service.DatabaseService = databaseService
+	mode := do.MustInvokeNamed[constants.ApiType](reqInjector, "mode")
+
+	templateRenderer := template.NewTemplateRender()
+	service.DatabaseService = dboperations.NewDbOperationsService(dbconnection.NewDbConnectionService(awsutils.NewAwsUtils(), config), config)
 	service.TemplateRenderer = templateRenderer
-	service.Replicated = replicatedService
-	service.LicenseClient = licenseClient
 	service.Mode = mode
-	service.LicenseServiceUrl = config.LicenseServiceUrl
 	service.Config = config
 	return &service, nil
 }
@@ -128,20 +123,20 @@ func (svc *DownloadService) Products(params *omnitruck.RequestParams) (data omni
 	data = getServerStrategy.FilterProducts(data, eol)
 
 	// if svc.Mode == Opensource {
-	// 	svc.logCtx(c).Info("filtering opensource products")
-	// 	data = omnitruck.SelectList(data, omnitruck.OsProductName)
+	//  svc.logCtx(c).Info("filtering opensource products")
+	//  data = omnitruck.SelectList(data, omnitruck.OsProductName)
 	// } else if params.Eol != "true" {
-	// 	svc.logCtx(c).Info("filtering eol products")
-	// 	data = omnitruck.FilterList(data, omnitruck.EolProductName)
+	//  svc.logCtx(c).Info("filtering eol products")
+	//  data = omnitruck.FilterList(data, omnitruck.EolProductName)
 	// }
 
 	// if svc.Mode == Trial {
-	// 	data = omnitruck.FilterProductsForFreeTrial(data, omnitruck.ProductsForFreeTrial)
-	// 	omnitruck.ProductDisplayName(data)
+	//  data = omnitruck.FilterProductsForFreeTrial(data, omnitruck.ProductsForFreeTrial)
+	//  omnitruck.ProductDisplayName(data)
 	// }
 
 	// if svc.Mode == Commercial {
-	// 	data = append(data, constants.PLATFORM_SERVICE_PRODUCT)
+	//  data = append(data, constants.PLATFORM_SERVICE_PRODUCT)
 	// }
 
 	return data, request
@@ -352,7 +347,7 @@ func (svc *DownloadService) GetLinuxScript(params *omnitruck.RequestParams) (str
 	if svc.Mode == constants.Opensource {
 		params.LicenseId = ""
 	}
-	filePath := "../../templates/install.sh.tmpl"
+	filePath := "templates/install.sh.tmpl"
 	resp, err := svc.TemplateRenderer.GetScript(svc.locals["base_url"].(string), params, filePath)
 	if err != nil {
 		return "", &clients.Request{
@@ -372,7 +367,7 @@ func (svc *DownloadService) GetWindowsScript(params *omnitruck.RequestParams) (s
 	if svc.Mode == constants.Opensource {
 		params.LicenseId = ""
 	}
-	filePath := "../../templates/install.ps1.tmpl"
+	filePath := "templates/install.ps1.tmpl"
 	resp, err := svc.TemplateRenderer.GetScript(svc.locals["base_url"].(string), params, filePath)
 	if err != nil {
 		return "", &clients.Request{
@@ -449,6 +444,7 @@ func (svc *DownloadService) ProductStrategyDeps() *strategy.ProductStrategyDeps 
 		Replicated:        svc.Replicated,
 		LicenseClient:     svc.LicenseClient,
 		LicenseServiceUrl: svc.LicenseServiceUrl,
+		Validator:         svc.Validator,
 		Mode:              svc.Mode,
 		Config:            svc.Config,
 	}
