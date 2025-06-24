@@ -2,6 +2,7 @@ package dboperations
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -367,7 +368,8 @@ func TestGetMetaDataFailure(t *testing.T) {
 		name        string
 		args        args
 		want        *models.MetaData
-		wantErr     error
+		wantDBErr   bool
+		errorMsg    error
 		dbModelType reflect.Type
 	}{
 		{
@@ -382,8 +384,23 @@ func TestGetMetaDataFailure(t *testing.T) {
 				architecture:    "arch64",
 			},
 			want:        nil,
-			wantErr:     errors.New("ReplicaNotFoundException: Requested resource not found"),
+			wantDBErr:   true,
+			errorMsg:    errors.New("ReplicaNotFoundException: Requested resource not found"),
 			dbModelType: reflect.TypeOf(models.ProductDetails{}),
+		},
+		{
+			name: "Failure for wrong model type",
+			args: args{
+				partitionValue:  "automate",
+				sortValue:       "4.0.54",
+				platform:        "amazon",
+				platformVersion: "2",
+				architecture:    "arch64",
+			},
+			want:        nil,
+			wantDBErr:   false,
+			errorMsg:    fmt.Errorf("unexpected type %T for product details", &models.MetaData{}),
+			dbModelType: reflect.TypeOf(models.MetaData{}),
 		},
 	}
 	for _, tt := range tests {
@@ -391,16 +408,36 @@ func TestGetMetaDataFailure(t *testing.T) {
 			ser := &DbOperationsService{
 				db: &MDB{
 					GetItemfunc: func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
-						return nil, &dynamodb.ReplicaNotFoundException{
-							Message_: aws.String("Requested resource not found"),
+						if tt.wantDBErr {
+							return nil, &dynamodb.ReplicaNotFoundException{
+								Message_: aws.String("Requested resource not found"),
+							}
 						}
+						return &dynamodb.GetItemOutput{
+							Item: map[string]*dynamodb.AttributeValue{
+								"product": {S: aws.String("chef-ice")},
+								"version": {S: aws.String("19.1.2")},
+								"metadata": {M: map[string]*dynamodb.AttributeValue{
+									"linux": {M: map[string]*dynamodb.AttributeValue{
+										"x86_64": {M: map[string]*dynamodb.AttributeValue{
+											"deb": {M: map[string]*dynamodb.AttributeValue{
+												"filename":        {S: aws.String("chef_19.1.27-1_amd64.deb")},
+												"install-message": {S: aws.String("")},
+												"sha1":            {S: aws.String("SHA1x86_64")},
+												"sha256":          {S: aws.String("SHA256x86_64")},
+											}},
+										}},
+									}},
+								}},
+							},
+						}, nil
 					},
 				},
 				dbModelType: tt.dbModelType,
 			}
 			got, err := ser.GetMetaData(tt.args.partitionValue, tt.args.sortValue, tt.args.platform, tt.args.platformVersion, tt.args.architecture, tt.args.packageManager)
 			assert.Nil(t, got)
-			assert.Equal(t, tt.wantErr.Error(), err.Error())
+			assert.Equal(t, tt.errorMsg.Error(), err.Error())
 		})
 	}
 }

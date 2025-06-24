@@ -51,7 +51,6 @@ type RequestParams struct {
 	Eol             string
 	LicenseId       string
 	BOM             string
-	PackageManager  string
 }
 
 type RequestParamsFlags struct {
@@ -65,7 +64,6 @@ type RequestParamsFlags struct {
 	Eol             bool
 	LicenseId       bool
 	BOM             bool
-	PackageManager  bool
 }
 
 type PackageListUpdater func(platform string, platformVersion string, arch string, meta PackageMetadata) PackageMetadata
@@ -103,9 +101,6 @@ func (rp *RequestParams) UrlParams() url.Values {
 	}
 	if len(rp.LicenseId) > 0 {
 		v.Add("license_id", rp.LicenseId)
-	}
-	if len(rp.PackageManager) > 0 {
-		v.Add("pm", rp.PackageManager)
 	}
 
 	return v

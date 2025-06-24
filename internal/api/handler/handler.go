@@ -240,7 +240,7 @@ func (h *DownloadsHandler) ProductPackagesHandler(c *fiber.Ctx) error {
 // @Param       p          query    string true  "Platform, valid values are returned from the `/platforms` endpoint."                                                          Example(ubuntu)
 // @Param       pv         query    string true  "Platform Version, possible values depend on the platform. For example, Ubuntu: 16.04, or 18.04 or for macOS: 10.14 or 10.15." Example(20.04)
 // @Param       m          query    string true  "Machine architecture, valid values are returned by the `/architectures` endpoint."                                            Example(x86_64)
-// @Param       pm         query    string true  "Package Manager, valid values depend on the platform (e.g., Linux: deb, tar; Windows: msi).""                                 Example(tar)
+// @Param       pm         query    string true  "Package Manager, valid values depend on the platform (e.g., Linux: deb, tar; Windows: msi)."                                  Example(tar)
 // @Param       v          query    string false "Version of the product to be installed. A version always takes the form `x.y.z`"                                              Default(latest)
 // @Param       license_id query    string false "License ID"
 // @Param       eol        query    bool   false "EOL Products" Default(false)

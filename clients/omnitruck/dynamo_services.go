@@ -128,6 +128,7 @@ func (svc *DynamoServices) ProductMetadata(params *RequestParams) (PackageMetada
 			return PackageMetadata{}, fiber.NewError(fiber.StatusInternalServerError, utils.DBError)
 		}
 	}
+	params.PlatformVersion = ""
 
 	details, err := svc.db.GetMetaData(params.Product, version, params.Platform, params.PlatformVersion, params.Architecture, params.PackageManager)
 	if err != nil {
