@@ -35,6 +35,22 @@ func Test_buildEndpointUrl(t *testing.T) {
 			},
 			want: "https://commercial.chef.io/stable/chef/download?eol=true&v=1.0",
 		},
+		{
+			name: "full download URL with platform, pm",
+			args: args{
+				baseUrl:  "https://trial.chef.io",
+				endpoint: "download",
+				params: omnitruck.RequestParams{
+					Channel:     "stable",
+					Product:     "chef-ice",
+					Eol:         "false",
+					Version:     "19.7.17",
+					Platform:    "linux",
+					PackageManager: "rpm",
+				},
+			},
+			want: "https://trial.chef.io/stable/chef-ice/download?eol=false&p=linux&pm=rpm&v=19.7.17",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
