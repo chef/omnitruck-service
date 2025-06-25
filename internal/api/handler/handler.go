@@ -64,6 +64,7 @@ func (h *DownloadsHandler) SendErrorResponse(c *fiber.Ctx, code int, msg string)
 		Message:    msg,
 	})
 }
+
 // @Summary Get list of available products
 // @description Returns a valid list of valid product keys.
 // @description Any of these product keys can be used in the <PRODUCT> value of other endpoints. Please note many of these products are used for internal tools only and many have been EOL'd.
@@ -74,9 +75,14 @@ func (h *DownloadsHandler) SendErrorResponse(c *fiber.Ctx, code int, msg string)
 // @Failure     500 {object} ErrorResponse
 // @Router      /products [get]
 func (h *DownloadsHandler) ProductsHandler(c *fiber.Ctx) error {
-
+	reqInjectorI := c.Locals("reqinjector")
+	reqInjector, ok := reqInjectorI.(*do.Injector)
+	if !ok {
+		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+	}
+	locals := setLocals(c)
 	params := helpers.GetRequestParams(c)
-	downloadService, err := services.NewDownloadService(c, h.Log)
+	downloadService, err := services.NewDownloadService(reqInjector, h.Log, locals)
 	if err != nil {
 		return h.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create download service")
 	}
@@ -98,8 +104,14 @@ func (h *DownloadsHandler) ProductsHandler(c *fiber.Ctx) error {
 // @Failure     500 {object} ErrorResponse
 // @Router      /platforms [get]
 func (h *DownloadsHandler) PlatformsHandler(c *fiber.Ctx) error {
+	reqInjectorI := c.Locals("reqinjector")
+	reqInjector, ok := reqInjectorI.(*do.Injector)
+	if !ok {
+		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+	}
+	locals := setLocals(c)
 	var data omnitruck.PlatformList
-	downloadService, err := services.NewDownloadService(c, h.Log)
+	downloadService, err := services.NewDownloadService(reqInjector, h.Log, locals)
 	if err != nil {
 		return h.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create download service")
 	}
@@ -121,8 +133,13 @@ func (h *DownloadsHandler) PlatformsHandler(c *fiber.Ctx) error {
 // @Failure     500 {object} ErrorResponse
 // @Router      /architectures [get]
 func (h *DownloadsHandler) ArchitecturesHandler(c *fiber.Ctx) error {
-
-	downloadService, err := services.NewDownloadService(c, h.Log)
+	reqInjectorI := c.Locals("reqinjector")
+	reqInjector, ok := reqInjectorI.(*do.Injector)
+	if !ok {
+		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+	}
+	locals := setLocals(c)
+	downloadService, err := services.NewDownloadService(reqInjector, h.Log, locals)
 	if err != nil {
 		return h.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create download service")
 	}
@@ -147,6 +164,12 @@ func (h *DownloadsHandler) ArchitecturesHandler(c *fiber.Ctx) error {
 // @Failure     403        {object} ErrorResponse
 // @Router      /{channel}/{product}/versions/latest [get]
 func (h *DownloadsHandler) LatestVersionHandler(c *fiber.Ctx) error {
+	reqInjectorI := c.Locals("reqinjector")
+	reqInjector, ok := reqInjectorI.(*do.Injector)
+	if !ok {
+		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+	}
+	locals := setLocals(c)
 	params := helpers.GetRequestParams(c)
 	msg, code, ok := h.ValidateRequest(params, c)
 	if !ok {
@@ -154,7 +177,7 @@ func (h *DownloadsHandler) LatestVersionHandler(c *fiber.Ctx) error {
 	}
 	params.Version = "latest"
 
-	downloadService, err := services.NewDownloadService(c, h.Log)
+	downloadService, err := services.NewDownloadService(reqInjector, h.Log, locals)
 	if err != nil {
 		return h.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create download service")
 	}
@@ -180,12 +203,18 @@ func (h *DownloadsHandler) LatestVersionHandler(c *fiber.Ctx) error {
 // @Failure     403        {object} ErrorResponse
 // @Router      /{channel}/{product}/versions/all [get]
 func (h *DownloadsHandler) ProductVersionsHandler(c *fiber.Ctx) error {
+	reqInjectorI := c.Locals("reqinjector")
+	reqInjector, ok := reqInjectorI.(*do.Injector)
+	if !ok {
+		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+	}
+	locals := setLocals(c)
 	params := helpers.GetRequestParams(c)
 	msg, code, ok := h.ValidateRequest(params, c)
 	if !ok {
 		return h.SendErrorResponse(c, code, msg)
 	}
-	downloadService, err := services.NewDownloadService(c, h.Log)
+	downloadService, err := services.NewDownloadService(reqInjector, h.Log, locals)
 	if err != nil {
 		return h.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create download service")
 	}
@@ -212,12 +241,18 @@ func (h *DownloadsHandler) ProductVersionsHandler(c *fiber.Ctx) error {
 // @Failure     403        {object} ErrorResponse
 // @Router      /{channel}/{product}/packages [get]
 func (h *DownloadsHandler) ProductPackagesHandler(c *fiber.Ctx) error {
+	reqInjectorI := c.Locals("reqinjector")
+	reqInjector, ok := reqInjectorI.(*do.Injector)
+	if !ok {
+		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+	}
+	locals := setLocals(c)
 	params := helpers.GetRequestParams(c)
 	msg, code, ok := h.ValidateRequest(params, c)
 	if !ok {
 		return h.SendErrorResponse(c, code, msg)
 	}
-	downloadService, err := services.NewDownloadService(c, h.Log)
+	downloadService, err := services.NewDownloadService(reqInjector, h.Log, locals)
 	if err != nil {
 		return h.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create download service")
 	}
@@ -247,12 +282,18 @@ func (h *DownloadsHandler) ProductPackagesHandler(c *fiber.Ctx) error {
 // @Failure     403        {object} ErrorResponse
 // @Router      /{channel}/{product}/metadata [get]
 func (h *DownloadsHandler) ProductMetadataHandler(c *fiber.Ctx) error {
+	reqInjectorI := c.Locals("reqinjector")
+	reqInjector, ok := reqInjectorI.(*do.Injector)
+	if !ok {
+		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+	}
+	locals := setLocals(c)
 	params := helpers.GetRequestParams(c)
 	msg, code, ok := h.ValidateRequest(params, c)
 	if !ok {
 		return h.SendErrorResponse(c, code, msg)
 	}
-	downloadService, err := services.NewDownloadService(c, h.Log)
+	downloadService, err := services.NewDownloadService(reqInjector, h.Log, locals)
 	if err != nil {
 		return h.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create download service")
 	}
@@ -282,12 +323,18 @@ func (h *DownloadsHandler) ProductMetadataHandler(c *fiber.Ctx) error {
 // @Failure     403 {object} ErrorResponse
 // @Router      /{channel}/{product}/download [get]
 func (h *DownloadsHandler) ProductDownloadHandler(c *fiber.Ctx) error {
+	reqInjectorI := c.Locals("reqinjector")
+	reqInjector, ok := reqInjectorI.(*do.Injector)
+	if !ok {
+		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+	}
+	locals := setLocals(c)
 	params := helpers.GetRequestParams(c)
 	msg, code, ok := h.ValidateRequest(params, c)
 	if !ok {
 		return h.SendErrorResponse(c, code, msg)
 	}
-	downloadService, err := services.NewDownloadService(c, h.Log)
+	downloadService, err := services.NewDownloadService(reqInjector, h.Log, locals)
 	if err != nil {
 		return h.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create download service")
 	}
@@ -363,12 +410,18 @@ func (h *DownloadsHandler) ProductDownloadHandler(c *fiber.Ctx) error {
 // @Failure     403 {object} ErrorResponse
 // @Router      /relatedProducts [get]
 func (h *DownloadsHandler) RelatedProductsHandler(c *fiber.Ctx) error {
+	reqInjectorI := c.Locals("reqinjector")
+	reqInjector, ok := reqInjectorI.(*do.Injector)
+	if !ok {
+		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+	}
+	locals := setLocals(c)
 	params := helpers.GetRequestParams(c)
 	msg, code, ok := h.ValidateRequest(params, c)
 	if !ok {
 		return h.SendErrorResponse(c, code, msg)
 	}
-	downloadService, err := services.NewDownloadService(c, h.Log)
+	downloadService, err := services.NewDownloadService(reqInjector, h.Log, locals)
 	if err != nil {
 		return h.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create download service")
 	}
@@ -396,12 +449,18 @@ func (h *DownloadsHandler) RelatedProductsHandler(c *fiber.Ctx) error {
 // @Failure     403        {object} ErrorResponse
 // @Router      /{channel}/{product}/fileName [get]
 func (h *DownloadsHandler) FileNameHandler(c *fiber.Ctx) error {
+	reqInjectorI := c.Locals("reqinjector")
+	reqInjector, ok := reqInjectorI.(*do.Injector)
+	if !ok {
+		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+	}
+	locals := setLocals(c)
 	params := helpers.GetRequestParams(c)
 	msg, code, ok := h.ValidateRequest(params, c)
 	if !ok {
 		return h.SendErrorResponse(c, code, msg)
 	}
-	downloadService, err := services.NewDownloadService(c, h.Log)
+	downloadService, err := services.NewDownloadService(reqInjector, h.Log, locals)
 	if err != nil {
 		return h.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create download service")
 	}
@@ -425,6 +484,12 @@ func (h *DownloadsHandler) FileNameHandler(c *fiber.Ctx) error {
 // @Failure     500        {object} ErrorResponse
 // @Router      /install.sh [get]
 func (h *DownloadsHandler) DownloadLinuxScript(c *fiber.Ctx) error {
+	reqInjectorI := c.Locals("reqinjector")
+	reqInjector, ok := reqInjectorI.(*do.Injector)
+	if !ok {
+		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+	}
+	locals := setLocals(c)
 	params := helpers.GetRequestParams(c)
 	msg, code, ok := h.ValidateRequest(params, c)
 	if !ok {
@@ -432,7 +497,7 @@ func (h *DownloadsHandler) DownloadLinuxScript(c *fiber.Ctx) error {
 	}
 	c.Set("Content-Type", "application/x-sh")
 	c.Set("Content-Disposition", "attachment;filename=install.sh")
-	downloadService, err := services.NewDownloadService(c, h.Log)
+	downloadService, err := services.NewDownloadService(reqInjector, h.Log, locals)
 	if err != nil {
 		return h.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create download service")
 	}
@@ -454,6 +519,12 @@ func (h *DownloadsHandler) DownloadLinuxScript(c *fiber.Ctx) error {
 // @Failure     500        {object} ErrorResponse
 // @Router      /install.ps1 [get]
 func (h *DownloadsHandler) DownloadWindowsScript(c *fiber.Ctx) error {
+	reqInjectorI := c.Locals("reqinjector")
+	reqInjector, ok := reqInjectorI.(*do.Injector)
+	if !ok {
+		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+	}
+	locals := setLocals(c)
 	params := helpers.GetRequestParams(c)
 	msg, code, ok := h.ValidateRequest(params, c)
 	if !ok {
@@ -462,7 +533,7 @@ func (h *DownloadsHandler) DownloadWindowsScript(c *fiber.Ctx) error {
 	c.Set(fiber.HeaderContentType, fiber.MIMETextPlainCharsetUTF8)
 	c.Set("Content-Disposition", "attachment;filename=install.ps1")
 
-	downloadService, err := services.NewDownloadService(c, h.Log)
+	downloadService, err := services.NewDownloadService(reqInjector, h.Log, locals)
 	if err != nil {
 		return h.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create download service")
 	}
@@ -482,7 +553,13 @@ func (h *DownloadsHandler) DownloadWindowsScript(c *fiber.Ctx) error {
 // @Failure     500 {object} ErrorResponse
 // @Router /package-managers [get]
 func (h *DownloadsHandler) PackageManagersHandler(c *fiber.Ctx) error {
-	downloadService, err := services.NewDownloadService(c, h.Log)
+	reqInjectorI := c.Locals("reqinjector")
+	reqInjector, ok := reqInjectorI.(*do.Injector)
+	if !ok {
+		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+	}
+	locals := setLocals(c)
+	downloadService, err := services.NewDownloadService(reqInjector, h.Log, locals)
 	if err != nil {
 		return h.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create download service")
 	}
@@ -520,4 +597,36 @@ func (h *DownloadsHandler) ValidateRequest(params *omnitruck.RequestParams, c *f
 func (h *DownloadsHandler) validLicense(c *fiber.Ctx) bool {
 	v := c.Locals("valid_license")
 	return v != nil && v.(bool)
+}
+
+func setLocals(c *fiber.Ctx) map[string]interface{} {
+	locals := map[string]interface{}{}
+	if c.Locals("valid_license") != nil {
+		requestId := c.Locals("valid_license").(bool)
+		locals["valid_license"] = requestId
+
+	} else {
+		locals["valid_license"] = false
+	}
+
+	if c.Locals("request_id") != nil {
+		requestId := c.Locals("request_id").(string)
+		locals["request_id"] = requestId
+
+	} else {
+		locals["request_id"] = ""
+	}
+	if c.Locals("base_url") != nil {
+		baseUrl := c.Locals("base_url").(string)
+		locals["base_url"] = baseUrl
+	} else {
+		locals["base_url"] = c.BaseURL()
+	}
+	if c.Locals("license_id") != nil {
+		licenseId := c.Locals("license_id").(string)
+		locals["license_id"] = licenseId
+	} else {
+		locals["license_id"] = ""
+	}
+	return locals
 }
