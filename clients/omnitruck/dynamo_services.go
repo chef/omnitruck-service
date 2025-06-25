@@ -7,6 +7,7 @@ import (
 
 	"github.com/chef/omnitruck-service/dboperations"
 	"github.com/chef/omnitruck-service/models"
+	 "github.com/chef/omnitruck-service/constants"
 	"github.com/chef/omnitruck-service/utils"
 	"github.com/gofiber/fiber/v2"
 	log "github.com/sirupsen/logrus"
@@ -171,36 +172,57 @@ func (svc *DynamoServices) ProductPackages(params *RequestParams) (PackageList, 
 		}
 	}
 
-	details, err := svc.db.GetPackages(params.Product, params.Version)
+	data, err := svc.db.GetPackages(params.Product, params.Version)
 	if err != nil {
 		svc.log.WithError(err).Error("Error while fetching packages")
 		return PackageList{}, fiber.NewError(fiber.StatusInternalServerError, utils.DBError)
 	}
-	if detail, ok := details.(*models.ProductDetails); ok {
-		if len(detail.MetaData) == 0 {
+
+	switch v := data.(type) {
+	case *models.ProductDetails:
+		if len(v.MetaData) == 0 {
 			return PackageList{}, fiber.NewError(fiber.StatusBadRequest, utils.BadRequestError)
 		}
-		packageVersion := detail.Version
-		for _, v := range detail.MetaData {
-			v.Platform_Version = "pv"
-			if _, ok := packageList[v.Platform]; !ok {
-				packageList[v.Platform] = PlatformVersionList{}
-			}
-			if _, ok := packageList[v.Platform][v.Platform_Version]; !ok {
-				packageList[v.Platform][v.Platform_Version] = ArchList{}
-			}
-			if _, ok := packageList[v.Platform][v.Platform_Version][v.Architecture]; !ok {
-				packageList[v.Platform][v.Platform_Version][v.Architecture] = PackageMetadata{
-					Sha1:    v.SHA1,
-					Sha256:  v.SHA256,
-					Url:     "",
-					Version: packageVersion,
+		for _, meta := range v.MetaData {
+			updatePackageList(packageList, meta.Platform, constants.PLATFORM_VERSION_KEY, meta.Architecture, PackageMetadata{
+				Sha1:    meta.SHA1,
+				Sha256:  meta.SHA256,
+				Url:     "",
+				Version: v.Version,
+			})
+		}
+		return packageList, nil
+
+	case *models.PackageDetails:
+		for platform, archMap := range v.Metadata {
+			for arch, pkgManagers := range archMap {
+				for pkgMgr, pkg := range pkgManagers {
+					updatePackageList(packageList, platform, arch, pkgMgr, PackageMetadata{
+						Sha1:    pkg.SHA1,
+						Sha256:  pkg.SHA256,
+						Url:     "",
+						Version: v.Version,
+					})
 				}
 			}
 		}
 		return packageList, nil
+
+	default:
+		svc.log.Error(utils.ErrorLogUnsupportedPackageStructure)
+		return nil, fiber.NewError(fiber.StatusInternalServerError, utils.ErrorMsgUnsupportedPackageStructure)
 	}
-	return PackageList{}, nil
+}
+
+// Utility to update nested map safely
+func updatePackageList(pl PackageList, platform, versionKey, arch string, metadata PackageMetadata) {
+	if pl[platform] == nil {
+		pl[platform] = PlatformVersionList{}
+	}
+	if pl[platform][versionKey] == nil {
+		pl[platform][versionKey] = ArchList{}
+	}
+	pl[platform][versionKey][arch] = metadata
 }
 
 func (svc *DynamoServices) FetchLatestOsVersion(params *RequestParams) (string, error) {

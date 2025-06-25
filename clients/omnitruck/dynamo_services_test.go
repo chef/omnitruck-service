@@ -524,7 +524,7 @@ func TestProductPackages(t *testing.T) {
 		name        string
 		args        args
 		version     string
-		packages    models.ProductDetails
+		packages    interface{}
 		want        PackageList
 		wantErr     bool
 		errMsg      string
@@ -546,7 +546,7 @@ func TestProductPackages(t *testing.T) {
 				},
 			},
 			version: "1.6.826",
-			packages: models.ProductDetails{
+			packages: &models.ProductDetails{
 				Product: "habitat",
 				Version: "1.6.826",
 				MetaData: []models.MetaData{
@@ -656,10 +656,78 @@ func TestProductPackages(t *testing.T) {
 				},
 			},
 			version:     "1.6.826",
-			packages:    models.ProductDetails{},
+			packages:    &models.ProductDetails{},
 			want:        map[string]PlatformVersionList{},
 			wantErr:     true,
 			errMsg:      "Product information not found. Please check the input parameters.",
+			package_err: nil,
+			version_err: nil,
+		},
+		{
+			name: "success with PackageDetails type",
+			args: args{
+				params: &RequestParams{
+					Channel:         "stable",
+					Product:         "chef-ice",
+					Version:         "2.0.0",
+					Platform:        "",
+					PlatformVersion: "",
+					Architecture:    "",
+					Eol:             "",
+					LicenseId:       "",
+				},
+			},
+			version: "2.0.0",
+			packages: &models.PackageDetails{
+				Product: "chef-ice",
+				Version: "2.0.0",
+				Metadata: map[string]models.Platform{
+					"linux": {
+						"x86_64": {
+							"deb": models.PackageType{
+								Filename: "hab.deb",
+								SHA1:     "sha1value",
+								SHA256:   "sha256value",
+							},
+						},
+					},
+				},
+			},
+			want: map[string]PlatformVersionList{
+				"linux": {
+					"x86_64": ArchList{
+						"deb": PackageMetadata{
+							Sha1:    "sha1value",
+							Sha256:  "sha256value",
+							Url:     "",
+							Version: "2.0.0",
+						},
+					},
+				},
+			},
+			wantErr:     false,
+			package_err: nil,
+			version_err: nil,
+		},		
+		{
+			name: "failure unknown data type",
+			args: args{
+				params: &RequestParams{
+					Channel:         "stable",
+					Product:         "habitat",
+					Version:         "3.0.0",
+					Platform:        "",
+					PlatformVersion: "",
+					Architecture:    "",
+					Eol:             "",
+					LicenseId:       "",
+				},
+			},
+			version:     "3.0.0",
+			packages:    nil,
+			want:        map[string]PlatformVersionList{},
+			wantErr:     true,
+			errMsg:      "Package details could not be interpreted. Please verify your request.",
 			package_err: nil,
 			version_err: nil,
 		},
@@ -668,7 +736,7 @@ func TestProductPackages(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDbService := new(dboperations.MockIDbOperations)
 			mockDbService.GetPackagesfunc = func(partitionValue, sortValue string) (interface{}, error) {
-				return &tt.packages, tt.package_err
+				return tt.packages, tt.package_err
 			}
 			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
 				return tt.version, tt.version_err
