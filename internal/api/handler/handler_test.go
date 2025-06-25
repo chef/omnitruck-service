@@ -748,7 +748,7 @@ func TestProductPackagesHandler(t *testing.T) {
 						"deb": {
 							"sha1": "dcf75b37bb80128af4657501bfd41eac52820191",
 							"sha256": "2c501d02b16d67e9d5a28578b95f8d3155bed940ee4946229213f41a2e8b798e",
-							"url": "http://example.com/stable/chef-ice/download?eol=false&license_id=tmns-e88dafdb-06e1-4676-908f-87503da14c4d-3413&p=linux&pm=deb&v=19.7.17",
+							"url": "http://example.com/stable/chef-ice/download?eol=false&license_id=tmns-e88dafdb-06e1-4676-908f-87503da14c4d-3413&m=x86_64&p=linux&pm=deb&v=19.7.17",
 							"version": "19.7.17"
 						}
 					}

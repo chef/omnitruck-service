@@ -69,13 +69,13 @@ func (s *InfraProductStrategy) GetFileName(params *omnitruck.RequestParams) (str
 }
 
 func (s *InfraProductStrategy) UpdatePackages(data *omnitruck.PackageList, params *omnitruck.RequestParams, baseUrl string) {
-	data.UpdatePackages(func(platform string, pv string, packageManager string, m omnitruck.PackageMetadata) omnitruck.PackageMetadata {
+	data.UpdatePackages(func(platform string, arch string, packageManager string, m omnitruck.PackageMetadata) omnitruck.PackageMetadata {
 		params.Version = m.Version
 		params.Platform = platform
 		params.PackageManager = packageManager
+		params.Architecture = arch
 
 		m.Url = helpers.GetDownloadUrl(params, baseUrl)
-
 		return m
 	})
 }
