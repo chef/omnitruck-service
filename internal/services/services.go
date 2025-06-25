@@ -93,7 +93,7 @@ func (svc *DownloadService) SetLocals(c *fiber.Ctx) {
 }
 
 func (svc *DownloadService) Omnitruck() *omnitruck.Omnitruck {
-	client := omnitruck.New(svc.logCtx())
+	client := omnitruck.New(svc.logCtx(), svc.Config.OmnitruckUrl)
 
 	return &client
 }
@@ -157,7 +157,6 @@ func (svc *DownloadService) Platforms() (data omnitruck.PlatformList, request *c
 }
 
 func (svc *DownloadService) Architectures() (data omnitruck.ItemList, request *clients.Request) {
-
 	request = svc.Omnitruck().Architectures().ParseData(&data)
 
 	return data, request
