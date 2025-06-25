@@ -9,7 +9,7 @@ import (
 type MockIDbOperations struct {
 	GetPackagesfunc        func(partitionValue string, sortValue string) (interface{}, error)
 	GetVersionAllfunc      func(partitionValue string) ([]string, error)
-	GetMetaDatafunc        func(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (interface{}, error)
+	GetMetaDatafunc        func(partitionValue, sortValue, platform, platformVersion, architecture, packageManager string) (*models.MetaData, error)
 	GetVersionLatestfunc   func(partitionValue string) (string, error)
 	GetRelatedProductsfunc func(partitionValue string) (*models.RelatedProducts, error)
 	GetPackageManagersfunc func() ([]string, error)
@@ -24,8 +24,8 @@ func (mdbop *MockIDbOperations) GetVersionAll(partitionValue string) ([]string, 
 	return mdbop.GetVersionAllfunc(partitionValue)
 }
 
-func (mdbop *MockIDbOperations) GetMetaData(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (interface{}, error) {
-	return mdbop.GetMetaDatafunc(partitionValue, sortValue, platform, platformVersion, architecture)
+func (mdbop *MockIDbOperations) GetMetaData(partitionValue, sortValue, platform, platformVersion, architecture, packageManager string) (*models.MetaData, error) {
+	return mdbop.GetMetaDatafunc(partitionValue, sortValue, platform, platformVersion, architecture, packageManager)
 }
 
 func (mdbop *MockIDbOperations) GetVersionLatest(partitionValue string) (string, error) {

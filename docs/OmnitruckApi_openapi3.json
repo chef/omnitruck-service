@@ -570,6 +570,16 @@
                         }
                     },
                     {
+                        "example": "tar",
+                        "description": "Package Manager, valid values depend on the platform (e.g., Linux: deb, tar; Windows: msi).",
+                        "name": "pm",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
                         "description": "Version of the product to be installed. A version always takes the form `x.y.z`",
                         "name": "v",
                         "in": "query",

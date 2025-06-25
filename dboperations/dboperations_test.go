@@ -2,6 +2,7 @@ package dboperations
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -47,8 +48,8 @@ func TestGetPackagesSuccess(t *testing.T) {
 			want: &models.ProductDetails{Product: "automate", Version: "4.3.9"},
 		},
 		{
-			name: "Success with PackageDetails",
-			args: args{"chef-ice", "19.1.27"},
+			name:  "Success with PackageDetails",
+			args:  args{"chef-ice", "19.1.27"},
 			model: models.PackageDetails{},
 			mockItem: map[string]*dynamodb.AttributeValue{
 				"product": {S: aws.String("chef-ice")},
@@ -62,7 +63,7 @@ func TestGetPackagesSuccess(t *testing.T) {
 				Version:  "19.1.27",
 				Metadata: map[string]models.Platform{}, // fixed
 			},
-		},		
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -93,14 +94,14 @@ func TestGetPackagesFailure(t *testing.T) {
 		expectError string
 	}{
 		{
-			name:  "Failure in DB fetch",
-			args:  args{"automate", "4.3.9"},
-			model: models.ProductDetails{},
+			name:        "Failure in DB fetch",
+			args:        args{"automate", "4.3.9"},
+			model:       models.ProductDetails{},
 			expectError: "ResourceNotFoundException: Requested resource not found",
 		},
 		{
-			name: "Unknown type fallback",
-			args: args{"chef", "1.0.0"},
+			name:  "Unknown type fallback",
+			args:  args{"chef", "1.0.0"},
 			model: struct{ Foo string }{}, // unknown type
 			mockItem: map[string]*dynamodb.AttributeValue{
 				"foo": {S: aws.String("bar")},
@@ -227,6 +228,7 @@ func TestGetVersionAllFailure(t *testing.T) {
 						}
 					},
 				},
+				dbModelType: reflect.TypeOf(models.ProductDetails{}),
 			}
 			got, err := ser.GetVersionAll(tt.args.partitionValue)
 			assert.Equal(t, got, tt.want)
@@ -242,15 +244,18 @@ func TestGetMetaDataSuccess(t *testing.T) {
 		platform        string
 		platformVersion string
 		architecture    string
+		packageManager  string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    *models.MetaData
-		wantErr bool
+		name         string
+		args         args
+		want         *models.MetaData
+		wantErr      bool
+		dynamodbResp dynamodb.GetItemOutput
+		dbModelType  reflect.Type
 	}{
 		{
-			name: "Success",
+			name: "Success for automate",
 			args: args{
 				partitionValue:  "automate",
 				sortValue:       "4.0.54",
@@ -259,52 +264,92 @@ func TestGetMetaDataSuccess(t *testing.T) {
 				architecture:    "arch64",
 			},
 			want: &models.MetaData{
-
-				Architecture:     "arch64",
-				Platform:         "amazon",
-				Platform_Version: "2",
-				SHA1:             "SHA1arch64",
-				SHA256:           "SHA256arch64",
+				Architecture:    "arch64",
+				Platform:        "amazon",
+				PlatformVersion: "2",
+				SHA1:            "SHA1arch64",
+				SHA256:          "SHA256arch64",
 			},
 			wantErr: false,
+			dynamodbResp: dynamodb.GetItemOutput{
+				Item: map[string]*dynamodb.AttributeValue{
+					"product": {S: aws.String("automate")},
+					"version": {S: aws.String("4.3.9")},
+					"metaData": {L: []*dynamodb.AttributeValue{
+						{
+							M: map[string]*dynamodb.AttributeValue{
+								"architecture": {S: aws.String(("arch64"))},
+								"platform":     {S: aws.String("amazon")},
+								"sha1":         {S: aws.String("SHA1arch64")},
+								"sha256":       {S: aws.String("SHA256arch64")},
+							},
+						},
+						{
+							M: map[string]*dynamodb.AttributeValue{
+								"architecture": {S: aws.String(("x86_64"))},
+								"platform":     {S: aws.String("windows")},
+								"sha1":         {S: aws.String("SHA1x86_64")},
+								"sha256":       {S: aws.String("SHA256x86_64")},
+							},
+						},
+					}},
+				},
+			},
+			dbModelType: reflect.TypeOf(models.ProductDetails{}),
+		},
+		{
+			name: "Success for chef-ice",
+			args: args{
+				partitionValue:  "chef-ice",
+				sortValue:       "19.1.2",
+				platform:        "linux",
+				platformVersion: "",
+				architecture:    "x86_64",
+				packageManager:  "deb",
+			},
+			want: &models.MetaData{
+				Architecture:    "x86_64",
+				Platform:        "linux",
+				PlatformVersion: "",
+				SHA1:            "SHA1x86_64",
+				SHA256:          "SHA256x86_64",
+				FileName:        "chef_19.1.27-1_amd64.deb",
+				PackageManager:  "deb",
+			},
+			wantErr: false,
+			dynamodbResp: dynamodb.GetItemOutput{
+				Item: map[string]*dynamodb.AttributeValue{
+					"product": {S: aws.String("chef-ice")},
+					"version": {S: aws.String("19.1.2")},
+					"metadata": {M: map[string]*dynamodb.AttributeValue{
+						"linux": {M: map[string]*dynamodb.AttributeValue{
+							"x86_64": {M: map[string]*dynamodb.AttributeValue{
+								"deb": {M: map[string]*dynamodb.AttributeValue{
+									"filename":        {S: aws.String("chef_19.1.27-1_amd64.deb")},
+									"install-message": {S: aws.String("")},
+									"sha1":            {S: aws.String("SHA1x86_64")},
+									"sha256":          {S: aws.String("SHA256x86_64")},
+								}},
+							}},
+						}},
+					}},
+				},
+			},
+			dbModelType: reflect.TypeOf(models.PackageDetails{}),
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ser := &DbOperationsService{
 				db: &MDB{
 					GetItemfunc: func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
-						return &dynamodb.GetItemOutput{
-							Item: map[string]*dynamodb.AttributeValue{
-								"product": {S: aws.String("automate")},
-								"version": {S: aws.String("4.3.9")},
-								"metaData": {L: []*dynamodb.AttributeValue{
-									{
-										M: map[string]*dynamodb.AttributeValue{
-											"architecture":     {S: aws.String(("arch64"))},
-											"platform":         {S: aws.String("amazon")},
-											"platform_version": {S: aws.String("2")},
-											"sha1":             {S: aws.String("SHA1arch64")},
-											"sha256":           {S: aws.String("SHA256arch64")},
-										},
-									},
-									{
-										M: map[string]*dynamodb.AttributeValue{
-											"architecture":     {S: aws.String(("x86_64"))},
-											"platform":         {S: aws.String("windows")},
-											"platform_version": {S: aws.String("11")},
-											"sha1":             {S: aws.String("SHA1arch64")},
-											"sha256":           {S: aws.String("SHA256arch64")},
-										},
-									},
-								}},
-							},
-						}, nil
+						return &tt.dynamodbResp, nil
 					},
 				},
-				dbModelType: reflect.TypeOf(models.ProductDetails{}),
+				dbModelType: tt.dbModelType,
 			}
-			got, _ := ser.GetMetaData(tt.args.partitionValue, tt.args.sortValue, tt.args.platform, tt.args.platformVersion, tt.args.architecture)
+			got, _ := ser.GetMetaData(tt.args.partitionValue, tt.args.sortValue, tt.args.platform, tt.args.platformVersion, tt.args.architecture, tt.args.packageManager)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -317,12 +362,15 @@ func TestGetMetaDataFailure(t *testing.T) {
 		platform        string
 		platformVersion string
 		architecture    string
+		packageManager  string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    *models.MetaData
-		wantErr error
+		name        string
+		args        args
+		want        *models.MetaData
+		wantDBErr   bool
+		errorMsg    error
+		dbModelType reflect.Type
 	}{
 		{
 			name: "Failure in reading the DataBase",
@@ -335,8 +383,24 @@ func TestGetMetaDataFailure(t *testing.T) {
 				platformVersion: "2",
 				architecture:    "arch64",
 			},
-			want:    nil,
-			wantErr: errors.New("ReplicaNotFoundException: Requested resource not found"),
+			want:        nil,
+			wantDBErr:   true,
+			errorMsg:    errors.New("ReplicaNotFoundException: Requested resource not found"),
+			dbModelType: reflect.TypeOf(models.ProductDetails{}),
+		},
+		{
+			name: "Failure for wrong model type",
+			args: args{
+				partitionValue:  "automate",
+				sortValue:       "4.0.54",
+				platform:        "amazon",
+				platformVersion: "2",
+				architecture:    "arch64",
+			},
+			want:        nil,
+			wantDBErr:   false,
+			errorMsg:    fmt.Errorf("unexpected type %T for product details", &models.MetaData{}),
+			dbModelType: reflect.TypeOf(models.MetaData{}),
 		},
 	}
 	for _, tt := range tests {
@@ -344,15 +408,36 @@ func TestGetMetaDataFailure(t *testing.T) {
 			ser := &DbOperationsService{
 				db: &MDB{
 					GetItemfunc: func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
-						return nil, &dynamodb.ReplicaNotFoundException{
-							Message_: aws.String("Requested resource not found"),
+						if tt.wantDBErr {
+							return nil, &dynamodb.ReplicaNotFoundException{
+								Message_: aws.String("Requested resource not found"),
+							}
 						}
+						return &dynamodb.GetItemOutput{
+							Item: map[string]*dynamodb.AttributeValue{
+								"product": {S: aws.String("chef-ice")},
+								"version": {S: aws.String("19.1.2")},
+								"metadata": {M: map[string]*dynamodb.AttributeValue{
+									"linux": {M: map[string]*dynamodb.AttributeValue{
+										"x86_64": {M: map[string]*dynamodb.AttributeValue{
+											"deb": {M: map[string]*dynamodb.AttributeValue{
+												"filename":        {S: aws.String("chef_19.1.27-1_amd64.deb")},
+												"install-message": {S: aws.String("")},
+												"sha1":            {S: aws.String("SHA1x86_64")},
+												"sha256":          {S: aws.String("SHA256x86_64")},
+											}},
+										}},
+									}},
+								}},
+							},
+						}, nil
 					},
 				},
+				dbModelType: tt.dbModelType,
 			}
-			got, err := ser.GetMetaData(tt.args.partitionValue, tt.args.sortValue, tt.args.platform, tt.args.platformVersion, tt.args.architecture)
+			got, err := ser.GetMetaData(tt.args.partitionValue, tt.args.sortValue, tt.args.platform, tt.args.platformVersion, tt.args.architecture, tt.args.packageManager)
 			assert.Nil(t, got)
-			assert.Equal(t, tt.wantErr.Error(), err.Error())
+			assert.Equal(t, tt.errorMsg.Error(), err.Error())
 		})
 	}
 }
@@ -362,10 +447,11 @@ func TestGetVersionLatestSuccess(t *testing.T) {
 		partitionValue string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    string
-		wantErr bool
+		name        string
+		args        args
+		want        string
+		wantErr     bool
+		dbModelType reflect.Type
 	}{
 		{
 			name: "Success",
@@ -373,8 +459,9 @@ func TestGetVersionLatestSuccess(t *testing.T) {
 
 				partitionValue: "automate",
 			},
-			want:    "4.0.91",
-			wantErr: false,
+			want:        "4.0.91",
+			wantErr:     false,
+			dbModelType: reflect.TypeOf(models.ProductDetails{}),
 		},
 	}
 	for _, tt := range tests {
@@ -413,10 +500,11 @@ func TestGetVersionLatestFailure(t *testing.T) {
 		partitionValue string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    string
-		wantErr error
+		name        string
+		args        args
+		want        string
+		wantErr     error
+		dbModelType reflect.Type
 	}{
 		{
 			name: "Failure in reading the DataBase",
@@ -424,8 +512,9 @@ func TestGetVersionLatestFailure(t *testing.T) {
 
 				partitionValue: "automate",
 			},
-			want:    "",
-			wantErr: errors.New("ReplicaNotFoundException: Requested resource not found"),
+			want:        "",
+			wantErr:     errors.New("ReplicaNotFoundException: Requested resource not found"),
+			dbModelType: reflect.TypeOf(models.ProductDetails{}),
 		},
 	}
 	for _, tt := range tests {
@@ -443,6 +532,7 @@ func TestGetVersionLatestFailure(t *testing.T) {
 						}
 					},
 				},
+				dbModelType: tt.dbModelType,
 			}
 			got, err := ser.GetVersionLatest(tt.args.partitionValue)
 			assert.Equal(t, tt.want, got)

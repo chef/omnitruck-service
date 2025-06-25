@@ -6,6 +6,7 @@ import (
 
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
+	"github.com/chef/omnitruck-service/constants"
 	helpers "github.com/chef/omnitruck-service/internal/helper"
 	log "github.com/sirupsen/logrus"
 )
@@ -48,6 +49,7 @@ func (s *ProductDynamoStrategy) GetPackages(params *omnitruck.RequestParams) (om
 
 func (s *ProductDynamoStrategy) GetMetadata(params *omnitruck.RequestParams) (omnitruck.PackageMetadata, *clients.Request) {
 	request := &clients.Request{}
+	params.PackageManager = constants.DUMMY_PACKAGE_MANAGER
 	data, err := s.DynamoService.ProductMetadata(params)
 	if err != nil {
 		code, msg := helpers.GetErrorCodeAndMsg(err)

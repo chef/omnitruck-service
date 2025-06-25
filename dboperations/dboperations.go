@@ -21,7 +21,7 @@ import (
 type IDbOperations interface {
 	GetPackages(partitionValue string, sortValue string) (interface{}, error)
 	GetVersionAll(partitionValue string) ([]string, error)
-	GetMetaData(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (interface{}, error)
+	GetMetaData(partitionValue, sortValue, platform, platformVersion, architecture, packageManager string) (*models.MetaData, error)
 	GetVersionLatest(partitionValue string) (string, error)
 	GetRelatedProducts(partitionValue string) (*models.RelatedProducts, error)
 	GetPackageManagers() ([]string, error)
@@ -115,7 +115,7 @@ func (dbo *DbOperationsService) GetVersionAll(partitionValue string) ([]string, 
 	return versionsArray, nil
 }
 
-func (dbo *DbOperationsService) GetMetaData(partitionValue string, sortValue string, platform string, platformVersion string, architecture string) (interface{}, error) {
+func (dbo *DbOperationsService) GetMetaData(partitionValue, sortValue, platform, platformVersion, architecture, packageManager string) (*models.MetaData, error) {
 	res, err := dbo.fetchDataValuesWithSortKey(partitionValue, sortValue)
 	if err != nil {
 		return nil, err
@@ -124,23 +124,38 @@ func (dbo *DbOperationsService) GetMetaData(partitionValue string, sortValue str
 	if err := dynamodbattribute.UnmarshalMap(res.Item, &productDetails); err != nil {
 		return nil, err
 	}
-	if v, ok := productDetails.(*models.ProductDetails); ok {
-		MetaData := v.MetaData
+	switch v := productDetails.(type) {
+	case *models.ProductDetails:
+		metadata := v.MetaData
 		var response models.MetaData
-		for _, j := range MetaData {
+		for _, j := range metadata {
 			if j.Architecture == architecture && j.Platform == platform {
 				response.Architecture = architecture
 				response.Platform = platform
-				response.Platform_Version = platformVersion
+				response.PlatformVersion = platformVersion
 				response.SHA1 = j.SHA1
 				response.SHA256 = j.SHA256
 				response.FileName = j.FileName
 			}
 		}
 		return &response, nil
+	case *models.PackageDetails:
+		metadata := v.Metadata
+		var response models.MetaData
+		resp := metadata[platform][architecture][packageManager]
+		if resp != (models.PackageType{}) {
+			response.Architecture = architecture
+			response.Platform = platform
+			response.PlatformVersion = platformVersion
+			response.PackageManager = packageManager
+			response.SHA1 = resp.SHA1
+			response.SHA256 = resp.SHA256
+			response.FileName = resp.Filename
+		}
+		return &response, nil
+	default:
+		return nil, fmt.Errorf("unexpected type %T for product details", productDetails)
 	}
-
-	return nil, nil
 }
 
 func (dbo *DbOperationsService) GetVersionLatest(partitionValue string) (string, error) {

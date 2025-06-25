@@ -10,6 +10,7 @@ const (
 	BOMParamsError             = "BOM (bom) params cannot be empty"
 	PlatformParamsError        = "Platfrom (p) params cannot be empty"
 	PlatformVersionParamsError = "Platform Version (pv) params cannot be empty"
+	PackageManagerParamsError  = "Package Manager (pm) params cannot be empty"
 
 	OmnitruckDataNotFoundError = "Requested data is not found. Please check the input parameters"
 	OmnitruckApiError          = "Error while fetching omnitruck data"

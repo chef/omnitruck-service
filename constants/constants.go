@@ -18,6 +18,7 @@ const (
 	CURRENT_CHANNEL                      = "current"
 	STABLE_CHANNEL                       = "stable"
 	PLATFORM_VERSION_KEY                 = "pv"
+	DUMMY_PACKAGE_MANAGER                = "pm"
 )
 
 const (
@@ -25,6 +26,7 @@ const (
 	SUCCESS_RESPONSE_FROM_FILENAME_MSG = "Returning success response from fileName API for "
 	REPLICATED_CUSTOMER_ERROR          = "error while searching customer in replicated"
 	REPLICATED_DOWNLOAD_ERROR          = "error while downloading from replicated"
+	ERR_VALIDATING                     = "Error while validating params:"
 )
 
 type ApiType int
