@@ -5,9 +5,9 @@ import (
 	"reflect"
 	"sort"
 
+	"github.com/chef/omnitruck-service/constants"
 	"github.com/chef/omnitruck-service/dboperations"
 	"github.com/chef/omnitruck-service/models"
-	 "github.com/chef/omnitruck-service/constants"
 	"github.com/chef/omnitruck-service/utils"
 	"github.com/gofiber/fiber/v2"
 	log "github.com/sirupsen/logrus"
@@ -85,26 +85,23 @@ func (svc *DynamoServices) ProductDownload(params *RequestParams) (string, error
 		params.Channel = AUTOMATE_CHANNEL
 	}
 
-	details, err := svc.db.GetMetaData(params.Product, params.Version, params.Platform, params.PlatformVersion, params.Architecture)
+	details, err := svc.db.GetMetaData(params.Product, params.Version, params.Platform, params.PlatformVersion, params.Architecture, params.PackageManager)
 	if err != nil {
 		svc.log.WithError(err).Error("Error while fetching filename")
 		return "", fiber.NewError(fiber.StatusInternalServerError, utils.DBError)
 	}
-	if v, ok := details.(*models.MetaData); ok {
-		if *v == (models.MetaData{}) {
-			return "", fiber.NewError(fiber.StatusBadRequest, utils.BadRequestError)
-		}
-
-		switch params.Product {
-		case AUTOMATE_PRODUCT:
-			url = fmt.Sprintf(DOWNLOAD_URL, params.Channel, params.Version, CHEF_AUTOMATE_CLI, v.FileName)
-		case HABITAT_PRODUCT:
-			url = fmt.Sprintf(DOWNLOAD_URL, params.Channel, params.Product, params.Version, v.FileName)
-		}
-
-		return url, nil
+	if *details == (models.MetaData{}) {
+		return "", fiber.NewError(fiber.StatusBadRequest, utils.BadRequestError)
 	}
-	return "", nil
+
+	switch params.Product {
+	case AUTOMATE_PRODUCT:
+		url = fmt.Sprintf(DOWNLOAD_URL, params.Channel, params.Version, CHEF_AUTOMATE_CLI, details.FileName)
+	case HABITAT_PRODUCT:
+		url = fmt.Sprintf(DOWNLOAD_URL, params.Channel, params.Product, params.Version, details.FileName)
+	}
+
+	return url, nil
 }
 
 func (svc *DynamoServices) ProductMetadata(params *RequestParams) (PackageMetadata, error) {
@@ -112,14 +109,15 @@ func (svc *DynamoServices) ProductMetadata(params *RequestParams) (PackageMetada
 	version := params.Version
 
 	flags := RequestParamsFlags{
-		Channel:      true,
-		Platform:     true,
-		Architecture: true,
+		Channel:        true,
+		Platform:       true,
+		Architecture:   true,
+		PackageManager: true,
 	}
 
 	requestParams := ValidateRequest(params, flags)
 	if !requestParams.Ok {
-		svc.log.Error(validating_log, requestParams.Message)
+		svc.log.Error(constants.ERR_VALIDATING, requestParams.Message)
 		return PackageMetadata{}, fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 
@@ -132,24 +130,22 @@ func (svc *DynamoServices) ProductMetadata(params *RequestParams) (PackageMetada
 	}
 	params.PlatformVersion = ""
 
-	details, err := svc.db.GetMetaData(params.Product, version, params.Platform, params.PlatformVersion, params.Architecture)
+	details, err := svc.db.GetMetaData(params.Product, version, params.Platform, params.PlatformVersion, params.Architecture, params.PackageManager)
 	if err != nil {
 		svc.log.WithError(err).Error("Error while fetching metadata")
 		return PackageMetadata{}, fiber.NewError(fiber.StatusInternalServerError, utils.DBError)
 	}
-	if v, ok := details.(*models.MetaData); ok {
-		if *v == (models.MetaData{}) {
-			return PackageMetadata{}, fiber.NewError(fiber.StatusBadRequest, utils.BadRequestError)
-		}
-		metadata := PackageMetadata{
-			Url:     "",
-			Sha1:    v.SHA1,
-			Sha256:  v.SHA256,
-			Version: version,
-		}
-		return metadata, nil
+	if reflect.DeepEqual(*details, models.MetaData{}) {
+		return PackageMetadata{}, fiber.NewError(fiber.StatusBadRequest, utils.BadRequestError)
 	}
-	return PackageMetadata{}, fiber.NewError(fiber.StatusInternalServerError, "Unexpected error while fetching metadata")
+
+	metadata := PackageMetadata{
+		Url:     "",
+		Sha1:    details.SHA1,
+		Sha256:  details.SHA256,
+		Version: version,
+	}
+	return metadata, nil
 }
 
 func (svc *DynamoServices) ProductPackages(params *RequestParams) (PackageList, error) {
@@ -361,19 +357,18 @@ func (svc *DynamoServices) GetFilename(params *RequestParams) (string, error) {
 	}
 	params.PlatformVersion = ""
 
-	details, err := svc.db.GetMetaData(params.Product, version, params.Platform, params.PlatformVersion, params.Architecture)
+	details, err := svc.db.GetMetaData(params.Product, version, params.Platform, params.PlatformVersion, params.Architecture, params.PackageManager)
 	if err != nil {
 		svc.log.WithError(err).Error("Error while fetching fileName for " + params.Product)
 		return "", fiber.NewError(fiber.StatusInternalServerError, utils.DBError)
 	}
-	if v, ok := details.(*models.MetaData); ok {
-		if v == nil || v.FileName == "" {
-			svc.log.Error("Error while fetching fileName for " + params.Product + ":- unable to find the product information for given parameters")
-			return "", fiber.NewError(fiber.StatusBadRequest, utils.BadRequestError)
-		}
-		return v.FileName, nil
+
+	if details == nil || details.FileName == "" {
+		svc.log.Error("Error while fetching fileName for " + params.Product + ":- unable to find the product information for given parameters")
+		return "", fiber.NewError(fiber.StatusBadRequest, utils.BadRequestError)
 	}
-	return "", fiber.NewError(fiber.StatusInternalServerError, "Unexpected error while fetching fileName")
+
+	return details.FileName, nil
 }
 
 func (svc *DynamoServices) GetPackageManagers() ([]string, error) {

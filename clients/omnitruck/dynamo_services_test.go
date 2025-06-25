@@ -151,12 +151,12 @@ func TestProductDownload(t *testing.T) {
 		{
 			name: "success",
 			metadata: &models.MetaData{
-				Architecture:     "amd64",
-				FileName:         "automate-cli.zip",
-				Platform:         "linux",
-				Platform_Version: "",
-				SHA1:             "",
-				SHA256:           "1234",
+				Architecture:    "amd64",
+				FileName:        "automate-cli.zip",
+				Platform:        "linux",
+				PlatformVersion: "",
+				SHA1:            "",
+				SHA256:          "1234",
 			},
 			args: args{
 				p: &RequestParams{
@@ -246,12 +246,12 @@ func TestProductDownload(t *testing.T) {
 		{
 			name: "success for habitat",
 			metadata: &models.MetaData{
-				Architecture:     "x86_64",
-				FileName:         "hab-x86_64-linux.tar.gz",
-				Platform:         "linux",
-				Platform_Version: "",
-				SHA1:             "",
-				SHA256:           "1234",
+				Architecture:    "x86_64",
+				FileName:        "hab-x86_64-linux.tar.gz",
+				Platform:        "linux",
+				PlatformVersion: "",
+				SHA1:            "",
+				SHA256:          "1234",
 			},
 			args: args{
 				p: &RequestParams{
@@ -298,7 +298,7 @@ func TestProductDownload(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDbService := new(dboperations.MockIDbOperations)
-			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture string) (interface{}, error) {
+			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture, packageManager string) (*models.MetaData, error) {
 				return tt.metadata, tt.metadata_err
 			}
 			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
@@ -339,12 +339,12 @@ func TestProductMetadata(t *testing.T) {
 		{
 			name: "success",
 			metadata: &models.MetaData{
-				Architecture:     "amd64",
-				FileName:         "automate-cli.zip",
-				Platform:         "linux",
-				Platform_Version: "",
-				SHA1:             "",
-				SHA256:           "1234",
+				Architecture:    "amd64",
+				FileName:        "automate-cli.zip",
+				Platform:        "linux",
+				PlatformVersion: "",
+				SHA1:            "",
+				SHA256:          "1234",
 			},
 			args: args{
 				p: &RequestParams{
@@ -353,6 +353,7 @@ func TestProductMetadata(t *testing.T) {
 					Version:         "",
 					Platform:        "linux",
 					PlatformVersion: "pv",
+					PackageManager:  "pm",
 					Architecture:    "amd64",
 					Eol:             "",
 					LicenseId:       "",
@@ -370,7 +371,7 @@ func TestProductMetadata(t *testing.T) {
 			metadata_err: nil,
 		},
 		{
-			name:     "failure validation",
+			name:     "failure validation for empty platform",
 			metadata: &models.MetaData{},
 			args: args{
 				p: &RequestParams{
@@ -379,6 +380,7 @@ func TestProductMetadata(t *testing.T) {
 					Version:         "1.2",
 					Platform:        "",
 					PlatformVersion: "1.2",
+					PackageManager:  "pm",
 					Architecture:    "x86_64",
 					Eol:             "",
 					LicenseId:       "",
@@ -392,6 +394,29 @@ func TestProductMetadata(t *testing.T) {
 			metadata_err: nil,
 		},
 		{
+			name:     "failure validation for empty package manager",
+			metadata: &models.MetaData{},
+			args: args{
+				p: &RequestParams{
+					Channel:         "stable",
+					Product:         "automate",
+					Version:         "1.2",
+					Platform:        "linux",
+					PlatformVersion: "1.2",
+					PackageManager:  "",
+					Architecture:    "x86_64",
+					Eol:             "",
+					LicenseId:       "",
+				},
+			},
+			version:      "latest",
+			version_err:  nil,
+			want:         PackageMetadata{},
+			wantErr:      true,
+			errMsg:       "Package Manager (pm) params cannot be empty",
+			metadata_err: nil,
+		},
+		{
 			name:     "failure empty response",
 			metadata: &models.MetaData{},
 			args: args{
@@ -401,6 +426,7 @@ func TestProductMetadata(t *testing.T) {
 					Version:         "1.2",
 					Platform:        "linux",
 					PlatformVersion: "1.2",
+					PackageManager:  "pm",
 					Architecture:    "x86_64",
 					Eol:             "",
 					LicenseId:       "",
@@ -423,6 +449,7 @@ func TestProductMetadata(t *testing.T) {
 					Version:         "1.2",
 					Platform:        "linux",
 					PlatformVersion: "1.2",
+					PackageManager:  "pm",
 					Architecture:    "x86_64",
 					Eol:             "",
 					LicenseId:       "",
@@ -438,12 +465,12 @@ func TestProductMetadata(t *testing.T) {
 		{
 			name: "success for habitat",
 			metadata: &models.MetaData{
-				Architecture:     "x86_64",
-				FileName:         "hab-x86_64-linux.tar.gz",
-				Platform:         "linux",
-				Platform_Version: "",
-				SHA1:             "",
-				SHA256:           "1234",
+				Architecture:    "x86_64",
+				FileName:        "hab-x86_64-linux.tar.gz",
+				Platform:        "linux",
+				PlatformVersion: "",
+				SHA1:            "",
+				SHA256:          "1234",
 			},
 			args: args{
 				p: &RequestParams{
@@ -452,6 +479,7 @@ func TestProductMetadata(t *testing.T) {
 					Version:         "",
 					Platform:        "linux",
 					PlatformVersion: "",
+					PackageManager:  "pm",
 					Architecture:    "x86_64",
 					Eol:             "",
 					LicenseId:       "",
@@ -478,6 +506,65 @@ func TestProductMetadata(t *testing.T) {
 					Version:         "",
 					Platform:        "linux",
 					PlatformVersion: "",
+					PackageManager:  "pm",
+					Architecture:    "x86_64",
+					Eol:             "",
+					LicenseId:       "",
+				},
+			},
+			version:      "",
+			version_err:  errors.New("ResourceNotFoundException: Requested resource not found"),
+			want:         PackageMetadata{},
+			wantErr:      true,
+			errMsg:       utils.DBError,
+			metadata_err: nil,
+		},
+		{
+			name: "success for chef-ice",
+			metadata: &models.MetaData{
+				Architecture:    "x86_64",
+				FileName:        "chef-ice-x86_64-linux.tar.gz",
+				Platform:        "linux",
+				PlatformVersion: "",
+				SHA1:            "",
+				PackageManager:  "tar",
+				SHA256:          "1234",
+			},
+			args: args{
+				p: &RequestParams{
+					Channel:         "stable",
+					Product:         "chef-ice",
+					Version:         "",
+					Platform:        "linux",
+					PlatformVersion: "",
+					PackageManager:  "tar",
+					Architecture:    "x86_64",
+					Eol:             "",
+					LicenseId:       "",
+				},
+			},
+			version:     "1.6.862",
+			version_err: nil,
+			want: PackageMetadata{
+				Sha1:    "",
+				Sha256:  "1234",
+				Url:     "",
+				Version: "1.6.862",
+			},
+			wantErr:      false,
+			metadata_err: nil,
+		},
+		{
+			name:     "failure for chef-ice",
+			metadata: &models.MetaData{},
+			args: args{
+				p: &RequestParams{
+					Channel:         "stable",
+					Product:         "chef-ice",
+					Version:         "",
+					Platform:        "linux",
+					PlatformVersion: "",
+					PackageManager:  "tar",
 					Architecture:    "x86_64",
 					Eol:             "",
 					LicenseId:       "",
@@ -494,7 +581,7 @@ func TestProductMetadata(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDbService := new(dboperations.MockIDbOperations)
-			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture string) (interface{}, error) {
+			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture, packageManager string) (*models.MetaData, error) {
 				return tt.metadata, tt.metadata_err
 			}
 			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
@@ -551,12 +638,12 @@ func TestProductPackages(t *testing.T) {
 				Version: "1.6.826",
 				MetaData: []models.MetaData{
 					{
-						Architecture:     "aarch64",
-						FileName:         "hab-aarch64-darwin.zip",
-						Platform:         "darwin",
-						Platform_Version: "",
-						SHA1:             "abcde",
-						SHA256:           "079e5",
+						Architecture:    "aarch64",
+						FileName:        "hab-aarch64-darwin.zip",
+						Platform:        "darwin",
+						PlatformVersion: "",
+						SHA1:            "abcde",
+						SHA256:          "079e5",
 					},
 				},
 			},
@@ -1248,12 +1335,12 @@ func TestGetFilename(t *testing.T) {
 			wantErr: false,
 			errMsg:  "",
 			metadata: &models.MetaData{
-				Architecture:     "amd64",
-				FileName:         "automate_cli.zip",
-				Platform:         "linux",
-				Platform_Version: "",
-				SHA1:             "abcd",
-				SHA256:           "",
+				Architecture:    "amd64",
+				FileName:        "automate_cli.zip",
+				Platform:        "linux",
+				PlatformVersion: "",
+				SHA1:            "abcd",
+				SHA256:          "",
 			},
 			metadata_err: nil,
 			version:      "latest",
@@ -1278,12 +1365,12 @@ func TestGetFilename(t *testing.T) {
 			wantErr: true,
 			errMsg:  "Architecture (m) params cannot be empty",
 			metadata: &models.MetaData{
-				Architecture:     "amd64",
-				FileName:         "automate_cli.zip",
-				Platform:         "linux",
-				Platform_Version: "",
-				SHA1:             "abcd",
-				SHA256:           "",
+				Architecture:    "amd64",
+				FileName:        "automate_cli.zip",
+				Platform:        "linux",
+				PlatformVersion: "",
+				SHA1:            "abcd",
+				SHA256:          "",
 			},
 			metadata_err: nil,
 			version:      "",
@@ -1308,12 +1395,12 @@ func TestGetFilename(t *testing.T) {
 			wantErr: true,
 			errMsg:  utils.DBError,
 			metadata: &models.MetaData{
-				Architecture:     "amd64",
-				FileName:         "automate_cli.zip",
-				Platform:         "linux",
-				Platform_Version: "",
-				SHA1:             "abcd",
-				SHA256:           "",
+				Architecture:    "amd64",
+				FileName:        "automate_cli.zip",
+				Platform:        "linux",
+				PlatformVersion: "",
+				SHA1:            "abcd",
+				SHA256:          "",
 			},
 			metadata_err: nil,
 			version:      "",
@@ -1369,7 +1456,7 @@ func TestGetFilename(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDbService := new(dboperations.MockIDbOperations)
-			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture string) (interface{}, error) {
+			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture, packageManager string) (*models.MetaData, error) {
 				return tt.metadata, tt.metadata_err
 			}
 			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {

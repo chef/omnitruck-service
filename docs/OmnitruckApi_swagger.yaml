@@ -225,6 +225,13 @@ paths:
         name: m
         required: true
         type: string
+      - description: 'Package Manager, valid values depend on the platform (e.g.,
+          Linux: deb, tar; Windows: msi).'
+        example: tar
+        in: query
+        name: pm
+        required: true
+        type: string
       - default: latest
         description: Version of the product to be installed. A version always takes
           the form `x.y.z`
