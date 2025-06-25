@@ -51,10 +51,9 @@ func (svc *DynamoServices) ProductDownload(params *RequestParams) (string, error
 	var err error
 
 	flags := RequestParamsFlags{
-		Channel:        true,
-		Platform:       true,
-		Architecture:   true,
-		PackageManager: true,
+		Channel:      true,
+		Platform:     true,
+		Architecture: true,
 	}
 
 	requestParams := ValidateRequest(params, flags)

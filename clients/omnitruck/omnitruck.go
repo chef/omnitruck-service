@@ -51,7 +51,6 @@ type RequestParams struct {
 	Eol             string
 	LicenseId       string
 	BOM             string
-	PackageManager  string
 }
 
 type RequestParamsFlags struct {
@@ -60,7 +59,6 @@ type RequestParamsFlags struct {
 	Version         bool
 	Platform        bool
 	PlatformVersion bool
-	PackageManager  bool
 	Architecture    bool
 	Eol             bool
 	LicenseId       bool

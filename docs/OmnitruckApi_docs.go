@@ -327,6 +327,14 @@ const docTemplateOmnitruckApi = `{
                     },
                     {
                         "type": "string",
+                        "example": "tar",
+                        "description": "Package Manager, valid values depend on the platform (e.g., Linux: deb, tar; Windows: msi).",
+                        "name": "pm",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
                         "description": "License ID",
                         "name": "license_id",
                         "in": "query"

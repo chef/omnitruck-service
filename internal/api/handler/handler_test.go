@@ -1788,3 +1788,81 @@ func TestProductsHandler(t *testing.T) {
 		})
 	}
 }
+
+// TestProductDownloadHandler_MandatoryFlags tests only the mandatory flag validations for ProductDownloadHandler
+func TestProductDownloadHandler(t *testing.T) {
+	log := logrus.NewEntry(logrus.New())
+	handler := NewDownloadsHandler(log)
+
+	tests := []struct {
+		name             string
+		requestPath      string
+		expectedStatus   int
+		expectedResponse string
+	}{
+		{
+			name:             "missing platform",
+			requestPath:      "/current/chef/download?pv=20.04&m=x86_64&pm=tar",
+			expectedStatus:   http.StatusBadRequest,
+			expectedResponse: `{"code":400, "message":"Platfrom (p) params cannot be empty", "status_text":"Bad Request"}`,
+		},
+		{
+			name:             "missing platform version",
+			requestPath:      "/current/chef/download?p=ubuntu&m=x86_64&pm=tar",
+			expectedStatus:   http.StatusBadRequest,
+			expectedResponse: `{"code":400, "message":"Platform Version (pv) params cannot be empty", "status_text":"Bad Request"}`,
+		},
+		{
+			name:             "missing architecture",
+			requestPath:      "/current/chef/download?p=ubuntu&pv=20.04&pm=tar",
+			expectedStatus:   http.StatusBadRequest,
+			expectedResponse: `{"code":400, "message":"Architecture (m) params cannot be empty", "status_text":"Bad Request"}`,
+		},
+		{
+			name:             "package manager parameter missing",
+			requestPath:      "/stable/chef-ice/download?p=linux&m=amd64&eol=false&v=latest",
+			expectedStatus:   fiber.StatusBadRequest,
+			expectedResponse: `{"code":400, "message":"Package Manager (pm) params cannot be empty", "status_text":"Bad Request"}`,
+		},
+		{
+			name:             "package manager auto add for automate",
+			requestPath:      "/stable/automate/download?p=linux&m=amd64&eol=false&v=latest",
+			expectedStatus:   fiber.StatusOK,
+			expectedResponse: `{"code":400, "message":"Package Manager (pm) params cannot be empty", "status_text":"Bad Request"}`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			app := fiber.New()
+			// Set up DownloadService with necessary mocks (see other tests for pattern)
+			mockDbService := new(dboperations.MockIDbOperations)
+			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture, packageManager string) (*models.MetaData, error) {
+				return &models.MetaData{}, nil
+			}
+			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
+				return "latest", nil
+			}
+			mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
+				return []string{"latest"}, nil
+			}
+			mockDbService.SetDbInfofunc = func(tableName string, dbModel reflect.Type) {}
+
+			service := services.DownloadService{
+				DatabaseService: mockDbService,
+			}
+			app.Use(testInjector(service))
+			app.Get("/:channel/:product/download", func(c *fiber.Ctx) error {
+				return handler.ProductDownloadHandler(c)
+			})
+			req := httptest.NewRequest(http.MethodGet, "http://example.com"+test.requestPath, nil)
+			resp, err := app.Test(req, 100*1000)
+			assert.NoError(t, err)
+			assert.Equal(t, test.expectedStatus, resp.StatusCode)
+			if test.expectedStatus != http.StatusOK {
+				bodyBytes, _ := io.ReadAll(resp.Body)
+				assert.JSONEq(t, test.expectedResponse, string(bodyBytes))
+			}
+		})
+	}
+}
