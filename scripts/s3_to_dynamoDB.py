@@ -73,12 +73,12 @@ def lambda_handler(event, context):
             pversion_folder = os.path.dirname(object_key) + '/'
         else :
             logging.info(f"metadata.json not created or updated: {object_key}")
-            exit(0)
+            return
         objects = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=pversion_folder)
         logging.info(f"Objects in bucket {bucket_name}: {objects}")
         if 'Contents' not in objects:
             logging.info(f"No objects found in the bucket: {bucket_name} under channel: {channel}")
-            exit(0)
+            return
         
         
         for obj in objects['Contents']:
