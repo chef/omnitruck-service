@@ -138,48 +138,10 @@ func TestGetVersionAllSuccess(t *testing.T) {
 			},
 			wantErr: false,
 		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ser := &DbOperationsService{
-				db: &MDB{
-					Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
-						return &dynamodb.ScanOutput{
-							Items: []map[string]*dynamodb.AttributeValue{
-								{
-									"product": {S: aws.String("automate")},
-									"version": {S: aws.String(version4054)},
-								},
-								{
-									"product": {S: aws.String("automate")},
-									"version": {S: aws.String(version4091)},
-								},
-							},
-						}, nil
-					},
-				},
-				dbModelType: reflect.TypeOf(models.ProductDetails{}),
-			}
-			got, _ := ser.GetVersionAll(tt.args.partitionValue)
-			assert.Equal(t, got, tt.want)
-		})
-	}
-}
-
-func TestGetVersionAllSuccessForPackageDetailsModel(t *testing.T) {
-	type args struct {
-		partitionValue string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    []string
-		wantErr bool
-	}{
 		{
 			name: "SuccessFull",
 			args: args{
-				partitionValue: "autoamte",
+				partitionValue: "chef-ice",
 			},
 			want: []string{
 				version4054,
@@ -190,24 +152,47 @@ func TestGetVersionAllSuccessForPackageDetailsModel(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ser := &DbOperationsService{
-				db: &MDB{
-					Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
-						return &dynamodb.ScanOutput{
-							Items: []map[string]*dynamodb.AttributeValue{
-								{
-									"product": {S: aws.String("automate")},
-									"version": {S: aws.String(version4054)},
+			var ser *DbOperationsService
+			if tt.args.partitionValue == "automate" {
+				ser = &DbOperationsService{
+					db: &MDB{
+						Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+							return &dynamodb.ScanOutput{
+								Items: []map[string]*dynamodb.AttributeValue{
+									{
+										"product": {S: aws.String("automate")},
+										"version": {S: aws.String(version4054)},
+									},
+									{
+										"product": {S: aws.String("automate")},
+										"version": {S: aws.String(version4091)},
+									},
 								},
-								{
-									"product": {S: aws.String("automate")},
-									"version": {S: aws.String(version4091)},
-								},
-							},
-						}, nil
+							}, nil
+						},
 					},
-				},
-				dbModelType: reflect.TypeOf(models.PackageDetails{}),
+					dbModelType: reflect.TypeOf(models.ProductDetails{}),
+				}
+			} else {
+				ser = &DbOperationsService{
+					db: &MDB{
+						Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+							return &dynamodb.ScanOutput{
+								Items: []map[string]*dynamodb.AttributeValue{
+									{
+										"product": {S: aws.String("chef-ice")},
+										"version": {S: aws.String(version4054)},
+									},
+									{
+										"product": {S: aws.String("chef-ice")},
+										"version": {S: aws.String(version4091)},
+									},
+								},
+							}, nil
+						},
+					},
+					dbModelType: reflect.TypeOf(models.PackageDetails{}),
+				}
 			}
 			got, _ := ser.GetVersionAll(tt.args.partitionValue)
 			assert.Equal(t, got, tt.want)
@@ -395,88 +380,75 @@ func TestGetVersionLatestSuccess(t *testing.T) {
 			want:    "4.0.91",
 			wantErr: false,
 		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ser := &DbOperationsService{
-				db: &MDB{
-					GetItemfunc: func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
-						return &dynamodb.GetItemOutput{
-							Item: map[string]*dynamodb.AttributeValue{
-								"product": {S: aws.String("automate")},
-								"version": {S: aws.String("4.0.91")},
-							},
-						}, nil
-					},
-					Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
-						return &dynamodb.ScanOutput{
-							Items: []map[string]*dynamodb.AttributeValue{
-								{
-									"product": {S: aws.String("automate")},
-									"version": {S: aws.String("4.0.91")},
-								},
-							},
-						}, nil
-					},
-				},
-				dbModelType: reflect.TypeOf(models.ProductDetails{}),
-			}
-			got, _ := ser.GetVersionLatest(tt.args.partitionValue)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
-func TestGetVersionLatestSuccessForPackageDetailsModel(t *testing.T) {
-	type args struct {
-		partitionValue string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    string
-		wantErr bool
-	}{
 		{
 			name: "Success",
 			args: args{
 
-				partitionValue: "automate",
+				partitionValue: "chef-ice",
 			},
-			want:    "4.0.91",
+			want:    "19.0.0",
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ser := &DbOperationsService{
-				db: &MDB{
-					GetItemfunc: func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
-						return &dynamodb.GetItemOutput{
-							Item: map[string]*dynamodb.AttributeValue{
-								"product": {S: aws.String("automate")},
-								"version": {S: aws.String("4.0.91")},
-							},
-						}, nil
-					},
-					Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
-						return &dynamodb.ScanOutput{
-							Items: []map[string]*dynamodb.AttributeValue{
-								{
+			var ser *DbOperationsService
+			if tt.args.partitionValue == "automate" {
+				ser = &DbOperationsService{
+					db: &MDB{
+						GetItemfunc: func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
+							return &dynamodb.GetItemOutput{
+								Item: map[string]*dynamodb.AttributeValue{
 									"product": {S: aws.String("automate")},
 									"version": {S: aws.String("4.0.91")},
 								},
-							},
-						}, nil
+							}, nil
+						},
+						Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+							return &dynamodb.ScanOutput{
+								Items: []map[string]*dynamodb.AttributeValue{
+									{
+										"product": {S: aws.String("automate")},
+										"version": {S: aws.String("4.0.91")},
+									},
+								},
+							}, nil
+						},
 					},
-				},
-				dbModelType: reflect.TypeOf(models.PackageDetails{}),
+					dbModelType: reflect.TypeOf(models.ProductDetails{}),
+				}
+			} else {
+				ser = &DbOperationsService{
+					db: &MDB{
+						GetItemfunc: func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
+							return &dynamodb.GetItemOutput{
+								Item: map[string]*dynamodb.AttributeValue{
+									"product": {S: aws.String("chef-ice")},
+									"version": {S: aws.String("19.0.0")},
+								},
+							}, nil
+						},
+						Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+							return &dynamodb.ScanOutput{
+								Items: []map[string]*dynamodb.AttributeValue{
+									{
+										"product": {S: aws.String("chef-ice")},
+										"version": {S: aws.String("19.0.0")},
+									},
+								},
+							}, nil
+						},
+					},
+					dbModelType: reflect.TypeOf(models.PackageDetails{}),
+				}
 			}
 			got, _ := ser.GetVersionLatest(tt.args.partitionValue)
 			assert.Equal(t, tt.want, got)
 		})
 	}
 }
+
+
 
 func TestGetVersionLatestFailure(t *testing.T) {
 	type args struct {
