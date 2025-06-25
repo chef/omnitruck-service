@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.66 -->
-## [0.0.66](https://github.com/chef/omnitruck-service/tree/0.0.66) (2025-06-23)
+<!-- latest_release 0.0.67 -->
+## [0.0.67](https://github.com/chef/omnitruck-service/tree/0.0.67) (2025-06-25)
 
 #### Merged Pull Requests
-- Fix breaking test [#92](https://github.com/chef/omnitruck-service/pull/92) ([rishabhjhs](https://github.com/rishabhjhs))
+- CHEF-22050: Updated product package API to support Infra 19 product [#89](https://github.com/chef/omnitruck-service/pull/89) ([swathi-s3](https://github.com/swathi-s3))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- CHEF-22050: Updated product package API to support Infra 19 product [#89](https://github.com/chef/omnitruck-service/pull/89) ([swathi-s3](https://github.com/swathi-s3)) <!-- 0.0.67 -->
 - Fix breaking test [#92](https://github.com/chef/omnitruck-service/pull/92) ([rishabhjhs](https://github.com/rishabhjhs)) <!-- 0.0.66 -->
 - Fixed error code and baseUrl [#88](https://github.com/chef/omnitruck-service/pull/88) ([swathi-s3](https://github.com/swathi-s3)) <!-- 0.0.65 -->
 - Common change for db operations [#87](https://github.com/chef/omnitruck-service/pull/87) ([vipin230](https://github.com/vipin230)) <!-- 0.0.64 -->
