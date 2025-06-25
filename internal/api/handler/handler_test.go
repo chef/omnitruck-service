@@ -1765,6 +1765,7 @@ func TestProductsHandler(t *testing.T) {
 			log := logrus.NewEntry(logrus.New())
 			handler := NewDownloadsHandler(log)
 			service := services.DownloadService{
+				Config:          config.ServiceConfig{OmnitruckUrl: "https://omnitruck.chef.io"},
 				Mode:            tt.serverMode,
 				DatabaseService: mockDb,
 			}
