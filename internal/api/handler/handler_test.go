@@ -561,7 +561,7 @@ func TestProductPackagesHandler(t *testing.T) {
 		requestPath      string
 		expectedStatus   int
 		expectedResponse string
-		details          models.ProductDetails
+		details          interface{}
 		err              error
 		version          string
 		version_err      error
@@ -574,7 +574,7 @@ func TestProductPackagesHandler(t *testing.T) {
 			requestPath:      "/stable/automate/packages?eol=false",
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"linux": {"pv": {"amd64": {"sha1": "","sha256": "abcd","url": "http://example.com/stable/automate/download?eol=false&m=amd64&p=linux&v=latest","version": "latest"}}}}`,
-			details: models.ProductDetails{
+			details: &models.ProductDetails{
 				Product: "automate",
 				Version: "latest",
 				MetaData: []models.MetaData{
@@ -600,7 +600,7 @@ func TestProductPackagesHandler(t *testing.T) {
 			requestPath:      "/stable/automate/packages?eol=false&v=1",
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"the requested version is not supported on the selected persona or channel", "status_text":"Bad Request"}`,
-			details:          models.ProductDetails{},
+			details:          &models.ProductDetails{},
 			err:              nil,
 			version:          "latest",
 			version_err:      nil,
@@ -613,7 +613,7 @@ func TestProductPackagesHandler(t *testing.T) {
 			requestPath:      "/stable/chef-360/packages?eol=false&v=latest",
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"chef-360 not available for the trial and opensource", "status_text":"Bad Request"}`,
-			details:          models.ProductDetails{},
+			details:          &models.ProductDetails{},
 			err:              nil,
 			version:          "latest",
 			version_err:      nil,
@@ -626,7 +626,7 @@ func TestProductPackagesHandler(t *testing.T) {
 			requestPath:      "/stable/chef-360/packages?eol=false&v=latest",
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"linux": {"pv": {"amd64": {"sha1": "","sha256": "","url": "http://example.com/stable/chef-360/download?eol=false&m=amd64&p=linux&v=latest","version": "latest"}}}}`,
-			details: models.ProductDetails{
+			details: &models.ProductDetails{
 				Product: "chef-360",
 				Version: "latest",
 				MetaData: []models.MetaData{
@@ -652,7 +652,7 @@ func TestProductPackagesHandler(t *testing.T) {
 			requestPath:      "/stable/automate/packages?eol=false",
 			expectedStatus:   fiber.StatusInternalServerError,
 			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
-			details:          models.ProductDetails{},
+			details:          &models.ProductDetails{},
 			err:              nil,
 			version:          "",
 			version_err:      errors.New("ResourceNotFoundException: Requested resource not found"),
@@ -665,7 +665,7 @@ func TestProductPackagesHandler(t *testing.T) {
 			requestPath:      "/stable/habitat/packages?eol=false",
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"linux": {"pv": {"x86_64": {"sha1":"", "sha256":"abcd", "url":"http://example.com/stable/habitat/download?eol=false&m=x86_64&p=linux&v=0.9.3", "version":"0.9.3"}}}}`,
-			details: models.ProductDetails{
+			details: &models.ProductDetails{
 				Product: "habitat",
 				Version: "0.9.3",
 				MetaData: []models.MetaData{{
@@ -689,7 +689,7 @@ func TestProductPackagesHandler(t *testing.T) {
 			requestPath:      "/stable/habitat/packages?eol=false",
 			expectedStatus:   fiber.StatusInternalServerError,
 			expectedResponse: `{"code":500, "message":"Error while fetching product versions", "status_text":"Internal Server Error"}`,
-			details:          models.ProductDetails{},
+			details:          &models.ProductDetails{},
 			err:              nil,
 			version:          "",
 			version_err:      nil,
@@ -702,7 +702,7 @@ func TestProductPackagesHandler(t *testing.T) {
 			requestPath:      "/stable/habitat/packages?eol=false",
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"Product information not found. Please check the input parameters.", "status_text":"Bad Request"}`,
-			details: models.ProductDetails{
+			details: &models.ProductDetails{
 				Product:  "habitat",
 				Version:  "1.6.826",
 				MetaData: []models.MetaData{},
@@ -719,7 +719,7 @@ func TestProductPackagesHandler(t *testing.T) {
 			requestPath:      "/stable/habitat/packages?eol=false&v=0.3.2",
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `{"linux": {"pv": {"x86_64": {"sha1":"", "sha256":"abcd", "url":"http://example.com/stable/habitat/download?eol=false&m=x86_64&p=linux&v=0.3.2", "version":"0.3.2"}}}}`,
-			details: models.ProductDetails{
+			details: &models.ProductDetails{
 				Product: "habitat",
 				Version: "0.3.2",
 				MetaData: []models.MetaData{{
@@ -737,6 +737,44 @@ func TestProductPackagesHandler(t *testing.T) {
 			versions:     []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0"},
 			versions_err: nil,
 		},
+		{
+			name:           "chef-ice product success",
+			serverMode:     constants.Commercial,
+			requestPath:    "/stable/chef-ice/packages?eol=false&license_id=tmns-e88dafdb-06e1-4676-908f-87503da14c4d-3413&v=19.7.17",
+			expectedStatus: fiber.StatusOK,
+			expectedResponse: `{
+				"linux": {
+					"x86_64": {
+						"deb": {
+							"sha1": "dcf75b37bb80128af4657501bfd41eac52820191",
+							"sha256": "2c501d02b16d67e9d5a28578b95f8d3155bed940ee4946229213f41a2e8b798e",
+							"url": "http://example.com/stable/chef-ice/download?eol=false&license_id=tmns-e88dafdb-06e1-4676-908f-87503da14c4d-3413&m=x86_64&p=linux&pm=deb&v=19.7.17",
+							"version": "19.7.17"
+						}
+					}
+				}
+			}`,
+			details: &models.PackageDetails{
+				Product: "chef-ice",
+				Version: "19.7.17",
+				Metadata: map[string]models.Platform{
+					"linux": {
+						"x86_64": {
+							"deb": models.PackageType{
+								Filename: "chef-ice_19.7.17_amd64.deb",
+								SHA1:     "dcf75b37bb80128af4657501bfd41eac52820191",
+								SHA256:   "2c501d02b16d67e9d5a28578b95f8d3155bed940ee4946229213f41a2e8b798e",
+							},
+						},
+					},
+				},
+			},
+			err:          nil,
+			version:      "19.7.17",
+			version_err:  nil,
+			versions:     []string{"19.7.17"},
+			versions_err: nil,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -747,7 +785,7 @@ func TestProductPackagesHandler(t *testing.T) {
 			})
 			mockDbService := new(dboperations.MockIDbOperations)
 			mockDbService.GetPackagesfunc = func(partitionValue, sortValue string) (interface{}, error) {
-				return &test.details, test.err
+				return test.details, test.err
 			}
 			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
 				return test.version, test.version_err

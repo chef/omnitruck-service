@@ -30,84 +30,114 @@ func TestGetPackagesSuccess(t *testing.T) {
 		sortValue      string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    *models.ProductDetails
-		wantErr bool
+		name     string
+		args     args
+		model    interface{}
+		mockItem map[string]*dynamodb.AttributeValue
+		want     interface{}
 	}{
 		{
-			name: "Successful",
-			args: args{
-				partitionValue: "automate",
-				sortValue:      "4.3.9",
+			name:  "Success with ProductDetails",
+			args:  args{"automate", "4.3.9"},
+			model: models.ProductDetails{},
+			mockItem: map[string]*dynamodb.AttributeValue{
+				"product": {S: aws.String("automate")},
+				"version": {S: aws.String("4.3.9")},
 			},
-			want: &models.ProductDetails{
-				Product: "automate",
-				Version: "4.3.9",
-			},
-			wantErr: false,
+			want: &models.ProductDetails{Product: "automate", Version: "4.3.9"},
 		},
+		{
+			name: "Success with PackageDetails",
+			args: args{"chef-ice", "19.1.27"},
+			model: models.PackageDetails{},
+			mockItem: map[string]*dynamodb.AttributeValue{
+				"product": {S: aws.String("chef-ice")},
+				"version": {S: aws.String("19.1.27")},
+				"metadata": {
+					M: map[string]*dynamodb.AttributeValue{}, // simulate structure
+				},
+			},
+			want: &models.PackageDetails{
+				Product:  "chef-ice",
+				Version:  "19.1.27",
+				Metadata: map[string]models.Platform{}, // fixed
+			},
+		},		
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ser := &DbOperationsService{
 				db: &MDB{
 					GetItemfunc: func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
-						return &dynamodb.GetItemOutput{
-							Item: map[string]*dynamodb.AttributeValue{
-								"product": {S: aws.String("automate")},
-								"version": {S: aws.String("4.3.9")},
-							},
-						}, nil
+						return &dynamodb.GetItemOutput{Item: tt.mockItem}, nil
 					},
 				},
-				dbModelType: reflect.TypeOf(models.ProductDetails{}),
+				dbModelType: reflect.TypeOf(tt.model),
 			}
-			got, _ := ser.GetPackages(tt.args.partitionValue, tt.args.sortValue)
-			// The GetPackages method returns a pointer to ProductDetails, so we need to compare the dereferenced value
-			if pd, ok := got.(*models.ProductDetails); ok {
-				assert.Equal(t, tt.want, pd)
-			} else {
-				t.Errorf("expected *models.ProductDetails, got %T", got)
-			}
+			got, err := ser.GetPackages(tt.args.partitionValue, tt.args.sortValue)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
-
 func TestGetPackagesFailure(t *testing.T) {
 	type args struct {
 		partitionValue string
 		sortValue      string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    *models.ProductDetails
-		wantErr error
+		name        string
+		args        args
+		model       interface{}
+		mockItem    map[string]*dynamodb.AttributeValue
+		expectError string
 	}{
 		{
-			name: "Failure in reading the DataBase",
-			args: args{
-				partitionValue: "automate",
-				sortValue:      "4.3.9",
+			name:  "Failure in DB fetch",
+			args:  args{"automate", "4.3.9"},
+			model: models.ProductDetails{},
+			expectError: "ResourceNotFoundException: Requested resource not found",
+		},
+		{
+			name: "Unknown type fallback",
+			args: args{"chef", "1.0.0"},
+			model: struct{ Foo string }{}, // unknown type
+			mockItem: map[string]*dynamodb.AttributeValue{
+				"foo": {S: aws.String("bar")},
 			},
-			want:    nil,
-			wantErr: errors.New("ReplicaNotFoundException: Requested resource not found"),
+			expectError: "",
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ser := &DbOperationsService{
-				db: &MDB{
-					GetItemfunc: func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
-						return nil, &dynamodb.ReplicaNotFoundException{
-							Message_: aws.String("Requested resource not found"),
-						}
-					},
-				},
+			mockDB := &MDB{}
+			if tt.mockItem != nil {
+				mockDB.GetItemfunc = func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
+					return &dynamodb.GetItemOutput{Item: tt.mockItem}, nil
+				}
+			} else {
+				mockDB.GetItemfunc = func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
+					return nil, &dynamodb.ResourceNotFoundException{
+						Message_: aws.String("Requested resource not found"),
+					}
+				}
 			}
-			_, err := ser.GetPackages(tt.args.partitionValue, tt.args.sortValue)
-			assert.Equal(t, err.Error(), tt.wantErr.Error())
+
+			ser := &DbOperationsService{
+				db:          mockDB,
+				dbModelType: reflect.TypeOf(tt.model),
+			}
+
+			got, err := ser.GetPackages(tt.args.partitionValue, tt.args.sortValue)
+
+			if tt.expectError != "" {
+				assert.EqualError(t, err, tt.expectError)
+				assert.Nil(t, got)
+			} else {
+				assert.Nil(t, got)
+				assert.NoError(t, err)
+			}
 		})
 	}
 }

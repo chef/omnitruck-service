@@ -20,7 +20,7 @@ func (s *InfraProductStrategy) GetLatestVersion(params *omnitruck.RequestParams)
 	data, err := s.DynamoService.VersionLatest(params)
 	if err != nil {
 		code, msg := helpers.GetErrorCodeAndMsg(err)
-		s.Log.WithError(err).Error("Error while fetching latest versions for "+ params.Product+ ": ", err)
+		s.Log.WithError(err).Error("Error while fetching latest versions for "+params.Product+": ", err)
 		request.Failure(code, msg)
 		return data, &request
 	}
@@ -32,7 +32,7 @@ func (s *InfraProductStrategy) GetAllVersions(params *omnitruck.RequestParams) (
 	request := clients.Request{}
 	data, err := s.DynamoService.VersionAll(params)
 	if err != nil {
-		s.Log.WithError(err).Error("Error while fetching all versions for "+ params.Product+ ": ", err)
+		s.Log.WithError(err).Error("Error while fetching all versions for "+params.Product+": ", err)
 		code, msg := helpers.GetErrorCodeAndMsg(err)
 		request.Failure(code, msg)
 		return nil, &request
@@ -54,7 +54,7 @@ func (s *InfraProductStrategy) GetMetadata(params *omnitruck.RequestParams) (omn
 	request := &clients.Request{}
 	data, err := s.DynamoService.ProductMetadata(params)
 	if err != nil {
-		s.Log.WithError(err).Error("Error while fetching metadata for "+ params.Product+ ": ", err)
+		s.Log.WithError(err).Error("Error while fetching metadata for "+params.Product+": ", err)
 		code, msg := helpers.GetErrorCodeAndMsg(err)
 		request.Failure(code, msg)
 	} else {
@@ -69,13 +69,13 @@ func (s *InfraProductStrategy) GetFileName(params *omnitruck.RequestParams) (str
 }
 
 func (s *InfraProductStrategy) UpdatePackages(data *omnitruck.PackageList, params *omnitruck.RequestParams, baseUrl string) {
-	data.UpdatePackages(func(platform string, pv string, arch string, m omnitruck.PackageMetadata) omnitruck.PackageMetadata {
+	data.UpdatePackages(func(platform string, arch string, packageManager string, m omnitruck.PackageMetadata) omnitruck.PackageMetadata {
 		params.Version = m.Version
 		params.Platform = platform
+		params.PackageManager = packageManager
 		params.Architecture = arch
 
 		m.Url = helpers.GetDownloadUrl(params, baseUrl)
-
 		return m
 	})
 }

@@ -17,6 +17,7 @@ const (
 	CHUNKED                              = "chunked"
 	CURRENT_CHANNEL                      = "current"
 	STABLE_CHANNEL                       = "stable"
+	PLATFORM_VERSION_KEY                 = "pv"
 )
 
 const (
