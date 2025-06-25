@@ -16,7 +16,6 @@ import (
 	"github.com/chef/omnitruck-service/constants"
 	"github.com/chef/omnitruck-service/dboperations"
 	_ "github.com/chef/omnitruck-service/docs"
-	"github.com/chef/omnitruck-service/internal/services"
 	"github.com/chef/omnitruck-service/models"
 	"github.com/chef/omnitruck-service/utils/template"
 	"github.com/gofiber/fiber/v2"
@@ -26,16 +25,18 @@ import (
 )
 
 // TestInjector provides a test injector similar to httpserver/routes.go Injector middleware
-func testInjector(service services.DownloadService) func(*fiber.Ctx) error {
+func testInjector(mockDbService *dboperations.MockIDbOperations, mode constants.ApiType, mockTemplate *template.MockTemplateRennder) func(*fiber.Ctx) error {
 	return func(c *fiber.Ctx) error {
 		reqInjector := do.New()
-		do.ProvideNamedValue[omnitruck.RequestValidator](reqInjector, "validator", service.Validator)
-		do.ProvideNamedValue[template.TemplateRender](reqInjector, "templateRenderer", service.TemplateRenderer)
-		do.ProvideNamedValue[clients.ILicense](reqInjector, "licenseClient", service.LicenseClient)
-		do.ProvideNamedValue[dboperations.IDbOperations](reqInjector, "dbService", service.DatabaseService)
-		do.ProvideNamedValue[constants.ApiType](reqInjector, "mode", service.Mode)
-		do.ProvideNamedValue[string](reqInjector, "licenseServiceUrl", service.LicenseServiceUrl)
-		do.ProvideNamedValue[config.ServiceConfig](reqInjector, "config", service.Config)
+		do.ProvideNamedValue[omnitruck.RequestValidator](reqInjector, "validator", omnitruck.RequestValidator{})
+		do.ProvideNamedValue[template.TemplateRender](reqInjector, "templateRenderer", mockTemplate)
+		do.ProvideNamedValue[clients.ILicense](reqInjector, "licenseClient", &clients.MockLicense{})
+		do.ProvideNamedValue[dboperations.IDbOperations](reqInjector, "dbService", mockDbService) // <-- ensure this is present and correct
+		do.ProvideNamedValue[constants.ApiType](reqInjector, "mode", mode)
+		do.ProvideNamedValue[string](reqInjector, "licenseServiceUrl", "")
+		do.ProvideNamedValue[config.ServiceConfig](reqInjector, "config", config.ServiceConfig{
+			OmnitruckUrl: "https://omnitruck.chef.io",
+		})
 
 		// Inject mock replicated dependency
 		mockReplicated := &replicated.MockReplicated{
@@ -50,7 +51,6 @@ func testInjector(service services.DownloadService) func(*fiber.Ctx) error {
 			},
 		}
 		do.ProvideNamedValue[replicated.IReplicated](reqInjector, "replicated", mockReplicated)
-
 		c.Locals("reqinjector", reqInjector)
 		err := c.Next()
 		reqInjector.Shutdown()
@@ -113,14 +113,9 @@ func TestRelatedProductsHandler(t *testing.T) {
 			mockDbService.GetRelatedProductsfunc = func(partitionValue string) (*models.RelatedProducts, error) {
 				return &test.relatedProducts, test.err
 			}
-
 			log := logrus.NewEntry(logrus.New())
 			handler := NewDownloadsHandler(log)
-			service := services.DownloadService{
-				DatabaseService: mockDbService,
-				Mode:            constants.Opensource, // Use Opensource for this test
-			}
-			app.Use(testInjector(service))
+			app.Use(testInjector(mockDbService, constants.Opensource, &template.MockTemplateRennder{}))
 
 			app.Get("/relatedProducts", func(c *fiber.Ctx) error {
 				return handler.RelatedProductsHandler(c)
@@ -230,12 +225,8 @@ func TestLatestVersionsHandler(t *testing.T) {
 
 			log := logrus.NewEntry(logrus.New())
 			handler := NewDownloadsHandler(log)
-			service := services.DownloadService{
-				DatabaseService: mockDbService,
-				Mode:            test.serverMode,
-			}
 
-			app.Use(testInjector(service))
+			app.Use(testInjector(mockDbService, test.serverMode, &template.MockTemplateRennder{}))
 
 			app.Get("/:channel/:product/versions/latest", func(c *fiber.Ctx) error {
 				return handler.LatestVersionHandler(c)
@@ -329,12 +320,7 @@ func TestProductVersionsHandler(t *testing.T) {
 
 			log := logrus.NewEntry(logrus.New())
 			handler := NewDownloadsHandler(log)
-			service := services.DownloadService{
-				DatabaseService: mockDbService,
-				Mode:            test.serverMode,
-			}
-
-			app.Use(testInjector(service))
+			app.Use(testInjector(mockDbService, test.serverMode, &template.MockTemplateRennder{}))
 			app.Get("/:channel/:product/versions/all", func(c *fiber.Ctx) error {
 				return handler.ProductVersionsHandler(c)
 			})
@@ -573,13 +559,8 @@ func TestProductMetadataHandler(t *testing.T) {
 
 			log := logrus.NewEntry(logrus.New())
 			handler := NewDownloadsHandler(log)
-			service := services.DownloadService{
-				DatabaseService: mockDbService,
-				Mode:            test.serverMode,
-				Validator:       omnitruck.RequestValidator{},
-			}
 
-			app.Use(testInjector(service))
+			app.Use(testInjector(mockDbService, test.serverMode, &template.MockTemplateRennder{}))
 			app.Get("/:channel/:product/metadata", func(c *fiber.Ctx) error {
 				return handler.ProductMetadataHandler(c)
 			})
@@ -843,12 +824,7 @@ func TestProductPackagesHandler(t *testing.T) {
 			}
 			log := logrus.NewEntry(logrus.New())
 			handler := NewDownloadsHandler(log)
-			service := services.DownloadService{
-				DatabaseService: mockDbService,
-				Mode:            test.serverMode,
-			}
-
-			app.Use(testInjector(service))
+			app.Use(testInjector(mockDbService, test.serverMode, &template.MockTemplateRennder{}))
 			app.Get("/:channel/:product/packages", func(c *fiber.Ctx) error {
 				return handler.ProductPackagesHandler(c)
 			})
@@ -1031,12 +1007,7 @@ func TestFileNameHandler(t *testing.T) {
 
 				log := logrus.NewEntry(logrus.New())
 				handler := NewDownloadsHandler(log)
-				service := services.DownloadService{
-					DatabaseService: mockDbService,
-					Mode:            test.serverMode,
-				}
-
-				app.Use(testInjector(service))
+				app.Use(testInjector(mockDbService, test.serverMode, &template.MockTemplateRennder{}))
 				app.Get("/:channel/:product/fileName", func(c *fiber.Ctx) error {
 					return handler.FileNameHandler(c)
 				})
@@ -1105,13 +1076,8 @@ func TestDownloadLinuxScriptHandler(t *testing.T) {
 			mockTemplate.GetScriptfunc = test.mockTemplate
 			log := logrus.NewEntry(logrus.New())
 			handler := NewDownloadsHandler(log)
-			service := services.DownloadService{
-				Mode:             test.serverMode,
-				TemplateRenderer: mockTemplate,
-			}
 
-			app.Use(testInjector(service))
-
+			app.Use(testInjector(&dboperations.MockIDbOperations{}, test.serverMode, mockTemplate))
 			app.Get("/install.sh", func(c *fiber.Ctx) error {
 				return handler.DownloadLinuxScript(c)
 			})
@@ -1166,12 +1132,8 @@ func TestDownloadWindowsScriptHandler(t *testing.T) {
 			mockTemplate.GetScriptfunc = test.mockTemplate
 			log := logrus.NewEntry(logrus.New())
 			handler := NewDownloadsHandler(log)
-			service := services.DownloadService{
-				Mode:             test.serverMode,
-				TemplateRenderer: mockTemplate,
-			}
 
-			app.Use(testInjector(service))
+			app.Use(testInjector(&dboperations.MockIDbOperations{}, test.serverMode, mockTemplate))
 
 			app.Get("/install.ps1", func(c *fiber.Ctx) error {
 				return handler.DownloadWindowsScript(c)
@@ -1185,442 +1147,442 @@ func TestDownloadWindowsScriptHandler(t *testing.T) {
 	}
 }
 
-// func TestApiService_downloadChefPlatform(t *testing.T) {
-// 	app := fiber.New()
-// 	c := app.AcquireCtx(&fasthttp.RequestCtx{})
-// 	c.Locals("license_id", "lic01")
-// 	c.Locals("requestid", "req01")
-// 	type fields struct {
-// 		Replicated        replicated.IReplicated
-// 		LicenseClient     clients.ILicense
-// 		mockUnmarshalFunc func(data []byte, v any) error
-// 		mockIoCopyFunc    func(dst io.Writer, src io.Reader) (written int64, err error)
-// 	}
-// 	type args struct {
-// 		params *omnitruck.RequestParams
-// 		c      *fiber.Ctx
-// 	}
-// 	tests := []struct {
-// 		name    string
-// 		fields  fields
-// 		args    args
-// 		wantErr bool
-// 	}{
-// 		{
-// 			name: "Success",
-// 			fields: fields{
-// 				Replicated: replicated.MockReplicated{
-// 					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
-// 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
-// 					},
-// 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
-// 						mockResponse := http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body"))), Header: make(http.Header)}
-// 						mockResponse.Header.Set("Content-Type", "application/json")
-// 						return &mockResponse, nil
-// 					},
-// 					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
-// 						return []models.Customer{
-// 							{
-// 								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
-// 								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
-// 								Name:           "[DEV] George Westwater",
-// 								Email:          "george.westwater@progress.com",
-// 								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
-// 								Airgap:         false,
-// 								Channels: []models.Channel{
-// 									{
-// 										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
-// 										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
-// 										AppSlug:     "chef-360",
-// 										AppName:     "Chef 360",
-// 										ChannelSlug: "rc",
-// 										Name:        "RC",
-// 									},
-// 								},
-// 							},
-// 						}, nil
-// 					},
-// 				},
-// 				LicenseClient: &clients.MockLicense{
-// 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
-// 						return &clients.Request{
-// 							Code: 200,
-// 							Ok:   true,
-// 							Body: []byte(`{
-// 								"replicatedEmail": "abc@gmail.com",
-// 								"message": "OK",
-// 								"status_code": "200 OK"
-// 							  }`),
-// 						}
-// 					},
-// 				},
-// 			},
-// 			args: args{
-// 				params: &omnitruck.RequestParams{
-// 					LicenseId: "abc123",
-// 				},
-// 				c: c,
-// 			},
-// 			wantErr: false,
-// 		},
-// 		{
-// 			name: "License Client Err",
-// 			fields: fields{
-// 				LicenseClient: &clients.MockLicense{
-// 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
-// 						return &clients.Request{
-// 							Code: 200,
-// 							Ok:   false,
-// 						}
-// 					},
-// 				},
-// 			},
-// 			args: args{
-// 				params: &omnitruck.RequestParams{
-// 					LicenseId: "abc123",
-// 				},
-// 				c: c,
-// 			},
-// 			wantErr: true,
-// 		},
-// 		{
-// 			name: "Search Customer error",
-// 			fields: fields{
-// 				Replicated: replicated.MockReplicated{
-// 					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
-// 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
-// 					},
-// 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
-// 						return &http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body")))}, nil
-// 					},
-// 					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
-// 						return nil, errors.New("Error fetching customer")
-// 					},
-// 				},
-// 				LicenseClient: &clients.MockLicense{
-// 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
-// 						return &clients.Request{
-// 							Code: 200,
-// 							Ok:   true,
-// 							Body: []byte(`{
-// 								"replicatedEmail": "abc@gmail.com",
-// 								"message": "OK",
-// 								"status_code": "200 OK"
-// 							  }`),
-// 						}
-// 					},
-// 				},
-// 			},
-// 			args: args{
-// 				params: &omnitruck.RequestParams{
-// 					LicenseId: "abc123",
-// 				},
-// 				c: c,
-// 			},
-// 			wantErr: false,
-// 		},
-// 		{
-// 			name: "0 customers found",
-// 			fields: fields{
-// 				Replicated: replicated.MockReplicated{
-// 					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
-// 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
-// 					},
-// 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
-// 						return &http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body")))}, nil
-// 					},
-// 					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
-// 						return []models.Customer{}, nil
-// 					},
-// 				},
-// 				LicenseClient: &clients.MockLicense{
-// 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
-// 						return &clients.Request{
-// 							Code: 200,
-// 							Ok:   true,
-// 							Body: []byte(`{
-// 								"replicatedEmail": "abc@gmail.com",
-// 								"message": "OK",
-// 								"status_code": "200 OK"
-// 							  }`),
-// 						}
-// 					},
-// 				},
-// 			},
-// 			args: args{
-// 				params: &omnitruck.RequestParams{
-// 					LicenseId: "abc123",
-// 				},
-// 				c: c,
-// 			},
-// 			wantErr: false,
-// 		},
-// 		{
-// 			name: "GetUrl Err",
-// 			fields: fields{
-// 				Replicated: replicated.MockReplicated{
-// 					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
-// 						return "", errors.New("error getting download url")
-// 					},
-// 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
-// 						return &http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body")))}, nil
-// 					},
-// 					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
-// 						return []models.Customer{
-// 							{
-// 								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
-// 								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
-// 								Name:           "[DEV] George Westwater",
-// 								Email:          "george.westwater@progress.com",
-// 								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
-// 								Airgap:         false,
-// 								Channels: []models.Channel{
-// 									{
-// 										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
-// 										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
-// 										AppSlug:     "chef-360",
-// 										AppName:     "Chef 360",
-// 										ChannelSlug: "rc",
-// 										Name:        "RC",
-// 									},
-// 								},
-// 							},
-// 						}, nil
-// 					},
-// 				},
-// 				LicenseClient: &clients.MockLicense{
-// 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
-// 						return &clients.Request{
-// 							Code: 200,
-// 							Ok:   true,
-// 							Body: []byte(`{
-// 								"replicatedEmail": "abc@gmail.com",
-// 								"message": "OK",
-// 								"status_code": "200 OK"
-// 							  }`),
-// 						}
-// 					},
-// 				},
-// 			},
-// 			args: args{
-// 				params: &omnitruck.RequestParams{
-// 					LicenseId: "abc123",
-// 				},
-// 				c: c,
-// 			},
-// 			wantErr: false,
-// 		},
-// 		{
-// 			name: "Download error",
-// 			fields: fields{
-// 				Replicated: replicated.MockReplicated{
-// 					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
-// 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
-// 					},
-// 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
-// 						return nil, errors.New("error downloading")
-// 					},
-// 					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
-// 						return []models.Customer{
-// 							{
-// 								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
-// 								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
-// 								Name:           "[DEV] George Westwater",
-// 								Email:          "george.westwater@progress.com",
-// 								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
-// 								Airgap:         false,
-// 								Channels: []models.Channel{
-// 									{
-// 										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
-// 										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
-// 										AppSlug:     "chef-360",
-// 										AppName:     "Chef 360",
-// 										ChannelSlug: "rc",
-// 										Name:        "RC",
-// 									},
-// 								},
-// 							},
-// 						}, nil
-// 					},
-// 				},
-// 				LicenseClient: &clients.MockLicense{
-// 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
-// 						return &clients.Request{
-// 							Code: 200,
-// 							Ok:   true,
-// 							Body: []byte(`{
-// 								"replicatedEmail": "abc@gmail.com",
-// 								"message": "OK",
-// 								"status_code": "200 OK"
-// 							  }`),
-// 						}
-// 					},
-// 				},
-// 			},
-// 			args: args{
-// 				params: &omnitruck.RequestParams{
-// 					LicenseId: "abc123",
-// 				},
-// 				c: c,
-// 			},
-// 			wantErr: false,
-// 		},
-// 		{
-// 			name: "Unmarshal Error",
-// 			fields: fields{
-// 				Replicated: replicated.MockReplicated{
-// 					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
-// 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
-// 					},
-// 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
-// 						mockResponse := http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body"))), Header: make(http.Header)}
-// 						mockResponse.Header.Set("Content-Type", "application/json")
-// 						return &mockResponse, nil
-// 					},
-// 					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
-// 						return []models.Customer{
-// 							{
-// 								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
-// 								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
-// 								Name:           "[DEV] George Westwater",
-// 								Email:          "george.westwater@progress.com",
-// 								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
-// 								Airgap:         false,
-// 								Channels: []models.Channel{
-// 									{
-// 										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
-// 										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
-// 										AppSlug:     "chef-360",
-// 										AppName:     "Chef 360",
-// 										ChannelSlug: "rc",
-// 										Name:        "RC",
-// 									},
-// 								},
-// 							},
-// 						}, nil
-// 					},
-// 				},
-// 				LicenseClient: &clients.MockLicense{
-// 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
-// 						return &clients.Request{
-// 							Code: 200,
-// 							Ok:   true,
-// 							Body: []byte(`{
-// 								"replicatedEmail": "abc@gmail.com",
-// 								"message": "OK",
-// 								"status_code": "200 OK"
-// 							  }`),
-// 						}
-// 					},
-// 				},
-// 				mockUnmarshalFunc: func(data []byte, v any) error {
-// 					return errors.New("error occurred")
-// 				},
-// 			},
-// 			args: args{
-// 				params: &omnitruck.RequestParams{
-// 					LicenseId: "abc123",
-// 				},
-// 				c: c,
-// 			},
-// 			wantErr: false,
-// 		},
-// 		{
-// 			name: "IO Copy Error",
-// 			fields: fields{
-// 				Replicated: replicated.MockReplicated{
-// 					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
-// 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
-// 					},
-// 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
-// 						mockResponse := http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body"))), Header: make(http.Header)}
-// 						mockResponse.Header.Set("Content-Type", "application/json")
-// 						return &mockResponse, nil
-// 					},
-// 					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
-// 						return []models.Customer{
-// 							{
-// 								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
-// 								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
-// 								Name:           "[DEV] George Westwater",
-// 								Email:          "george.westwater@progress.com",
-// 								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
-// 								Airgap:         false,
-// 								Channels: []models.Channel{
-// 									{
-// 										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
-// 										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
-// 										AppSlug:     "chef-360",
-// 										AppName:     "Chef 360",
-// 										ChannelSlug: "rc",
-// 										Name:        "RC",
-// 									},
-// 								},
-// 							},
-// 						}, nil
-// 					},
-// 				},
-// 				LicenseClient: &clients.MockLicense{
-// 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
-// 						return &clients.Request{
-// 							Code: 200,
-// 							Ok:   true,
-// 							Body: []byte(`{
-// 								"replicatedEmail": "abc@gmail.com",
-// 								"message": "OK",
-// 								"status_code": "200 OK"
-// 							  }`),
-// 						}
-// 					},
-// 				},
-// 				mockIoCopyFunc: func(dst io.Writer, src io.Reader) (written int64, err error) {
-// 					return 0, errors.New("error occurred")
-// 				},
-// 			},
-// 			args: args{
-// 				params: &omnitruck.RequestParams{
-// 					LicenseId: "abc123",
-// 				},
-// 				c: c,
-// 			},
-// 			wantErr: false,
-// 		},
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			log := logger.NewLogrusStandardLogger().WithField("requestId", "req01")
-// 			handler := NewDownloadsHandler(log)
-// 			service := services.DownloadService{
-// 				Mode:             constants.Commercial,
-// 				Replicated:       tt.fields.Replicated,
-// 				TemplateRenderer: template.NewTemplateRender(),
-// 				Validator:        omnitruck.NewValidator(),
-// 				LicenseClient:    tt.fields.LicenseClient,
-// 			}
+// // func TestApiService_downloadChefPlatform(t *testing.T) {
+// // 	app := fiber.New()
+// // 	c := app.AcquireCtx(&fasthttp.RequestCtx{})
+// // 	c.Locals("license_id", "lic01")
+// // 	c.Locals("requestid", "req01")
+// // 	type fields struct {
+// // 		Replicated        replicated.IReplicated
+// // 		LicenseClient     clients.ILicense
+// // 		mockUnmarshalFunc func(data []byte, v any) error
+// // 		mockIoCopyFunc    func(dst io.Writer, src io.Reader) (written int64, err error)
+// // 	}
+// // 	type args struct {
+// // 		params *omnitruck.RequestParams
+// // 		c      *fiber.Ctx
+// // 	}
+// // 	tests := []struct {
+// // 		name    string
+// // 		fields  fields
+// // 		args    args
+// // 		wantErr bool
+// // 	}{
+// // 		{
+// // 			name: "Success",
+// // 			fields: fields{
+// // 				Replicated: replicated.MockReplicated{
+// // 					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
+// // 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
+// // 					},
+// // 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
+// // 						mockResponse := http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body"))), Header: make(http.Header)}
+// // 						mockResponse.Header.Set("Content-Type", "application/json")
+// // 						return &mockResponse, nil
+// // 					},
+// // 					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+// // 						return []models.Customer{
+// // 							{
+// // 								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
+// // 								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
+// // 								Name:           "[DEV] George Westwater",
+// // 								Email:          "george.westwater@progress.com",
+// // 								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
+// // 								Airgap:         false,
+// // 								Channels: []models.Channel{
+// // 									{
+// // 										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
+// // 										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
+// // 										AppSlug:     "chef-360",
+// // 										AppName:     "Chef 360",
+// // 										ChannelSlug: "rc",
+// // 										Name:        "RC",
+// // 									},
+// // 								},
+// // 							},
+// // 						}, nil
+// // 					},
+// // 				},
+// // 				LicenseClient: &clients.MockLicense{
+// // 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+// // 						return &clients.Request{
+// // 							Code: 200,
+// // 							Ok:   true,
+// // 							Body: []byte(`{
+// // 								"replicatedEmail": "abc@gmail.com",
+// // 								"message": "OK",
+// // 								"status_code": "200 OK"
+// // 							  }`),
+// // 						}
+// // 					},
+// // 				},
+// // 			},
+// // 			args: args{
+// // 				params: &omnitruck.RequestParams{
+// // 					LicenseId: "abc123",
+// // 				},
+// // 				c: c,
+// // 			},
+// // 			wantErr: false,
+// // 		},
+// // 		{
+// // 			name: "License Client Err",
+// // 			fields: fields{
+// // 				LicenseClient: &clients.MockLicense{
+// // 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+// // 						return &clients.Request{
+// // 							Code: 200,
+// // 							Ok:   false,
+// // 						}
+// // 					},
+// // 				},
+// // 			},
+// // 			args: args{
+// // 				params: &omnitruck.RequestParams{
+// // 					LicenseId: "abc123",
+// // 				},
+// // 				c: c,
+// // 			},
+// // 			wantErr: true,
+// // 		},
+// // 		{
+// // 			name: "Search Customer error",
+// // 			fields: fields{
+// // 				Replicated: replicated.MockReplicated{
+// // 					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
+// // 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
+// // 					},
+// // 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
+// // 						return &http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body")))}, nil
+// // 					},
+// // 					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+// // 						return nil, errors.New("Error fetching customer")
+// // 					},
+// // 				},
+// // 				LicenseClient: &clients.MockLicense{
+// // 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+// // 						return &clients.Request{
+// // 							Code: 200,
+// // 							Ok:   true,
+// // 							Body: []byte(`{
+// // 								"replicatedEmail": "abc@gmail.com",
+// // 								"message": "OK",
+// // 								"status_code": "200 OK"
+// // 							  }`),
+// // 						}
+// // 					},
+// // 				},
+// // 			},
+// // 			args: args{
+// // 				params: &omnitruck.RequestParams{
+// // 					LicenseId: "abc123",
+// // 				},
+// // 				c: c,
+// // 			},
+// // 			wantErr: false,
+// // 		},
+// // 		{
+// // 			name: "0 customers found",
+// // 			fields: fields{
+// // 				Replicated: replicated.MockReplicated{
+// // 					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
+// // 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
+// // 					},
+// // 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
+// // 						return &http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body")))}, nil
+// // 					},
+// // 					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+// // 						return []models.Customer{}, nil
+// // 					},
+// // 				},
+// // 				LicenseClient: &clients.MockLicense{
+// // 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+// // 						return &clients.Request{
+// // 							Code: 200,
+// // 							Ok:   true,
+// // 							Body: []byte(`{
+// // 								"replicatedEmail": "abc@gmail.com",
+// // 								"message": "OK",
+// // 								"status_code": "200 OK"
+// // 							  }`),
+// // 						}
+// // 					},
+// // 				},
+// // 			},
+// // 			args: args{
+// // 				params: &omnitruck.RequestParams{
+// // 					LicenseId: "abc123",
+// // 				},
+// // 				c: c,
+// // 			},
+// // 			wantErr: false,
+// // 		},
+// // 		{
+// // 			name: "GetUrl Err",
+// // 			fields: fields{
+// // 				Replicated: replicated.MockReplicated{
+// // 					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
+// // 						return "", errors.New("error getting download url")
+// // 					},
+// // 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
+// // 						return &http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body")))}, nil
+// // 					},
+// // 					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+// // 						return []models.Customer{
+// // 							{
+// // 								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
+// // 								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
+// // 								Name:           "[DEV] George Westwater",
+// // 								Email:          "george.westwater@progress.com",
+// // 								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
+// // 								Airgap:         false,
+// // 								Channels: []models.Channel{
+// // 									{
+// // 										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
+// // 										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
+// // 										AppSlug:     "chef-360",
+// // 										AppName:     "Chef 360",
+// // 										ChannelSlug: "rc",
+// // 										Name:        "RC",
+// // 									},
+// // 								},
+// // 							},
+// // 						}, nil
+// // 					},
+// // 				},
+// // 				LicenseClient: &clients.MockLicense{
+// // 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+// // 						return &clients.Request{
+// // 							Code: 200,
+// // 							Ok:   true,
+// // 							Body: []byte(`{
+// // 								"replicatedEmail": "abc@gmail.com",
+// // 								"message": "OK",
+// // 								"status_code": "200 OK"
+// // 							  }`),
+// // 						}
+// // 					},
+// // 				},
+// // 			},
+// // 			args: args{
+// // 				params: &omnitruck.RequestParams{
+// // 					LicenseId: "abc123",
+// // 				},
+// // 				c: c,
+// // 			},
+// // 			wantErr: false,
+// // 		},
+// // 		{
+// // 			name: "Download error",
+// // 			fields: fields{
+// // 				Replicated: replicated.MockReplicated{
+// // 					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
+// // 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
+// // 					},
+// // 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
+// // 						return nil, errors.New("error downloading")
+// // 					},
+// // 					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+// // 						return []models.Customer{
+// // 							{
+// // 								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
+// // 								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
+// // 								Name:           "[DEV] George Westwater",
+// // 								Email:          "george.westwater@progress.com",
+// // 								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
+// // 								Airgap:         false,
+// // 								Channels: []models.Channel{
+// // 									{
+// // 										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
+// // 										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
+// // 										AppSlug:     "chef-360",
+// // 										AppName:     "Chef 360",
+// // 										ChannelSlug: "rc",
+// // 										Name:        "RC",
+// // 									},
+// // 								},
+// // 							},
+// // 						}, nil
+// // 					},
+// // 				},
+// // 				LicenseClient: &clients.MockLicense{
+// // 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+// // 						return &clients.Request{
+// // 							Code: 200,
+// // 							Ok:   true,
+// // 							Body: []byte(`{
+// // 								"replicatedEmail": "abc@gmail.com",
+// // 								"message": "OK",
+// // 								"status_code": "200 OK"
+// // 							  }`),
+// // 						}
+// // 					},
+// // 				},
+// // 			},
+// // 			args: args{
+// // 				params: &omnitruck.RequestParams{
+// // 					LicenseId: "abc123",
+// // 				},
+// // 				c: c,
+// // 			},
+// // 			wantErr: false,
+// // 		},
+// // 		{
+// // 			name: "Unmarshal Error",
+// // 			fields: fields{
+// // 				Replicated: replicated.MockReplicated{
+// // 					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
+// // 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
+// // 					},
+// // 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
+// // 						mockResponse := http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body"))), Header: make(http.Header)}
+// // 						mockResponse.Header.Set("Content-Type", "application/json")
+// // 						return &mockResponse, nil
+// // 					},
+// // 					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+// // 						return []models.Customer{
+// // 							{
+// // 								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
+// // 								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
+// // 								Name:           "[DEV] George Westwater",
+// // 								Email:          "george.westwater@progress.com",
+// // 								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
+// // 								Airgap:         false,
+// // 								Channels: []models.Channel{
+// // 									{
+// // 										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
+// // 										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
+// // 										AppSlug:     "chef-360",
+// // 										AppName:     "Chef 360",
+// // 										ChannelSlug: "rc",
+// // 										Name:        "RC",
+// // 									},
+// // 								},
+// // 							},
+// // 						}, nil
+// // 					},
+// // 				},
+// // 				LicenseClient: &clients.MockLicense{
+// // 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+// // 						return &clients.Request{
+// // 							Code: 200,
+// // 							Ok:   true,
+// // 							Body: []byte(`{
+// // 								"replicatedEmail": "abc@gmail.com",
+// // 								"message": "OK",
+// // 								"status_code": "200 OK"
+// // 							  }`),
+// // 						}
+// // 					},
+// // 				},
+// // 				mockUnmarshalFunc: func(data []byte, v any) error {
+// // 					return errors.New("error occurred")
+// // 				},
+// // 			},
+// // 			args: args{
+// // 				params: &omnitruck.RequestParams{
+// // 					LicenseId: "abc123",
+// // 				},
+// // 				c: c,
+// // 			},
+// // 			wantErr: false,
+// // 		},
+// // 		{
+// // 			name: "IO Copy Error",
+// // 			fields: fields{
+// // 				Replicated: replicated.MockReplicated{
+// // 					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
+// // 						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
+// // 					},
+// // 					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
+// // 						mockResponse := http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body"))), Header: make(http.Header)}
+// // 						mockResponse.Header.Set("Content-Type", "application/json")
+// // 						return &mockResponse, nil
+// // 					},
+// // 					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+// // 						return []models.Customer{
+// // 							{
+// // 								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
+// // 								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
+// // 								Name:           "[DEV] George Westwater",
+// // 								Email:          "george.westwater@progress.com",
+// // 								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
+// // 								Airgap:         false,
+// // 								Channels: []models.Channel{
+// // 									{
+// // 										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
+// // 										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
+// // 										AppSlug:     "chef-360",
+// // 										AppName:     "Chef 360",
+// // 										ChannelSlug: "rc",
+// // 										Name:        "RC",
+// // 									},
+// // 								},
+// // 							},
+// // 						}, nil
+// // 					},
+// // 				},
+// // 				LicenseClient: &clients.MockLicense{
+// // 					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+// // 						return &clients.Request{
+// // 							Code: 200,
+// // 							Ok:   true,
+// // 							Body: []byte(`{
+// // 								"replicatedEmail": "abc@gmail.com",
+// // 								"message": "OK",
+// // 								"status_code": "200 OK"
+// // 							  }`),
+// // 						}
+// // 					},
+// // 				},
+// // 				mockIoCopyFunc: func(dst io.Writer, src io.Reader) (written int64, err error) {
+// // 					return 0, errors.New("error occurred")
+// // 				},
+// // 			},
+// // 			args: args{
+// // 				params: &omnitruck.RequestParams{
+// // 					LicenseId: "abc123",
+// // 				},
+// // 				c: c,
+// // 			},
+// // 			wantErr: false,
+// // 		},
+// // 	}
+// // 	for _, tt := range tests {
+// // 		t.Run(tt.name, func(t *testing.T) {
+// // 			log := logger.NewLogrusStandardLogger().WithField("requestId", "req01")
+// // 			handler := NewDownloadsHandler(log)
+// // 			service := services.DownloadService{
+// // 				Mode:             constants.Commercial,
+// // 				Replicated:       tt.fields.Replicated,
+// // 				TemplateRenderer: template.NewTemplateRender(),
+// // 				Validator:        omnitruck.NewValidator(),
+// // 				LicenseClient:    tt.fields.LicenseClient,
+// // 			}
 
-// 			app.Use(testInjector(service))
+// // 			app.Use(testInjector(service))
 
-// 			app.Get("/:channel/:product/versions/latest", func(c *fiber.Ctx) error {
-// 				return handler.LatestVersionHandler(c)
-// 			})
+// // 			app.Get("/:channel/:product/versions/latest", func(c *fiber.Ctx) error {
+// // 				return handler.LatestVersionHandler(c)
+// // 			})
 
-// 			req := httptest.NewRequest(http.MethodGet, tt.requestPath, nil)
-// 			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
-// 			if tt.fields.mockUnmarshalFunc != nil {
-// 				jsonUnmarshal = tt.fields.mockUnmarshalFunc
-// 			} else {
-// 				jsonUnmarshal = func(data []byte, v any) error {
-// 					return json.Unmarshal(data, &v)
-// 				}
-// 			}
-// 			if tt.fields.mockIoCopyFunc != nil {
-// 				ioCopy = tt.fields.mockIoCopyFunc
-// 			}
-// 			err := server.downloadChefPlatform(tt.args.params, tt.args.c)
-// 			assert.Nil(t, err)
-// 		})
-// 	}
-// }
+// // 			req := httptest.NewRequest(http.MethodGet, tt.requestPath, nil)
+// // 			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
+// // 			if tt.fields.mockUnmarshalFunc != nil {
+// // 				jsonUnmarshal = tt.fields.mockUnmarshalFunc
+// // 			} else {
+// // 				jsonUnmarshal = func(data []byte, v any) error {
+// // 					return json.Unmarshal(data, &v)
+// // 				}
+// // 			}
+// // 			if tt.fields.mockIoCopyFunc != nil {
+// // 				ioCopy = tt.fields.mockIoCopyFunc
+// // 			}
+// // 			err := server.downloadChefPlatform(tt.args.params, tt.args.c)
+// // 			assert.Nil(t, err)
+// // 		})
+// // 	}
+// // }
 
 func TestPackageManagersHandler(t *testing.T) {
 	tests := []struct {
@@ -1663,12 +1625,8 @@ func TestPackageManagersHandler(t *testing.T) {
 			})
 			log := logrus.NewEntry(logrus.New())
 			handler := NewDownloadsHandler(log)
-			service := services.DownloadService{
-				Mode:            tt.mode,
-				DatabaseService: mockDbService,
-			}
 
-			app.Use(testInjector(service))
+			app.Use(testInjector(mockDbService, tt.mode, &template.MockTemplateRennder{}))
 			app.Get("/package-managers", func(c *fiber.Ctx) error {
 				return handler.PackageManagersHandler(c)
 			})
@@ -1764,13 +1722,13 @@ func TestProductsHandler(t *testing.T) {
 
 			log := logrus.NewEntry(logrus.New())
 			handler := NewDownloadsHandler(log)
-			service := services.DownloadService{
-				Config:          config.ServiceConfig{OmnitruckUrl: "https://omnitruck.chef.io"},
-				Mode:            tt.serverMode,
-				DatabaseService: mockDb,
-			}
+			// service := services.DownloadService{
+			// 	Config:          config.ServiceConfig{OmnitruckUrl: "https://omnitruck.chef.io"},
+			// 	Mode:            tt.serverMode,
+			// 	DatabaseService: mockDb,
+			// }
 
-			app.Use(testInjector(service))
+			app.Use(testInjector(mockDb, tt.serverMode, &template.MockTemplateRennder{}))
 			app.Get("/products", func(c *fiber.Ctx) error {
 				return handler.ProductsHandler(c)
 			})
@@ -1849,11 +1807,11 @@ func TestProductDownloadHandler(t *testing.T) {
 			}
 			mockDbService.SetDbInfofunc = func(tableName string, dbModel reflect.Type) {}
 
-			service := services.DownloadService{
-				Config:          config.ServiceConfig{OmnitruckUrl: "https://omnitruck.chef.io"},
-				DatabaseService: mockDbService,
-			}
-			app.Use(testInjector(service))
+			// service := services.DownloadService{
+			// 	Config:          config.ServiceConfig{OmnitruckUrl: "https://omnitruck.chef.io"},
+			// 	DatabaseService: mockDbService,
+			// }
+			app.Use(testInjector(mockDbService, constants.Commercial, &template.MockTemplateRennder{}))
 			app.Get("/:channel/:product/download", func(c *fiber.Ctx) error {
 				return handler.ProductDownloadHandler(c)
 			})
