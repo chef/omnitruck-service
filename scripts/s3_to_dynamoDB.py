@@ -4,21 +4,17 @@ import os
 import json
 import logging
 
-# Configure logging
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
-logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Constants
-PACKAGE_MANAGER_TABLES = ['package-manager-production', 'package-manager-acceptence']
+PACKAGE_MANAGER_TABLES = ['package-manager-production', 'package-manager-acceptance']
 ARCH_LIST = ["aarch64", "armv7l", "i386", "powerpc", "ppc64", "ppc64le", "s390x", "sparc", "universal", "x86_64"]
 ASSUME_ROLE_ARN = "arn:aws:iam::712624343120:role/cross-account-s3-role"
 
-# AWS Clients
 sts_client = boto3.client('sts')
 
 def assume_role():
-    logging.info("Assuming role...")
+    logging.info("Assuming role for cross-account access")
     return sts_client.assume_role(
         RoleArn=ASSUME_ROLE_ARN,
         RoleSessionName="CrossAccountAccessSession"
@@ -49,8 +45,6 @@ def convert_to_dynamodb_format(data):
 def process_metadata_file(s3_client, dynamodb_client, bucket_name, object_key, channel):
     response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
     file_content = response['Body'].read().decode('utf-8')
-
-    logging.info(f"File content: {file_content}")
 
     try:
         json_content = json.loads(file_content)
