@@ -72,6 +72,7 @@ func (s *ProductDynamoStrategy) Download(params *omnitruck.RequestParams) (url s
 }
 
 func (s *ProductDynamoStrategy) GetFileName(params *omnitruck.RequestParams) (string, error) {
+	params.PackageManager = constants.DUMMY_PACKAGE_MANAGER
 	fileName, err := s.DynamoService.GetFilename(params)
 	return fileName, err
 }

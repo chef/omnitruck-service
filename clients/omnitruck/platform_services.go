@@ -23,7 +23,7 @@ func (r *PlatformServices) PlatformVersionsAll(req *RequestParams, serverMode in
 	}
 	requestParams := ValidateRequest(req, flags)
 	if !requestParams.Ok {
-		r.Logger.Error(validating_log, requestParams.Message)
+		r.Logger.Error(constants.ERR_VALIDATING, requestParams.Message)
 		return productVersions, fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 	if serverMode == 2 && req.Product == constants.PLATFORM_SERVICE_PRODUCT {
@@ -39,7 +39,7 @@ func (r *PlatformServices) PlatformVersionLatest(req *RequestParams, serverMode 
 	}
 	requestParams := ValidateRequest(req, flags)
 	if !requestParams.Ok {
-		r.Logger.Error(validating_log, requestParams.Message)
+		r.Logger.Error(constants.ERR_VALIDATING, requestParams.Message)
 		return "", fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 	if serverMode == 2 {
@@ -54,7 +54,7 @@ func (r *PlatformServices) PlatformMetadata(req *RequestParams, serverMode int) 
 	}
 	requestParams := ValidateRequest(req, flags)
 	if !requestParams.Ok {
-		r.Logger.Error(validating_log, requestParams.Message)
+		r.Logger.Error(constants.ERR_VALIDATING, requestParams.Message)
 		return PackageMetadata{}, fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 	if serverMode == 2 && req.Product == constants.PLATFORM_SERVICE_PRODUCT {
@@ -75,7 +75,7 @@ func (r *PlatformServices) PlatformPackages(req *RequestParams, serverMode int) 
 	}
 	requestParams := ValidateRequest(req, flags)
 	if !requestParams.Ok {
-		r.Logger.Error(validating_log, requestParams.Message)
+		r.Logger.Error(constants.ERR_VALIDATING, requestParams.Message)
 		return PackageList{}, fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 	if req.Version == "" {
@@ -101,7 +101,7 @@ func (r *PlatformServices) PlatformFilename(req *RequestParams, serverMode int) 
 	}
 	requestParams := ValidateRequest(req, flags)
 	if !requestParams.Ok {
-		r.Logger.Error(validating_log, requestParams.Message)
+		r.Logger.Error(constants.ERR_VALIDATING, requestParams.Message)
 		return "", fiber.NewError(requestParams.Code, requestParams.Message)
 	}
 	if serverMode == 2 {

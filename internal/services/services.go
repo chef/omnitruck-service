@@ -352,7 +352,7 @@ func (svc *DownloadService) GetLinuxScript(params *omnitruck.RequestParams) (str
 	if svc.Mode == constants.Opensource {
 		params.LicenseId = ""
 	}
-	filePath := "../../templates/install.sh.tmpl"
+	filePath := "templates/install.sh.tmpl"
 	resp, err := svc.TemplateRenderer.GetScript(svc.locals["base_url"].(string), params, filePath)
 	if err != nil {
 		return "", &clients.Request{
@@ -372,7 +372,7 @@ func (svc *DownloadService) GetWindowsScript(params *omnitruck.RequestParams) (s
 	if svc.Mode == constants.Opensource {
 		params.LicenseId = ""
 	}
-	filePath := "../../templates/install.ps1.tmpl"
+	filePath := "templates/install.ps1.tmpl"
 	resp, err := svc.TemplateRenderer.GetScript(svc.locals["base_url"].(string), params, filePath)
 	if err != nil {
 		return "", &clients.Request{

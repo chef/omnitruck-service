@@ -59,11 +59,11 @@ type RequestParamsFlags struct {
 	Version         bool
 	Platform        bool
 	PlatformVersion bool
-	PackageManager  bool
 	Architecture    bool
 	Eol             bool
 	LicenseId       bool
 	BOM             bool
+	PackageManager  bool
 }
 
 type PackageListUpdater func(platform string, platformVersion string, arch string, meta PackageMetadata) PackageMetadata
