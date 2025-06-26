@@ -92,13 +92,12 @@ def process_package_manager_data(dynamodb_client, version_data):
                                 )
                             logging.info("Package manager data processed successfully.")
                 else:
-                    logging.info(f"Unexpected data format for architecture {arch}: {arch_data}")
+                    logging.debug(f"Unexpected data format for architecture {arch}: {arch_data}")
         else:
-            logging.info(f"Unexpected data format for platform {platform}: {platform_data}")
+            logging.debug(f"Unexpected data format for platform {platform}: {platform_data}")
 
 def lambda_handler(event, context):
     try:
-        logging.info("Raw event: %s", event)
 
         assumed_role = assume_role()
         logging.info("Assumed role successfully.")
@@ -121,7 +120,8 @@ def lambda_handler(event, context):
 
         channel = extract_channel(object_key)
         if not channel:
-            logging.info("Channel not found in object key.")
+            logging.info(f"the channel from which we got:{object_key}")
+            logging.debug("Channel not found in object key.")
             return
 
         if object_key.endswith('metadata.json'):
@@ -131,7 +131,6 @@ def lambda_handler(event, context):
             return
 
         objects = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=pversion_folder)
-        logging.info(f"Objects in bucket {bucket_name}: {objects}")
 
         if 'Contents' not in objects:
             logging.info(f"No objects found in the bucket: {bucket_name} under channel: {channel}")
@@ -145,7 +144,7 @@ def lambda_handler(event, context):
                 if len(parts) < 3 or object_channel != channel:
                     continue
 
-                logging.info(f"Processing object: {object_key}")
+                logging.debug(f"Processing object: {object_key}")
                 process_metadata_file(s3_client, dynamodb_client, bucket_name, object_key, channel)
                 logging.info("Processed metadata file successfully.")
 
