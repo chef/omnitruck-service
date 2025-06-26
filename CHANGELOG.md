@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.69 -->
-## [0.0.69](https://github.com/chef/omnitruck-service/tree/0.0.69) (2025-06-26)
+<!-- latest_release 0.0.70 -->
+## [0.0.70](https://github.com/chef/omnitruck-service/tree/0.0.70) (2025-06-26)
 
 #### Merged Pull Requests
-- Testcase scenerios [#94](https://github.com/chef/omnitruck-service/pull/94) ([vviveksharma](https://github.com/vviveksharma))
+- Update the existing downloads API to support Infra 19 product. [#90](https://github.com/chef/omnitruck-service/pull/90) ([shanmugapriya-tr](https://github.com/shanmugapriya-tr))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Update the existing downloads API to support Infra 19 product. [#90](https://github.com/chef/omnitruck-service/pull/90) ([shanmugapriya-tr](https://github.com/shanmugapriya-tr)) <!-- 0.0.70 -->
 - Testcase scenerios [#94](https://github.com/chef/omnitruck-service/pull/94) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.69 -->
 - Changes in metadata api for chef-ice [#93](https://github.com/chef/omnitruck-service/pull/93) ([vipin230](https://github.com/vipin230)) <!-- 0.0.68 -->
 - CHEF-22050: Updated product package API to support Infra 19 product [#89](https://github.com/chef/omnitruck-service/pull/89) ([swathi-s3](https://github.com/swathi-s3)) <!-- 0.0.67 -->
