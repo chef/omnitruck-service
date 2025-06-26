@@ -988,6 +988,21 @@ func TestVersionAll(t *testing.T) {
 			versions_err: nil,
 		},
 		{
+			name: "Success for chef-ice product",
+			versions: []string{"0.70.0", "0.71.0", "0.72.0", "0.73.0"},
+			args: args{
+				p: &RequestParams{	
+					Channel:   "stable",
+					Product:   "chef-ice",
+					Eol:       "",
+					LicenseId: "",
+				},
+			},
+			want:        []ProductVersion{ProductVersion("0.70.0"), ProductVersion("0.71.0"), ProductVersion("0.72.0"), ProductVersion("0.73.0")},
+			wantErr:     false,
+			versions_err: nil,
+		},
+		{
 			name:     "Failure validation",
 			versions: []string{},
 			args: args{
@@ -1103,6 +1118,21 @@ func TestVersionLatest(t *testing.T) {
 			version_err: nil,
 		},
 		{
+			name: "Success for chef-ice product",
+			version: "0.70.0",
+			args: args{
+				p: &RequestParams{	
+					Channel:   "stable",
+					Product:   "chef-ice",
+					Eol:       "",
+					LicenseId: "",
+				},
+			},
+			want:        ProductVersion("0.70.0"),
+			wantErr:     false,
+			version_err: nil,
+		},
+		{
 			name:    "Fail",
 			version: "",
 			args: args{
@@ -1122,6 +1152,7 @@ func TestVersionLatest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDbService := new(dboperations.MockIDbOperations)
+			
 			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
 				return tt.version, tt.version_err
 			}
