@@ -2,6 +2,7 @@ package config
 
 type ServiceConfig struct {
 	LicenseServiceUrl          string           `json:"licenseServiceUrl"`
+	OmnitruckUrl               string           `json:"omnitruckUrl"`
 	RelatedProductsTable       string           `json:"relatedProductsTable"`
 	MetadataDetailsTable       string           `json:"metadataDetailsTable"`
 	AWSConfig                  AWSConfig        `json:"awsConfig"`
