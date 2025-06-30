@@ -7,6 +7,7 @@ const (
 	AUTOMATE_PRODUCT                     = "automate"
 	HABITAT_PRODUCT                      = "habitat"
 	CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT = "chef-ice"
+	MIGRATION_TOOLS_PRODUCT              = "migration-tools"
 	LATEST                               = "latest"
 	PLATFORM_SERVICE                     = "chef-360"
 	PLATFORM_SERVICE_PRODUCT             = "chef-360"

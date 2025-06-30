@@ -311,6 +311,15 @@ func (svc *DownloadService) GetLinuxScript(params *omnitruck.RequestParams) (str
 	if svc.mode == constants.Opensource {
 		params.LicenseId = ""
 	}
+
+	if params.Product == constants.MIGRATION_TOOLS_PRODUCT {
+		return "", &clients.Request{
+			Ok:      false,
+			Code:    fiber.StatusBadRequest,
+			Message: "Migration Tools does not support script downloads",
+		}
+	}
+
 	filePath := "templates/install.sh.tmpl"
 	resp, err := svc.templateRenderer.GetScript(svc.locals["base_url"].(string), params, filePath)
 	if err != nil {
