@@ -636,10 +636,15 @@ determine_package_type() {
   esac
 }
 
+if [ "$project" = "migration-tools" ]; then
+  echo "Error: Script generation is not supported for the product 'migration-tools'."
+  exit 1
+fi
+
 if [ "$project" = "chef-ice" ]; then
-    package_manager=$(determine_package_type)
+  package_manager=$(determine_package_type)
 else
-    package_manager="pm"
+  package_manager="pm"
 fi 
 
 echo "$platform $platform_version $machine $package_manager"
