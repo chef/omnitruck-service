@@ -78,7 +78,7 @@ func (h *DownloadsHandler) ProductsHandler(c *fiber.Ctx) error {
 	reqInjectorI := c.Locals("reqinjector")
 	reqInjector, ok := reqInjectorI.(*do.Injector)
 	if !ok {
-		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+		h.SendErrorResponse(c, http.StatusInternalServerError, "Not able to process the request.")
 	}
 	locals := setLocals(c)
 	params := helpers.GetRequestParams(c)
@@ -107,7 +107,7 @@ func (h *DownloadsHandler) PlatformsHandler(c *fiber.Ctx) error {
 	reqInjectorI := c.Locals("reqinjector")
 	reqInjector, ok := reqInjectorI.(*do.Injector)
 	if !ok {
-		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+		h.SendErrorResponse(c, http.StatusInternalServerError, "Not able to process the request.")
 	}
 	locals := setLocals(c)
 	var data omnitruck.PlatformList
@@ -136,7 +136,7 @@ func (h *DownloadsHandler) ArchitecturesHandler(c *fiber.Ctx) error {
 	reqInjectorI := c.Locals("reqinjector")
 	reqInjector, ok := reqInjectorI.(*do.Injector)
 	if !ok {
-		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+		h.SendErrorResponse(c, http.StatusInternalServerError, "Not able to process the request.")
 	}
 	locals := setLocals(c)
 	downloadService, err := services.NewDownloadService(reqInjector, h.Log, locals)
@@ -167,7 +167,7 @@ func (h *DownloadsHandler) LatestVersionHandler(c *fiber.Ctx) error {
 	reqInjectorI := c.Locals("reqinjector")
 	reqInjector, ok := reqInjectorI.(*do.Injector)
 	if !ok {
-		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+		h.SendErrorResponse(c, http.StatusInternalServerError, "Not able to process the request.")
 	}
 	locals := setLocals(c)
 	params := helpers.GetRequestParams(c)
@@ -206,7 +206,7 @@ func (h *DownloadsHandler) ProductVersionsHandler(c *fiber.Ctx) error {
 	reqInjectorI := c.Locals("reqinjector")
 	reqInjector, ok := reqInjectorI.(*do.Injector)
 	if !ok {
-		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+		h.SendErrorResponse(c, http.StatusInternalServerError, "Not able to process the request.")
 	}
 	locals := setLocals(c)
 	params := helpers.GetRequestParams(c)
@@ -244,7 +244,7 @@ func (h *DownloadsHandler) ProductPackagesHandler(c *fiber.Ctx) error {
 	reqInjectorI := c.Locals("reqinjector")
 	reqInjector, ok := reqInjectorI.(*do.Injector)
 	if !ok {
-		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+		h.SendErrorResponse(c, http.StatusInternalServerError, "Not able to process the request.")
 	}
 	locals := setLocals(c)
 	params := helpers.GetRequestParams(c)
@@ -286,7 +286,7 @@ func (h *DownloadsHandler) ProductMetadataHandler(c *fiber.Ctx) error {
 	reqInjectorI := c.Locals("reqinjector")
 	reqInjector, ok := reqInjectorI.(*do.Injector)
 	if !ok {
-		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+		h.SendErrorResponse(c, http.StatusInternalServerError, "Not able to process the request.")
 	}
 	locals := setLocals(c)
 	params := helpers.GetRequestParams(c)
@@ -328,7 +328,7 @@ func (h *DownloadsHandler) ProductDownloadHandler(c *fiber.Ctx) error {
 	reqInjectorI := c.Locals("reqinjector")
 	reqInjector, ok := reqInjectorI.(*do.Injector)
 	if !ok {
-		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+		h.SendErrorResponse(c, http.StatusInternalServerError, "Not able to process the request.")
 	}
 	locals := setLocals(c)
 	params := helpers.GetRequestParams(c)
@@ -414,7 +414,7 @@ func (h *DownloadsHandler) RelatedProductsHandler(c *fiber.Ctx) error {
 	reqInjectorI := c.Locals("reqinjector")
 	reqInjector, ok := reqInjectorI.(*do.Injector)
 	if !ok {
-		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+		h.SendErrorResponse(c, http.StatusInternalServerError, "Not able to process the request.")
 	}
 	locals := setLocals(c)
 	params := helpers.GetRequestParams(c)
@@ -453,7 +453,7 @@ func (h *DownloadsHandler) FileNameHandler(c *fiber.Ctx) error {
 	reqInjectorI := c.Locals("reqinjector")
 	reqInjector, ok := reqInjectorI.(*do.Injector)
 	if !ok {
-		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+		h.SendErrorResponse(c, http.StatusInternalServerError, "Not able to process the request.")
 	}
 	locals := setLocals(c)
 	params := helpers.GetRequestParams(c)
@@ -488,7 +488,7 @@ func (h *DownloadsHandler) DownloadLinuxScript(c *fiber.Ctx) error {
 	reqInjectorI := c.Locals("reqinjector")
 	reqInjector, ok := reqInjectorI.(*do.Injector)
 	if !ok {
-		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+		h.SendErrorResponse(c, http.StatusInternalServerError, "Not able to process the request.")
 	}
 	locals := setLocals(c)
 	params := helpers.GetRequestParams(c)
@@ -523,7 +523,7 @@ func (h *DownloadsHandler) DownloadWindowsScript(c *fiber.Ctx) error {
 	reqInjectorI := c.Locals("reqinjector")
 	reqInjector, ok := reqInjectorI.(*do.Injector)
 	if !ok {
-		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+		h.SendErrorResponse(c, http.StatusInternalServerError, "Not able to process the request.")
 	}
 	locals := setLocals(c)
 	params := helpers.GetRequestParams(c)
@@ -557,7 +557,7 @@ func (h *DownloadsHandler) PackageManagersHandler(c *fiber.Ctx) error {
 	reqInjectorI := c.Locals("reqinjector")
 	reqInjector, ok := reqInjectorI.(*do.Injector)
 	if !ok {
-		h.SendErrorResponse(c, fiber.StatusInternalServerError, "Failed to retrieve request injector")
+		h.SendErrorResponse(c, http.StatusInternalServerError, "Not able to process the request.")
 	}
 	locals := setLocals(c)
 	downloadService, err := services.NewDownloadService(reqInjector, h.Log, locals)
