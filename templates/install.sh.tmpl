@@ -365,7 +365,7 @@ tmp_dir="$tmp/install.sh.$$"
 # Defaults
 channel="stable"
 project="chef"
-package_manager="deb"
+package_manager=""
 
 while getopts pnv:c:f:P:d:s:l:a:i: opt
 do
@@ -388,8 +388,6 @@ do
       exit 1;;
   esac
 done
-
-echo "Installing $project $version from channel $channel the package_manager $package_manager"
 
 shift `expr $OPTIND - 1`
 
@@ -615,7 +613,7 @@ determine_package_type() {
     "debian"|"ubuntu"|"linuxmint")
       echo "deb"
       ;;
-    "centos"|"redhat"|"fedora"|"rocky"|"amazon")
+    "centos"|"redhat"|"fedora"|"rocky"|"amazon"|"el")
       echo "rpm"
       ;;
     "sles"|"opensuseleap")
@@ -659,8 +657,6 @@ if [ "$project" = "migration-tools" ]; then
   echo "Error: Script generation is not supported for the product 'migration-tools'."
   exit 1
 fi
-
-echo "$platform $platform_version $machine $package_manager"
 
 ############
 # end of platform_detection.sh
