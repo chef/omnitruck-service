@@ -617,6 +617,8 @@ determine_package_type() {
       echo "rpm"
       ;;
     "sles"|"opensuseleap")
+      $platform="linux"
+      $platform_version="pm"
       echo "rpm"
       ;;
     "aix")
@@ -643,6 +645,8 @@ fi
 
 if [ "$project" = "chef-ice" ]; then
   package_manager=$(determine_package_type)
+  platform="linux"
+  platform_version="pm"
 else
   package_manager="pm"
 fi 
