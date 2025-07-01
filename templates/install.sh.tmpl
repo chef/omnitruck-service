@@ -365,7 +365,7 @@ tmp_dir="$tmp/install.sh.$$"
 # Defaults
 channel="stable"
 project="chef"
-package_manager="" 
+package_manager="deb"
 
 while getopts pnv:c:f:P:d:s:l:a:i: opt
 do
@@ -388,6 +388,8 @@ do
       exit 1;;
   esac
 done
+
+echo "Installing $project $version from channel $channel the package_manager $package_manager"
 
 shift `expr $OPTIND - 1`
 
@@ -643,7 +645,7 @@ if [ "$project" = "chef-ice" ]; then
   if [ -z "$package_manager" ]; then
     package_manager=$(determine_package_type)
     platform="linux"
-  platform_version="pv"
+    platform_version="pv"
   else
     package_manager="$package_manager"
     platform="linux"
