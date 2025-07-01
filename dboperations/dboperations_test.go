@@ -565,8 +565,6 @@ func TestGetVersionLatestSuccess(t *testing.T) {
 	}
 }
 
-
-
 func TestGetVersionLatestFailure(t *testing.T) {
 	type args struct {
 		partitionValue string
