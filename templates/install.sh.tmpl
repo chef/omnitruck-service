@@ -365,7 +365,7 @@ tmp_dir="$tmp/install.sh.$$"
 # Defaults
 channel="stable"
 project="chef"
-package_manager=""  # Initialize package_manager as empty
+package_manager="" 
 
 while getopts pnv:c:f:P:d:s:l:a:i: opt
 do
@@ -390,18 +390,6 @@ do
 done
 
 shift `expr $OPTIND - 1`
-
-# Modify the logic to use the value of the -i flag directly if provided, and only determine the package manager dynamically if the flag is not set.
-if [ -z "$package_manager" ]; then
-  if [ "$project" = "chef-ice" ]; then
-    package_manager=$(determine_package_type)
-    platform="linux"
-    platform_version="pv"
-  else
-    package_manager="pm"
-  fi
-fi
-
 
 if test -d "/opt/$project" && test "x$install_strategy" = "xonce"; then
   echo "$project installation detected"
@@ -650,6 +638,17 @@ determine_package_type() {
       ;;
   esac
 }
+
+# Ensure the package_manager field is correctly set based on the -i flag or dynamically determined.
+if [ -z "$package_manager" ]; then
+  if [ "$project" = "chef-ice" ]; then
+    package_manager=$(determine_package_type)
+    platform="linux"
+    platform_version="pv"
+  else
+    package_manager="pm"
+  fi
+fi
 
 if [ "$project" = "migration-tools" ]; then
   echo "Error: Script generation is not supported for the product 'migration-tools'."
