@@ -426,7 +426,6 @@ fi
 
 machine=`uname -m`
 os=`uname -s`
-package_manager=""
 
 if test -f "/etc/lsb-release" && grep DISTRIB_ID /etc/lsb-release >/dev/null && ! grep wrlinux /etc/lsb-release >/dev/null; then
   platform=`grep DISTRIB_ID /etc/lsb-release | cut -d "=" -f 2 | tr '[A-Z]' '[a-z]'`
@@ -641,12 +640,14 @@ determine_package_type() {
 
 # Ensure the package_manager field is correctly set based on the -i flag or dynamically determined.
 if [ "$project" = "chef-ice" ]; then 
-  platform="linux"
-  platform_version="pv"
   if [ -z "$package_manager" ]; then
     package_manager=$(determine_package_type)
+    platform="linux"
+  platform_version="pv"
   else
     package_manager="$package_manager"
+    platform="linux"
+    platform_version="pv"
   fi
 else
   package_manager="pm"
