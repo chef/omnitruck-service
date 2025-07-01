@@ -645,6 +645,8 @@ if [ "$project" = "chef-ice" ]; then
   platform_version="pv"
   if [ -z "$package_manager" ]; then
     package_manager=$(determine_package_type)
+  else
+    package_manager="$package_manager"
   fi
 else
   package_manager="pm"
