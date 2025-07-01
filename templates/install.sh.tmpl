@@ -381,7 +381,7 @@ do
     s)  install_strategy="$OPTARG";;
     l)  download_url_override="$OPTARG";;
     a)  checksum="$OPTARG";;
-    i)  package_manager="$OPTARG";;  # Accept external package manager value
+    i)  package_manager="$OPTARG";; 
     \?)   # unknown flag
       echo >&2 \
       "usage: $0 [-P project] [-c release_channel] [-v version] [-f filename | -d download_dir] [-s install_strategy] [-l download_url_override] [-a checksum] [-i package_manager]"
@@ -640,14 +640,14 @@ determine_package_type() {
 }
 
 # Ensure the package_manager field is correctly set based on the -i flag or dynamically determined.
-if [ -z "$package_manager" ]; then
-  if [ "$project" = "chef-ice" ]; then
+if [ "$project" = "chef-ice" ]; then 
+  platform="linux"
+  platform_version="pv"
+  if [ -z "$package_manager" ]; then
     package_manager=$(determine_package_type)
-    platform="linux"
-    platform_version="pv"
-  else
-    package_manager="pm"
   fi
+else
+  package_manager="pm"
 fi
 
 if [ "$project" = "migration-tools" ]; then
