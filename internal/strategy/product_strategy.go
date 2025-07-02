@@ -62,7 +62,7 @@ func SelectProductStrategy(product string, channel string, deps *ProductStrategy
 			Log:           deps.Log,
 			AWSConfig:     deps.Config.AWSConfig,
 		}
-	case constants.MIGRATION_TOOL:
+	case constants.MIGRATION_TOOLS:
 		if channel == constants.CURRENT_CHANNEL {
 			deps.DynamoService.SetDbInfo(deps.Config.PackageDetailsCurrentTable, reflect.TypeOf(models.PackageDetails{}))
 		} else {
