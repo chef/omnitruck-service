@@ -14,11 +14,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const omnitruckApi = "https://omnitruck.chef.io"
-
 type Omnitruck struct {
-	client *http.Client
-	log    *logrus.Entry
+	omnitruckUrl string
+	client       *http.Client
+	log          *logrus.Entry
 }
 
 type FiberContext interface {
@@ -106,8 +105,9 @@ func (rp *RequestParams) UrlParams() url.Values {
 	return v
 }
 
-func New(log *log.Entry) Omnitruck {
+func New(log *log.Entry, omnitruckUrl string) Omnitruck {
 	return Omnitruck{
+		omnitruckUrl: omnitruckUrl,
 		client: &http.Client{
 			Timeout: 10 * time.Second,
 		},
@@ -168,19 +168,19 @@ func (ot *Omnitruck) Get(url string) *clients.Request {
 }
 
 func (ot *Omnitruck) Products(p *RequestParams, data clients.RequestDataInterface) *clients.Request {
-	url := fmt.Sprintf("%s/products", omnitruckApi)
+	url := fmt.Sprintf("%s/products", ot.omnitruckUrl)
 
 	return ot.Get(url).ParseData(data)
 }
 
 func (ot *Omnitruck) Platforms() *clients.Request {
-	url := fmt.Sprintf("%s/platforms", omnitruckApi)
+	url := fmt.Sprintf("%s/platforms", ot.omnitruckUrl)
 
 	return ot.Get(url)
 }
 
 func (ot *Omnitruck) Architectures() *clients.Request {
-	url := fmt.Sprintf("%s/architectures", omnitruckApi)
+	url := fmt.Sprintf("%s/architectures", ot.omnitruckUrl)
 
 	return ot.Get(url)
 }
@@ -194,7 +194,7 @@ func (ot *Omnitruck) LatestVersion(p *RequestParams) *clients.Request {
 	if !err.Ok {
 		return err
 	}
-	url := fmt.Sprintf("%s/%s/%s/versions/latest", omnitruckApi, p.Channel, p.Product)
+	url := fmt.Sprintf("%s/%s/%s/versions/latest", ot.omnitruckUrl, p.Channel, p.Product)
 
 	return ot.Get(url)
 }
@@ -208,7 +208,7 @@ func (ot *Omnitruck) ProductVersions(p *RequestParams) *clients.Request {
 	if !err.Ok {
 		return err
 	}
-	url := fmt.Sprintf("%s/%s/%s/versions/all", omnitruckApi, p.Channel, p.Product)
+	url := fmt.Sprintf("%s/%s/%s/versions/all", ot.omnitruckUrl, p.Channel, p.Product)
 
 	return ot.Get(url)
 }
@@ -222,7 +222,7 @@ func (ot *Omnitruck) ProductPackages(p *RequestParams) *clients.Request {
 	if !err.Ok {
 		return err
 	}
-	url := fmt.Sprintf("%s/%s/%s/packages?v=%s", omnitruckApi, p.Channel, p.Product, p.Version)
+	url := fmt.Sprintf("%s/%s/%s/packages?v=%s", ot.omnitruckUrl, p.Channel, p.Product, p.Version)
 
 	return ot.Get(url)
 }
@@ -239,7 +239,7 @@ func (ot *Omnitruck) ProductMetadata(p *RequestParams) *clients.Request {
 	if !err.Ok {
 		return err
 	}
-	url := fmt.Sprintf("%s/%s/%s/metadata?v=%s&p=%s&pv=%s&m=%s", omnitruckApi,
+	url := fmt.Sprintf("%s/%s/%s/metadata?v=%s&p=%s&pv=%s&m=%s", ot.omnitruckUrl,
 		p.Channel,
 		p.Product,
 		p.Version,
