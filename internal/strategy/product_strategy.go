@@ -53,18 +53,7 @@ func SelectProductStrategy(product string, channel string, deps *ProductStrategy
 			Mode:              deps.Mode,
 			Locals:            deps.Locals,
 		}
-	case constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT:
-		if channel == constants.CURRENT_CHANNEL {
-			deps.DynamoService.SetDbInfo(deps.Config.PackageDetailsCurrentTable, reflect.TypeOf(models.PackageDetails{}))
-		} else {
-			deps.DynamoService.SetDbInfo(deps.Config.PackageDetailsStableTable, reflect.TypeOf(models.PackageDetails{}))
-		}
-		return &InfraProductStrategy{
-			DynamoService: deps.DynamoService,
-			Log:           deps.Log,
-			AWSConfig:     deps.Config.AWSConfig,
-		}
-	case constants.MIGRATION_TOOL:
+	case constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT, constants.MIGRATION_TOOL:
 		if channel == constants.CURRENT_CHANNEL {
 			deps.DynamoService.SetDbInfo(deps.Config.PackageDetailsCurrentTable, reflect.TypeOf(models.PackageDetails{}))
 		} else {

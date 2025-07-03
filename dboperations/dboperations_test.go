@@ -64,6 +64,23 @@ func TestGetPackagesSuccess(t *testing.T) {
 				Metadata: map[string]models.Platform{}, // fixed
 			},
 		},
+		{
+			name:  "Success with PackageDetails",
+			args:  args{"migration-tools", "19.0.1"},
+			model: models.PackageDetails{},
+			mockItem: map[string]*dynamodb.AttributeValue{
+				"product": {S: aws.String("migration-tools")},
+				"version": {S: aws.String("19.0.1")},
+				"metadata": {
+					M: map[string]*dynamodb.AttributeValue{}, // simulate structure
+				},
+			},
+			want: &models.PackageDetails{
+				Product:  "migration-tools",
+				Version:  "19.0.1",
+				Metadata: map[string]models.Platform{}, // fixed
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -180,6 +197,17 @@ func TestGetVersionAllSuccess(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "SuccessFull",
+			args: args{
+				partitionValue: "migration-tools",
+			},
+			want: []string{
+				version4054,
+				version4091,
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -204,7 +232,7 @@ func TestGetVersionAllSuccess(t *testing.T) {
 					},
 					dbModelType: reflect.TypeOf(models.ProductDetails{}),
 				}
-			} else {
+			} else if tt.args.partitionValue == "chef-ice" {
 				ser = &DbOperationsService{
 					db: &MDB{
 						Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
@@ -216,6 +244,26 @@ func TestGetVersionAllSuccess(t *testing.T) {
 									},
 									{
 										"product": {S: aws.String("chef-ice")},
+										"version": {S: aws.String(version4091)},
+									},
+								},
+							}, nil
+						},
+					},
+					dbModelType: reflect.TypeOf(models.PackageDetails{}),
+				}
+			} else {
+				ser = &DbOperationsService{
+					db: &MDB{
+						Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+							return &dynamodb.ScanOutput{
+								Items: []map[string]*dynamodb.AttributeValue{
+									{
+										"product": {S: aws.String("migration-tools")},
+										"version": {S: aws.String(version4054)},
+									},
+									{
+										"product": {S: aws.String("migration-tools")},
 										"version": {S: aws.String(version4091)},
 									},
 								},
@@ -371,6 +419,46 @@ func TestGetMetaDataSuccess(t *testing.T) {
 			},
 			dbModelType: reflect.TypeOf(models.PackageDetails{}),
 		},
+		{
+			name: "Success for migration-tools",
+			args: args{
+				partitionValue:  "migration-tools",
+				sortValue:       "19.0.1",
+				platform:        "linux",
+				platformVersion: "",
+				architecture:    "x86_64",
+				packageManager:  "deb",
+			},
+			want: &models.MetaData{
+				Architecture:    "x86_64",
+				Platform:        "linux",
+				PlatformVersion: "",
+				SHA1:            "SHA1x86_64",
+				SHA256:          "SHA256x86_64",
+				FileName:        "migration-tool-19.0.1-1_amd64.deb",
+				PackageManager:  "deb",
+			},
+			wantErr: false,
+			dynamodbResp: dynamodb.GetItemOutput{
+				Item: map[string]*dynamodb.AttributeValue{
+					"product": {S: aws.String("migration-tools")},
+					"version": {S: aws.String("19.0.1")},
+					"metadata": {M: map[string]*dynamodb.AttributeValue{
+						"linux": {M: map[string]*dynamodb.AttributeValue{
+							"x86_64": {M: map[string]*dynamodb.AttributeValue{
+								"deb": {M: map[string]*dynamodb.AttributeValue{
+									"filename":        {S: aws.String("migration-tool-19.0.1-1_amd64.deb")},
+									"install-message": {S: aws.String("")},
+									"sha1":            {S: aws.String("SHA1x86_64")},
+									"sha256":          {S: aws.String("SHA256x86_64")},
+								}},
+							}},
+						}},
+					}},
+				},
+			},
+			dbModelType: reflect.TypeOf(models.PackageDetails{}),
+		},
 	}
 
 	for _, tt := range tests {
@@ -506,6 +594,15 @@ func TestGetVersionLatestSuccess(t *testing.T) {
 			want:    "19.0.0",
 			wantErr: false,
 		},
+		{
+			name: "Success",
+			args: args{
+
+				partitionValue: "migration-tools",
+			},
+			want:    "19.0.1",
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -534,7 +631,7 @@ func TestGetVersionLatestSuccess(t *testing.T) {
 					},
 					dbModelType: reflect.TypeOf(models.ProductDetails{}),
 				}
-			} else {
+			} else if tt.args.partitionValue == "chef-ice" {
 				ser = &DbOperationsService{
 					db: &MDB{
 						GetItemfunc: func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
@@ -551,6 +648,30 @@ func TestGetVersionLatestSuccess(t *testing.T) {
 									{
 										"product": {S: aws.String("chef-ice")},
 										"version": {S: aws.String("19.0.0")},
+									},
+								},
+							}, nil
+						},
+					},
+					dbModelType: reflect.TypeOf(models.PackageDetails{}),
+				}
+			} else {
+				ser = &DbOperationsService{
+					db: &MDB{
+						GetItemfunc: func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
+							return &dynamodb.GetItemOutput{
+								Item: map[string]*dynamodb.AttributeValue{
+									"product": {S: aws.String("migration-tools")},
+									"version": {S: aws.String("19.0.1")},
+								},
+							}, nil
+						},
+						Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+							return &dynamodb.ScanOutput{
+								Items: []map[string]*dynamodb.AttributeValue{
+									{
+										"product": {S: aws.String("migration-tools")},
+										"version": {S: aws.String("19.0.1")},
 									},
 								},
 							}, nil
