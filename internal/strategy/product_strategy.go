@@ -32,6 +32,7 @@ type ProductStrategyDeps struct {
 	Replicated        replicated.IReplicated
 	LicenseClient     clients.ILicense
 	LicenseServiceUrl string
+	Validator         omnitruck.RequestValidator
 	Mode              constants.ApiType
 	Config            config.ServiceConfig
 }
