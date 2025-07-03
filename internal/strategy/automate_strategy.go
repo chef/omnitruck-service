@@ -14,7 +14,7 @@ import (
 // ProductDynamoStrategy implements ProductStrategy for Automate and Habitat products
 // Uses DynamoDB for most operations
 type ProductDynamoStrategy struct {
-	DynamoService *omnitruck.DynamoServices
+	DynamoService omnitruck.IDynamoServices
 	Log           *log.Entry
 }
 

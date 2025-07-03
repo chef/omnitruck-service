@@ -65,6 +65,14 @@ type RequestParamsFlags struct {
 	PackageManager  bool
 }
 
+type IOmnitruck interface {
+	LatestVersion(params *RequestParams) *clients.Request
+	ProductVersions(params *RequestParams) *clients.Request
+	ProductPackages(params *RequestParams) *clients.Request
+	ProductMetadata(params *RequestParams) *clients.Request
+	ProductDownload(params *RequestParams) *clients.Request
+}
+
 type PackageListUpdater func(platform string, platformVersion string, arch string, meta PackageMetadata) PackageMetadata
 
 func (pl PackageList) UpdatePackages(fn PackageListUpdater) {

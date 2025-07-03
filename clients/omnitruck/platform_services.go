@@ -10,8 +10,8 @@ type PlatformServices struct {
 	Logger logger.Logger
 }
 
-func NewPlatformServices(logger logger.Logger) PlatformServices {
-	return PlatformServices{
+func NewPlatformServices(logger logger.Logger) IPlatformServices {
+	return &PlatformServices{
 		Logger: logger,
 	}
 }

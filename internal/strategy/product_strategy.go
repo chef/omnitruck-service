@@ -25,8 +25,8 @@ type ProductStrategy interface {
 }
 
 type ProductStrategyDeps struct {
-	DynamoService     *omnitruck.DynamoServices
-	PlatformService   *omnitruck.PlatformServices
+	DynamoService     omnitruck.IDynamoServices
+	PlatformService   omnitruck.IPlatformServices
 	OmnitruckService  *omnitruck.Omnitruck
 	Log               *log.Entry
 	Replicated        replicated.IReplicated

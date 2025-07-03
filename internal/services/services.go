@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 
@@ -22,7 +23,7 @@ import (
 type DownloadService struct {
 	log               *log.Entry
 	databaseService   dboperations.IDbOperations
-	templateRenderer  template.TemplateRender
+	templateRenderer  template.TemplateRenderer
 	replicated        replicated.IReplicated
 	licenseClient     clients.ILicense
 	licenseServiceUrl string
@@ -32,24 +33,40 @@ type DownloadService struct {
 }
 
 func NewDownloadService(injector *do.Injector, log *log.Entry, locals map[string]interface{}) (*DownloadService, error) {
-	service := DownloadService{}
-	service.log = log
-	service.locals = locals
-	// Retrieve the injector from the Fiber context	
-	databaseService := do.MustInvokeNamed[dboperations.IDbOperations](injector, "dbService")
-	templateRenderer := do.MustInvokeNamed[template.TemplateRender](injector, "templateRenderer")
-	replicatedService := do.MustInvokeNamed[replicated.IReplicated](injector, "replicated")
-	licenseClient := do.MustInvokeNamed[clients.ILicense](injector, "licenseClient")
-	mode := do.MustInvokeNamed[constants.ApiType](injector, "mode")
-	config := do.MustInvokeNamed[config.ServiceConfig](injector, "config")
-	service.databaseService = databaseService
-	service.templateRenderer = templateRenderer
-	service.replicated = replicatedService
-	service.licenseClient = licenseClient
-	service.mode = mode
-	service.licenseServiceUrl = config.LicenseServiceUrl
-	service.config = config
-	return &service, nil
+	service := &DownloadService{
+		log:    log,
+		locals: locals,
+	}
+
+	var err error
+
+	if service.databaseService, err = do.InvokeNamed[dboperations.IDbOperations](injector, "dbService"); err != nil {
+		return nil, fmt.Errorf("could not resolve dbService: %w", err)
+	}
+	if service.templateRenderer, err = do.InvokeNamed[template.TemplateRenderer](injector, "templateRenderer"); err != nil {
+		return nil, fmt.Errorf("could not resolve templateRenderer: %w", err)
+	}
+	if service.replicated, err = do.InvokeNamed[replicated.IReplicated](injector, "replicated"); err != nil {
+		return nil, fmt.Errorf("could not resolve replicated: %w", err)
+	}
+	if service.licenseClient, err = do.InvokeNamed[clients.ILicense](injector, "licenseClient"); err != nil {
+		return nil, fmt.Errorf("could not resolve licenseClient: %w", err)
+	}
+	if service.mode, err = do.InvokeNamed[constants.ApiType](injector, "mode"); err != nil {
+		return nil, fmt.Errorf("could not resolve mode: %w", err)
+	}
+	if cfg, err := do.InvokeNamed[config.ServiceConfig](injector, "config"); err != nil {
+		return nil, fmt.Errorf("could not resolve config: %w", err)
+	} else {
+		service.config = cfg
+		service.licenseServiceUrl = cfg.LicenseServiceUrl
+	}
+
+	return service, nil
+}
+
+func (svc *DownloadService) setMode(mode constants.ApiType) {
+	svc.mode = mode
 }
 
 func (svc *DownloadService) Omnitruck() *omnitruck.Omnitruck {
@@ -64,9 +81,9 @@ func (svc *DownloadService) DynamoServices(db dboperations.IDbOperations) *omnit
 	return &service
 }
 
-func (svc *DownloadService) PlatformServices() *omnitruck.PlatformServices {
+func (svc *DownloadService) PlatformServices() omnitruck.IPlatformServices {
 	service := omnitruck.NewPlatformServices(svc.logCtx())
-	return &service
+	return service
 }
 
 func (svc *DownloadService) ReplicatedService(config config.ReplicatedConfig, log logger.Logger) replicated.IReplicated {
@@ -269,14 +286,6 @@ func (svc *DownloadService) GetFileName(params *omnitruck.RequestParams) (string
 			Ok:      false,
 			Code:    fiber.StatusNotFound,
 			Message: "No versions found for this product/mode",
-		}
-	}
-
-	if len(filtered) == 0 {
-		return "", &clients.Request{
-			Ok:      false,
-			Code:    fiber.StatusNotFound,
-			Message: params.Product + " is not supported for opensource",
 		}
 	}
 
