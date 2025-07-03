@@ -180,3 +180,190 @@ func TestDownloadFromS3_Success(t *testing.T) {
 	assert.Equal(t, 0, code)
 	assert.NoError(t, err)
 }
+
+func TestInfraProductStrategy_GetLatestVersion(t *testing.T) {
+	mockDynamo := &omnitruck.MockDynamoServices{
+		VersionLatestFunc: func(params *omnitruck.RequestParams) (omnitruck.ProductVersion, error) {
+			return omnitruck.ProductVersion("1.2.3"), nil
+		},
+	}
+	strategy := &InfraProductStrategy{
+		DynamoService: mockDynamo,
+		Log:           logrus.NewEntry(logrus.New()),
+	}
+	params := &omnitruck.RequestParams{Product: "chef"}
+	data, req := strategy.GetLatestVersion(params)
+	assert.True(t, req.Ok)
+	assert.Equal(t, "1.2.3", string(data))
+}
+
+func TestInfraProductStrategy_GetLatestVersion_Error(t *testing.T) {
+	mockDynamo := &omnitruck.MockDynamoServices{
+		VersionLatestFunc: func(params *omnitruck.RequestParams) (omnitruck.ProductVersion, error) {
+			return "", errors.New("db error")
+		},
+	}
+	strategy := &InfraProductStrategy{
+		DynamoService: mockDynamo,
+		Log:           logrus.NewEntry(logrus.New()),
+	}
+	params := &omnitruck.RequestParams{Product: "chef"}
+	_, req := strategy.GetLatestVersion(params)
+	assert.False(t, req.Ok)
+	assert.Equal(t, http.StatusInternalServerError, req.Code)
+}
+
+func TestInfraProductStrategy_GetAllVersions(t *testing.T) {
+	mockDynamo := &omnitruck.MockDynamoServices{
+		VersionAllFunc: func(params *omnitruck.RequestParams) ([]omnitruck.ProductVersion, error) {
+			return []omnitruck.ProductVersion{"1.2.3"}, nil
+		},
+	}
+	strategy := &InfraProductStrategy{
+		DynamoService: mockDynamo,
+		Log:           logrus.NewEntry(logrus.New()),
+	}
+	params := &omnitruck.RequestParams{Product: "chef"}
+	data, req := strategy.GetAllVersions(params)
+	assert.True(t, req.Ok)
+	assert.Len(t, data, 1)
+	assert.Equal(t, "1.2.3", string(data[0]))
+}
+
+func TestInfraProductStrategy_GetAllVersions_Error(t *testing.T) {
+	mockDynamo := &omnitruck.MockDynamoServices{
+		VersionAllFunc: func(params *omnitruck.RequestParams) ([]omnitruck.ProductVersion, error) {
+			return nil, errors.New("db error")
+		},
+	}
+	strategy := &InfraProductStrategy{
+		DynamoService: mockDynamo,
+		Log:           logrus.NewEntry(logrus.New()),
+	}
+	params := &omnitruck.RequestParams{Product: "chef"}
+	data, req := strategy.GetAllVersions(params)
+	assert.False(t, req.Ok)
+	assert.Nil(t, data)
+	assert.Equal(t, http.StatusInternalServerError, req.Code)
+	t.Logf("Error message: %s", req.Message)
+}
+
+func TestInfraProductStrategy_Download_FilenameError(t *testing.T) {
+	mockDynamo := &omnitruck.MockDynamoServices{
+		GetFilenameFunc: func(params *omnitruck.RequestParams) (string, error) {
+			return "", errors.New("db error")
+		},
+	}
+	strategy := &InfraProductStrategy{
+		DynamoService: mockDynamo,
+		Log:           logrus.NewEntry(logrus.New()),
+	}
+	params := &omnitruck.RequestParams{Product: "chef"}
+	url, rc, hdr, msg, code, err := strategy.Download(params)
+	assert.Empty(t, url)
+	assert.Nil(t, rc)
+	assert.Nil(t, hdr)
+	assert.Equal(t, http.StatusInternalServerError, code)
+	assert.Error(t, err)
+	t.Logf("Download error message (may be empty): '%s'", msg)
+}
+
+func TestInfraProductStrategy_Download_EmptyFilename(t *testing.T) {
+	mockDynamo := &omnitruck.MockDynamoServices{
+		GetFilenameFunc: func(params *omnitruck.RequestParams) (string, error) {
+			return "", nil
+		},
+	}
+	strategy := &InfraProductStrategy{
+		DynamoService: mockDynamo,
+		Log:           logrus.NewEntry(logrus.New()),
+	}
+	params := &omnitruck.RequestParams{Product: "chef"}
+	url, rc, hdr, msg, code, err := strategy.Download(params)
+	assert.Empty(t, url)
+	assert.Nil(t, rc)
+	assert.Nil(t, hdr)
+	assert.Equal(t, "Download filename is empty", msg)
+	assert.Equal(t, 500, code)
+	assert.Nil(t, err)
+}
+
+func TestInfraProductStrategy_GetPackages(t *testing.T) {
+	mockDynamo := &omnitruck.MockDynamoServices{
+		ProductPackagesFunc: func(params *omnitruck.RequestParams) (omnitruck.PackageList, error) {
+			return omnitruck.PackageList{}, nil
+		},
+	}
+	strategy := &InfraProductStrategy{
+		DynamoService: mockDynamo,
+	}
+	params := &omnitruck.RequestParams{Product: "chef"}
+	pkgs, err := strategy.GetPackages(params)
+	assert.NoError(t, err)
+	assert.NotNil(t, pkgs)
+}
+
+func TestInfraProductStrategy_GetMetadata(t *testing.T) {
+	mockDynamo := &omnitruck.MockDynamoServices{
+		ProductMetadataFunc: func(params *omnitruck.RequestParams) (omnitruck.PackageMetadata, error) {
+			return omnitruck.PackageMetadata{Version: "1.2.3"}, nil
+		},
+	}
+	strategy := &InfraProductStrategy{
+		DynamoService: mockDynamo,
+		Log:           logrus.NewEntry(logrus.New()),
+	}
+	params := &omnitruck.RequestParams{Product: "chef"}
+	data, req := strategy.GetMetadata(params)
+	assert.True(t, req.Ok)
+	assert.Equal(t, "1.2.3", data.Version)
+}
+
+func TestInfraProductStrategy_GetMetadata_Error(t *testing.T) {
+	mockDynamo := &omnitruck.MockDynamoServices{
+		ProductMetadataFunc: func(params *omnitruck.RequestParams) (omnitruck.PackageMetadata, error) {
+			return omnitruck.PackageMetadata{}, errors.New("db error")
+		},
+	}
+	strategy := &InfraProductStrategy{
+		DynamoService: mockDynamo,
+		Log:           logrus.NewEntry(logrus.New()),
+	}
+	params := &omnitruck.RequestParams{Product: "chef"}
+	_, req := strategy.GetMetadata(params)
+	assert.False(t, req.Ok)
+	assert.Equal(t, http.StatusInternalServerError, req.Code)
+	t.Logf("Error message was: %s", req.Message)
+}
+
+func TestInfraProductStrategy_GetFileName(t *testing.T) {
+	mockDynamo := &omnitruck.MockDynamoServices{
+		GetFilenameFunc: func(params *omnitruck.RequestParams) (string, error) {
+			return "file.deb", nil
+		},
+	}
+	strategy := &InfraProductStrategy{
+		DynamoService: mockDynamo,
+	}
+	params := &omnitruck.RequestParams{Product: "chef"}
+	file, err := strategy.GetFileName(params)
+	assert.NoError(t, err)
+	assert.Equal(t, "file.deb", file)
+}
+
+func TestInfraProductStrategy_UpdatePackages(t *testing.T) {
+	strategy := &InfraProductStrategy{}
+	list := omnitruck.PackageList{
+		"ubuntu": {
+			"20.04": {
+				"x86_64": omnitruck.PackageMetadata{Version: "1.2.3"},
+			},
+		},
+	}
+	params := &omnitruck.RequestParams{
+		Product: "chef", Channel: "stable", Architecture: "x86_64",
+	}
+	strategy.UpdatePackages(&list, params, "http://myurl")
+	pkg := list["ubuntu"]["20.04"]["x86_64"]
+	assert.Contains(t, pkg.Url, "http://myurl")
+}

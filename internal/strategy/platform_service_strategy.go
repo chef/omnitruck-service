@@ -16,7 +16,7 @@ import (
 
 // PlatformServiceStrategy implements ProductStrategy for PlatformService product
 type PlatformServiceStrategy struct {
-	PlatformService   *omnitruck.PlatformServices
+	PlatformService   omnitruck.IPlatformServices
 	Replicated        replicated.IReplicated
 	LicenseClient     clients.ILicense
 	LicenseServiceUrl string
@@ -27,6 +27,10 @@ type PlatformServiceStrategy struct {
 
 var JsonUnmarshal = func(data []byte, v any) error {
 	return json.Unmarshal(data, &v)
+}
+
+func (s *PlatformServiceStrategy) SetLocals(locals map[string]interface{}) {
+	s.locals = locals
 }
 
 func (s *PlatformServiceStrategy) GetLatestVersion(params *omnitruck.RequestParams) (omnitruck.ProductVersion, *clients.Request) {

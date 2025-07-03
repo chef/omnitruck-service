@@ -14,7 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const omnitruckApi = "https://omnitruck.chef.io"
+var omnitruckApi = "https://omnitruck.chef.io"
 
 type Omnitruck struct {
 	client *http.Client
@@ -64,6 +64,14 @@ type RequestParamsFlags struct {
 	LicenseId       bool
 	BOM             bool
 	PackageManager  bool
+}
+
+type IOmnitruck interface {
+	LatestVersion(params *RequestParams) *clients.Request
+	ProductVersions(params *RequestParams) *clients.Request
+	ProductPackages(params *RequestParams) *clients.Request
+	ProductMetadata(params *RequestParams) *clients.Request
+	ProductDownload(params *RequestParams) *clients.Request
 }
 
 type PackageListUpdater func(platform string, platformVersion string, arch string, meta PackageMetadata) PackageMetadata

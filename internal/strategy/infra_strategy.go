@@ -16,7 +16,7 @@ import (
 )
 
 type InfraProductStrategy struct {
-	DynamoService *omnitruck.DynamoServices
+	DynamoService omnitruck.IDynamoServices
 	AWSConfig     config.AWSConfig
 	Log           *log.Entry
 }

@@ -13,7 +13,7 @@ import (
 
 // DefaultProductStrategy implements ProductStrategy for all other products
 type DefaultProductStrategy struct {
-	OmnitruckService *omnitruck.Omnitruck
+	OmnitruckService omnitruck.IOmnitruck
 	Log              *log.Entry
 }
 

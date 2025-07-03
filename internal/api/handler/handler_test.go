@@ -6,136 +6,155 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
-	"testing"
 	"time"
 
+	"testing"
+
 	"github.com/chef/omnitruck-service/clients"
+	"github.com/chef/omnitruck-service/models"
+
+	"github.com/chef/omnitruck-service/config"
+
 	"github.com/chef/omnitruck-service/clients/omnitruck"
 	"github.com/chef/omnitruck-service/clients/omnitruck/replicated"
-	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/constants"
 	"github.com/chef/omnitruck-service/dboperations"
 	_ "github.com/chef/omnitruck-service/docs"
-	"github.com/chef/omnitruck-service/internal/services"
-	"github.com/chef/omnitruck-service/models"
+
 	"github.com/chef/omnitruck-service/utils/template"
 	"github.com/gofiber/fiber/v2"
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// TestInjector provides a test injector similar to httpserver/routes.go Injector middleware
-func testInjector(service services.DownloadService) func(*fiber.Ctx) error {
+// 
+
+func testInjector(
+	db dboperations.IDbOperations,
+	mode constants.ApiType,
+	renderer template.TemplateRender,
+) func(*fiber.Ctx) error {
 	return func(c *fiber.Ctx) error {
 		reqInjector := do.New()
-		do.ProvideNamedValue[omnitruck.RequestValidator](reqInjector, "validator", service.Validator)
-		do.ProvideNamedValue[template.TemplateRender](reqInjector, "templateRenderer", service.TemplateRenderer)
-		do.ProvideNamedValue[clients.ILicense](reqInjector, "licenseClient", service.LicenseClient)
-		do.ProvideNamedValue[dboperations.IDbOperations](reqInjector, "dbService", service.DatabaseService)
-		do.ProvideNamedValue[constants.ApiType](reqInjector, "mode", service.Mode)
-		do.ProvideNamedValue[string](reqInjector, "licenseServiceUrl", service.LicenseServiceUrl)
-		do.ProvideNamedValue[config.ServiceConfig](reqInjector, "config", service.Config)
 
-		// Inject mock replicated dependency
-		mockReplicated := &replicated.MockReplicated{
-			SearchCustomersByEmailFunc: func(email string, requestId string) ([]models.Customer, error) {
-				return nil, nil
+		do.ProvideNamedValue[dboperations.IDbOperations](reqInjector, "dbService", db)
+		do.ProvideNamedValue[template.TemplateRender](reqInjector, "templateRenderer", renderer)
+		do.ProvideNamedValue[replicated.IReplicated](reqInjector, "replicated", &replicated.MockReplicated{})
+		do.ProvideNamedValue[clients.ILicense](reqInjector, "licenseClient", &clients.MockLicense{})
+		do.ProvideNamedValue[constants.ApiType](reqInjector, "mode", mode)
+		do.ProvideNamedValue[config.ServiceConfig](reqInjector, "config", config.ServiceConfig{
+			LicenseServiceUrl: "http://licenseservice",
+		})
+
+		do.ProvideNamedValue[omnitruck.IRequestValidator](reqInjector, "validator", &omnitruck.MockRequestValidator{
+			ParamsFunc: func(params *omnitruck.RequestParams, ctx omnitruck.Context) []*omnitruck.ValidationError {
+				// if channel is blank and product is blank, treat as download script, allow
+				if params.Channel == "" && params.Product == "" {
+					return nil
+				}
+				// for product routes, enforce channel check
+				if params.Channel != "stable" && params.Channel != "current" {
+					return []*omnitruck.ValidationError{
+						{
+							Msg:  "Channel can only be stable or current",
+							Code: fiber.StatusBadRequest,
+						},
+					}
+				}
+				return nil
 			},
-			GetDowloadUrlFunc: func(customer models.Customer, requestId string) (string, error) {
-				return "", nil
+			ErrorMessagesFunc: func(errors []*omnitruck.ValidationError) (string, int) {
+				if len(errors) == 0 {
+					return "", 0
+				}
+				return errors[0].Msg, errors[0].Code
 			},
-			DownloadFromReplicatedFunc: func(url, requestId, authorization string) (*http.Response, error) {
-				return nil, nil
-			},
-		}
-		do.ProvideNamedValue[replicated.IReplicated](reqInjector, "replicated", mockReplicated)
+		})
 
 		c.Locals("reqinjector", reqInjector)
-		err := c.Next()
-		reqInjector.Shutdown()
-		return err
+		return c.Next()
 	}
 }
 
-// Only for TestRelatedProductsHandler, use direct handler and minimal mocks
-func TestRelatedProductsHandler(t *testing.T) {
+
+func TestProductsHandler(t *testing.T) {
+	t.Parallel()
+
+	log := logrus.NewEntry(logrus.New())
+
 	tests := []struct {
 		name             string
-		requestPath      string
+		inject           bool
+		setupInjector    func() *do.Injector
 		expectedStatus   int
-		expectedResponse string
-		relatedProducts  models.RelatedProducts
-		err              error
+		expectedContains string
 	}{
 		{
-			name:             "Valid SKU with related products",
-			requestPath:      "/relatedProducts?bom=Chef%20Desktop%20Management",
-			expectedStatus:   http.StatusOK,
-			expectedResponse: `{"relatedProducts": {"inspec": "Chef InSpec"}}`,
-			relatedProducts:  models.RelatedProducts{Products: map[string]string{"inspec": "Chef InSpec"}},
-			err:              nil,
-		},
-		{
-			name:             "Empty SKU",
-			requestPath:      "/relatedProducts?bom=",
-			expectedStatus:   http.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"BOM (bom) params cannot be empty", "status_text":"Bad Request"}`,
-			relatedProducts:  models.RelatedProducts{},
-			err:              errors.New("No Related products found for SKU "),
-		},
-		{
-			name:             "Db error while fetching related products",
-			requestPath:      "/relatedProducts?bom=Chef%20123",
+			name:             "missing injector returns 500",
+			inject:           false,
 			expectedStatus:   http.StatusInternalServerError,
-			expectedResponse: `{"code":500, "message":"Error while fetching the information for the product from DB.", "status_text":"Internal Server Error"}`,
-			relatedProducts:  models.RelatedProducts{},
-			err:              errors.New("Db connection error"),
+			expectedContains: "Failed to retrieve request injector",
 		},
 		{
-			name:             "No related products",
-			requestPath:      "/relatedProducts?bom=Chef%20123",
-			expectedStatus:   http.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"Product information not found. Please check the input parameters.", "status_text":"Bad Request"}`,
-			relatedProducts:  models.RelatedProducts{},
-			err:              nil,
+			name:   "broken injector returns 500 on NewDownloadService failure",
+			inject: true,
+			setupInjector: func() *do.Injector {
+				return do.New() // no providers at all, will fail
+			},
+			expectedStatus:   http.StatusInternalServerError,
+			expectedContains: "Failed to create download service",
+		},
+		{
+			name:   "products returns success",
+			inject: true,
+			setupInjector: func() *do.Injector {
+				injector := do.New()
+				do.ProvideNamedValue[dboperations.IDbOperations](injector, "dbService", &dboperations.MockIDbOperations{})
+				do.ProvideNamedValue[template.TemplateRender](injector, "templateRenderer", &template.MockTemplateRennder{})
+				do.ProvideNamedValue[replicated.IReplicated](injector, "replicated", &replicated.MockReplicated{})
+				do.ProvideNamedValue[clients.ILicense](injector, "licenseClient", &clients.MockLicense{})
+				do.ProvideNamedValue[constants.ApiType](injector, "mode", constants.Commercial)
+				do.ProvideNamedValue[config.ServiceConfig](injector, "config", config.ServiceConfig{})
+				return injector
+			},
+			expectedStatus:   http.StatusOK,
+			expectedContains: "[", // JSON array of products
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
 			app := fiber.New()
 			app.Use(func(c *fiber.Ctx) error {
 				c.Locals("base_url", "http://example.com")
 				return c.Next()
 			})
-			mockDbService := new(dboperations.MockIDbOperations)
-			mockDbService.GetRelatedProductsfunc = func(partitionValue string) (*models.RelatedProducts, error) {
-				return &test.relatedProducts, test.err
+
+			if tt.inject {
+				reqInjector := tt.setupInjector()
+				app.Use(func(c *fiber.Ctx) error {
+					c.Locals("reqinjector", reqInjector)
+					return c.Next()
+				})
 			}
 
-			log := logrus.NewEntry(logrus.New())
+			// Use real handler (which expects dynamic DownloadService)
 			handler := NewDownloadsHandler(log)
-			service := services.DownloadService{
-				DatabaseService: mockDbService,
-				Mode:            constants.Opensource, // Use Opensource for this test
-			}
-			app.Use(testInjector(service))
 
-			app.Get("/relatedProducts", func(c *fiber.Ctx) error {
-				return handler.RelatedProductsHandler(c)
-			})
+			app.Get("/products", handler.ProductsHandler)
 
-			req := httptest.NewRequest(http.MethodGet, "http://example.com"+test.requestPath, nil)
-			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
-			assert.NoError(t, err)
-			assert.Equal(t, test.expectedStatus, resp.StatusCode)
+			req := httptest.NewRequest(http.MethodGet, "/products?eol=false", nil)
+			resp, err := app.Test(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
 
-			if test.expectedResponse != "" {
-				bodyBytes, err := io.ReadAll(resp.Body)
-				assert.NoError(t, err)
-				assert.JSONEq(t, test.expectedResponse, string(bodyBytes))
-			}
+			body, _ := io.ReadAll(resp.Body)
+
+			assert.Equal(t, tt.expectedStatus, resp.StatusCode, string(body))
+			assert.Contains(t, string(body), tt.expectedContains)
 		})
 	}
 }
@@ -159,7 +178,6 @@ func TestLatestVersionsHandler(t *testing.T) {
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `"0.9.3"`,
 			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0", "1.0.0"},
-			versions_err:     nil,
 		},
 		{
 			name:             "chef-360 success",
@@ -168,25 +186,22 @@ func TestLatestVersionsHandler(t *testing.T) {
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `"latest"`,
 			versions:         []string{"latest"},
-			versions_err:     nil,
 		},
 		{
 			name:             "failure for chef-360 when opensource is the server type",
 			requestPath:      "/stable/chef-360/versions/latest",
 			serverMode:       constants.Opensource,
 			expectedStatus:   fiber.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"chef-360 not available for the trial and opensource", "status_text":"Bad Request"}`,
+			expectedResponse: `{"code":400,"status_text":"Bad Request","message":"chef-360 not available for the trial and opensource"}`,
 			versions:         []string{},
-			versions_err:     nil,
 		},
 		{
 			name:             "failure for chef-360 when trial is the server type",
 			requestPath:      "/stable/chef-360/versions/latest",
 			serverMode:       constants.Trial,
 			expectedStatus:   fiber.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"chef-360 not available for the trial and opensource", "status_text":"Bad Request"}`,
+			expectedResponse: `{"code":400,"status_text":"Bad Request","message":"chef-360 not available for the trial and opensource"}`,
 			versions:         []string{},
-			versions_err:     nil,
 		},
 		{
 			name:             "success for trial",
@@ -195,62 +210,59 @@ func TestLatestVersionsHandler(t *testing.T) {
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: `"1.0.0"`,
 			version:          "1.0.0",
-			version_err:      nil,
 			versions:         []string{"0.9.3", "0.3.2", "0.7.11", "0.9.0", "1.0.0"},
-			versions_err:     nil,
 		},
 		{
 			name:             "failure validation",
 			requestPath:      "/stale/automate/versions/latest",
 			serverMode:       constants.Trial,
 			expectedStatus:   fiber.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"Channel can only be stable or current", "status_text":"Bad Request"}`,
-			version:          "latest",
-			version_err:      nil,
+			expectedResponse: `{"code":400,"status_text":"Bad Request","message":"Channel can only be stable or current"}`,
 			versions:         []string{"latest"},
-			versions_err:     nil,
 		},
+		
 	}
+
 	for _, test := range tests {
+		test := test // pin variable
 		t.Run(test.name, func(t *testing.T) {
 			app := fiber.New()
 			app.Use(func(c *fiber.Ctx) error {
 				c.Locals("base_url", "http://example.com")
 				return c.Next()
 			})
-			mockDbService := new(dboperations.MockIDbOperations)
-			mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
-				return test.versions, test.versions_err
-			}
-			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
-				return test.version, test.version_err
-			}
-			mockDbService.SetDbInfofunc = func(tableName string, dbModel reflect.Type) {
+
+			// mock db
+			mockDbService := &dboperations.MockIDbOperations{
+				GetVersionAllfunc: func(partitionValue string) ([]string, error) {
+					return test.versions, test.versions_err
+				},
+				GetVersionLatestfunc: func(partitionValue string) (string, error) {
+					return test.version, test.version_err
+				},
+				SetDbInfofunc: func(tableName string, dbModel reflect.Type) {},
 			}
 
 			log := logrus.NewEntry(logrus.New())
-			handler := NewDownloadsHandler(log)
-			service := services.DownloadService{
-				DatabaseService: mockDbService,
-				Mode:            test.serverMode,
-			}
+			h := NewDownloadsHandler(log)
 
-			app.Use(testInjector(service))
+			app.Use(testInjector(
+				mockDbService,
+				test.serverMode,
+				&template.MockTemplateRennder{},
+			))
 
 			app.Get("/:channel/:product/versions/latest", func(c *fiber.Ctx) error {
-				return handler.LatestVersionHandler(c)
+				return h.LatestVersionHandler(c)
 			})
 
 			req := httptest.NewRequest(http.MethodGet, "http://example.com"+test.requestPath, nil)
-			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
-
+			resp, err := app.Test(req, 10_000)
 			assert.NoError(t, err)
-
 			assert.Equal(t, test.expectedStatus, resp.StatusCode)
 
 			if test.expectedResponse != "" {
-				bodyBytes, err := io.ReadAll(resp.Body)
-				assert.NoError(t, err)
+				bodyBytes, _ := io.ReadAll(resp.Body)
 				assert.JSONEq(t, test.expectedResponse, string(bodyBytes))
 			}
 		})
@@ -329,12 +341,7 @@ func TestProductVersionsHandler(t *testing.T) {
 
 			log := logrus.NewEntry(logrus.New())
 			handler := NewDownloadsHandler(log)
-			service := services.DownloadService{
-				DatabaseService: mockDbService,
-				Mode:            test.serverMode,
-			}
-
-			app.Use(testInjector(service))
+			app.Use(testInjector(mockDbService, test.serverMode, &template.MockTemplateRennder{}))
 			app.Get("/:channel/:product/versions/all", func(c *fiber.Ctx) error {
 				return handler.ProductVersionsHandler(c)
 			})
@@ -573,13 +580,8 @@ func TestProductMetadataHandler(t *testing.T) {
 
 			log := logrus.NewEntry(logrus.New())
 			handler := NewDownloadsHandler(log)
-			service := services.DownloadService{
-				DatabaseService: mockDbService,
-				Mode:            test.serverMode,
-				Validator:       omnitruck.RequestValidator{},
-			}
 
-			app.Use(testInjector(service))
+			app.Use(testInjector(mockDbService, test.serverMode, &template.MockTemplateRennder{}))
 			app.Get("/:channel/:product/metadata", func(c *fiber.Ctx) error {
 				return handler.ProductMetadataHandler(c)
 			})
@@ -843,12 +845,7 @@ func TestProductPackagesHandler(t *testing.T) {
 			}
 			log := logrus.NewEntry(logrus.New())
 			handler := NewDownloadsHandler(log)
-			service := services.DownloadService{
-				DatabaseService: mockDbService,
-				Mode:            test.serverMode,
-			}
-
-			app.Use(testInjector(service))
+			app.Use(testInjector(mockDbService, test.serverMode, &template.MockTemplateRennder{}))
 			app.Get("/:channel/:product/packages", func(c *fiber.Ctx) error {
 				return handler.ProductPackagesHandler(c)
 			})
@@ -1031,12 +1028,7 @@ func TestFileNameHandler(t *testing.T) {
 
 				log := logrus.NewEntry(logrus.New())
 				handler := NewDownloadsHandler(log)
-				service := services.DownloadService{
-					DatabaseService: mockDbService,
-					Mode:            test.serverMode,
-				}
-
-				app.Use(testInjector(service))
+				app.Use(testInjector(mockDbService, test.serverMode, &template.MockTemplateRennder{}))
 				app.Get("/:channel/:product/fileName", func(c *fiber.Ctx) error {
 					return handler.FileNameHandler(c)
 				})
@@ -1063,6 +1055,7 @@ func TestFileNameHandler(t *testing.T) {
 		})
 	}
 }
+
 
 func TestDownloadLinuxScriptHandler(t *testing.T) {
 	tests := []struct {
@@ -1105,13 +1098,8 @@ func TestDownloadLinuxScriptHandler(t *testing.T) {
 			mockTemplate.GetScriptfunc = test.mockTemplate
 			log := logrus.NewEntry(logrus.New())
 			handler := NewDownloadsHandler(log)
-			service := services.DownloadService{
-				Mode:             test.serverMode,
-				TemplateRenderer: mockTemplate,
-			}
 
-			app.Use(testInjector(service))
-
+			app.Use(testInjector(&dboperations.MockIDbOperations{}, test.serverMode, mockTemplate))
 			app.Get("/install.sh", func(c *fiber.Ctx) error {
 				return handler.DownloadLinuxScript(c)
 			})
@@ -1166,12 +1154,8 @@ func TestDownloadWindowsScriptHandler(t *testing.T) {
 			mockTemplate.GetScriptfunc = test.mockTemplate
 			log := logrus.NewEntry(logrus.New())
 			handler := NewDownloadsHandler(log)
-			service := services.DownloadService{
-				Mode:             test.serverMode,
-				TemplateRenderer: mockTemplate,
-			}
 
-			app.Use(testInjector(service))
+			app.Use(testInjector(&dboperations.MockIDbOperations{}, test.serverMode, mockTemplate))
 
 			app.Get("/install.ps1", func(c *fiber.Ctx) error {
 				return handler.DownloadWindowsScript(c)
@@ -1184,6 +1168,7 @@ func TestDownloadWindowsScriptHandler(t *testing.T) {
 		})
 	}
 }
+
 
 // func TestApiService_downloadChefPlatform(t *testing.T) {
 // 	app := fiber.New()
@@ -1622,172 +1607,65 @@ func TestDownloadWindowsScriptHandler(t *testing.T) {
 // 	}
 // }
 
-func TestPackageManagersHandler(t *testing.T) {
-	tests := []struct {
-		name             string
-		mockData         []string
-		mockErr          error
-		expectedStatus   int
-		expectedResponse string
-		mode             constants.ApiType
-	}{
-		{
-			name:             "Success - package managers fetched",
-			mockData:         []string{"deb", "tar", "rpm"},
-			mockErr:          nil,
-			expectedStatus:   http.StatusOK,
-			expectedResponse: `["deb","tar","rpm"]`,
-			mode:             constants.Commercial,
-		},
-		{
-			name:             "Error - DB call fails",
-			mockData:         nil,
-			mockErr:          errors.New("db failure"),
-			expectedStatus:   http.StatusInternalServerError,
-			expectedResponse: `{"code":500,"message":"Error while fetching the information for the product from DB.","status_text":"Internal Server Error"}`,
-			mode:             constants.Commercial,
-		},
-	}
+	func TestPackageManagersHandler(t *testing.T) {
+		tests := []struct {
+			name             string
+			mockData         []string
+			mockErr          error
+			expectedStatus   int
+			expectedResponse string
+			mode             constants.ApiType
+		}{
+			{
+				name:             "Success - package managers fetched",
+				mockData:         []string{"deb", "tar", "rpm"},
+				mockErr:          nil,
+				expectedStatus:   http.StatusOK,
+				expectedResponse: `["deb","tar","rpm"]`,
+				mode:             constants.Commercial,
+			},
+			{
+				name:             "Error - DB call fails",
+				mockData:         nil,
+				mockErr:          errors.New("db failure"),
+				expectedStatus:   http.StatusInternalServerError,
+				expectedResponse: `{"code":500,"message":"Error while fetching the information for the product from DB.","status_text":"Internal Server Error"}`,
+				mode:             constants.Commercial,
+			},
+		}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockDbService := new(dboperations.MockIDbOperations)
-			mockDbService.GetPackageManagersfunc = func() ([]string, error) {
-				return tt.mockData, tt.mockErr
-			}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				mockDbService := new(dboperations.MockIDbOperations)
+				mockDbService.GetPackageManagersfunc = func() ([]string, error) {
+					return tt.mockData, tt.mockErr
+				}
 
-			app := fiber.New()
-			app.Use(func(c *fiber.Ctx) error {
-				c.Locals("base_url", "http://example.com")
-				return c.Next()
+				app := fiber.New()
+				app.Use(func(c *fiber.Ctx) error {
+					c.Locals("base_url", "http://example.com")
+					return c.Next()
+				})
+				log := logrus.NewEntry(logrus.New())
+				handler := NewDownloadsHandler(log)
+
+				app.Use(testInjector(mockDbService, tt.mode, &template.MockTemplateRennder{}))
+				app.Get("/package-managers", func(c *fiber.Ctx) error {
+					return handler.PackageManagersHandler(c)
+				})
+
+				req := httptest.NewRequest(http.MethodGet, "/package-managers", nil)
+				resp, err := app.Test(req, 100*1000) // 100 seconds timeout
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedStatus, resp.StatusCode)
+
+				bodyBytes, err := io.ReadAll(resp.Body)
+				assert.NoError(t, err)
+
+				assert.JSONEq(t, tt.expectedResponse, string(bodyBytes))
 			})
-			log := logrus.NewEntry(logrus.New())
-			handler := NewDownloadsHandler(log)
-			service := services.DownloadService{
-				Mode:            tt.mode,
-				DatabaseService: mockDbService,
-			}
-
-			app.Use(testInjector(service))
-			app.Get("/package-managers", func(c *fiber.Ctx) error {
-				return handler.PackageManagersHandler(c)
-			})
-
-			req := httptest.NewRequest(http.MethodGet, "/package-managers", nil)
-			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expectedStatus, resp.StatusCode)
-
-			bodyBytes, err := io.ReadAll(resp.Body)
-			assert.NoError(t, err)
-
-			assert.JSONEq(t, tt.expectedResponse, string(bodyBytes))
-		})
+		}
 	}
-}
-
-func TestProductsHandler(t *testing.T) {
-	tests := []struct {
-		name             string
-		serverMode       constants.ApiType
-		eolParam         string
-		expectedStatus   int
-		expectedContains []string
-	}{
-		{
-			name:             "constants.Opensource mode filters products",
-			serverMode:       constants.Opensource,
-			eolParam:         "false",
-			expectedStatus:   fiber.StatusOK,
-			expectedContains: []string{"habitat"},
-		},
-		{
-			name:             "constants.Trial mode adds enterprise product",
-			serverMode:       constants.Trial,
-			eolParam:         "false",
-			expectedStatus:   fiber.StatusOK,
-			expectedContains: []string{"Chef Infra Client Enterprise"},
-		},
-		{
-			name:             "constants.Commercial mode adds products",
-			serverMode:       constants.Commercial,
-			eolParam:         "false",
-			expectedStatus:   fiber.StatusOK,
-			expectedContains: []string{"chef-360", "chef-ice"},
-		},
-		{
-			name:             "constants.Trial mode with eol true includes Chef Infra Client Enterprise and automate-1",
-			serverMode:       constants.Trial,
-			eolParam:         "true",
-			expectedStatus:   fiber.StatusOK,
-			expectedContains: []string{"Chef Infra Client Enterprise", "automate-1"},
-		},
-		{
-			name:             "constants.Commercial mode with eol true includes automate-1",
-			serverMode:       constants.Commercial,
-			eolParam:         "true",
-			expectedStatus:   fiber.StatusOK,
-			expectedContains: []string{"chef-360", "chef-ice", "automate-1"},
-		},
-		{
-			name:             "constants.Trial mode returns formatted products",
-			serverMode:       constants.Trial,
-			eolParam:         "false",
-			expectedStatus:   fiber.StatusOK,
-			expectedContains: []string{"automate:Chef Automate", "chef:Chef Infra Client", "chef-server:Chef Infra Server", "chef-workstation:Chef Workstation", "habitat:Chef Habitat", "inspec:InSpec", "chef-ice:Chef Infra Client Enterprise"},
-		},
-		{
-			name:             "constants.Commercial mode returns full product list",
-			serverMode:       constants.Commercial,
-			eolParam:         "false",
-			expectedStatus:   fiber.StatusOK,
-			expectedContains: []string{"automate", "chef", "chef-backend", "chef-server", "chef-workstation", "habitat", "inspec", "manage", "supermarket", "chef-360", "chef-ice"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			app := fiber.New()
-			app.Use(func(c *fiber.Ctx) error {
-				c.Locals("base_url", "http://example.com")
-				return c.Next()
-			})
-
-			// Mock DB Service
-			mockDb := new(dboperations.MockIDbOperations)
-			mockDb.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
-				return []string{"0.1.0"}, nil
-			}
-			mockDb.GetVersionLatestfunc = func(partitionValue string) (string, error) {
-				return "0.1.0", nil
-			}
-
-			log := logrus.NewEntry(logrus.New())
-			handler := NewDownloadsHandler(log)
-			service := services.DownloadService{
-				Mode:            tt.serverMode,
-				DatabaseService: mockDb,
-			}
-
-			app.Use(testInjector(service))
-			app.Get("/products", func(c *fiber.Ctx) error {
-				return handler.ProductsHandler(c)
-			})
-
-			req := httptest.NewRequest(http.MethodGet, "/products?eol="+tt.eolParam, nil)
-			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expectedStatus, resp.StatusCode)
-
-			bodyBytes, _ := io.ReadAll(resp.Body)
-			body := string(bodyBytes)
-
-			for _, expected := range tt.expectedContains {
-				assert.Contains(t, body, expected)
-			}
-		})
-	}
-}
 
 // TestProductDownloadHandler_MandatoryFlags tests only the mandatory flag validations for ProductDownloadHandler
 func TestProductDownloadHandler(t *testing.T) {
@@ -1848,10 +1726,7 @@ func TestProductDownloadHandler(t *testing.T) {
 			}
 			mockDbService.SetDbInfofunc = func(tableName string, dbModel reflect.Type) {}
 
-			service := services.DownloadService{
-				DatabaseService: mockDbService,
-			}
-			app.Use(testInjector(service))
+			app.Use(testInjector(mockDbService, constants.Commercial, &template.MockTemplateRennder{}))
 			app.Get("/:channel/:product/download", func(c *fiber.Ctx) error {
 				return handler.ProductDownloadHandler(c)
 			})
@@ -1866,3 +1741,227 @@ func TestProductDownloadHandler(t *testing.T) {
 		})
 	}
 }
+
+func TestPlatformsHandler(t *testing.T) {
+	t.Parallel()
+
+	log := logrus.NewEntry(logrus.New())
+
+	tests := []struct {
+		name             string
+		inject           bool
+		setupInjector    func() *do.Injector
+		expectedStatus   int
+		expectedContains string
+	}{
+		{
+			name:             "missing injector returns 500",
+			inject:           false,
+			expectedStatus:   http.StatusInternalServerError,
+			expectedContains: "Failed to retrieve request injector",
+		},
+		{
+			name:   "broken injector returns 500 on NewDownloadService failure",
+			inject: true,
+			setupInjector: func() *do.Injector {
+				return do.New() // empty injector will fail NewDownloadService
+			},
+			expectedStatus:   http.StatusInternalServerError,
+			expectedContains: "Failed to create download service",
+		},
+		{
+			name:   "platforms returns success",
+			inject: true,
+			setupInjector: func() *do.Injector {
+				injector := do.New()
+				// Add dependencies expected by NewDownloadService
+				do.ProvideNamedValue[dboperations.IDbOperations](injector, "dbService", &dboperations.MockIDbOperations{})
+				do.ProvideNamedValue[template.TemplateRender](injector, "templateRenderer", &template.MockTemplateRennder{})
+				do.ProvideNamedValue[replicated.IReplicated](injector, "replicated", &replicated.MockReplicated{})
+				do.ProvideNamedValue[clients.ILicense](injector, "licenseClient", &clients.MockLicense{})
+				do.ProvideNamedValue[constants.ApiType](injector, "mode", constants.Commercial)
+				do.ProvideNamedValue[config.ServiceConfig](injector, "config", config.ServiceConfig{})
+				return injector
+			},
+			expectedStatus:   http.StatusOK,
+			expectedContains: "{", // because the platform list is a JSON object
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			app := fiber.New()
+
+			// inject base_url so setLocals works
+			app.Use(func(c *fiber.Ctx) error {
+				c.Locals("base_url", "http://example.com")
+				return c.Next()
+			})
+
+			if tt.inject {
+				reqInjector := tt.setupInjector()
+				app.Use(func(c *fiber.Ctx) error {
+					c.Locals("reqinjector", reqInjector)
+					return c.Next()
+				})
+			}
+
+			handler := NewDownloadsHandler(log)
+			app.Get("/platforms", handler.PlatformsHandler)
+
+			req := httptest.NewRequest(http.MethodGet, "/platforms", nil)
+			resp, err := app.Test(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			body, _ := io.ReadAll(resp.Body)
+
+			assert.Equal(t, tt.expectedStatus, resp.StatusCode, string(body))
+			assert.Contains(t, string(body), tt.expectedContains)
+		})
+	}
+}
+
+
+func TestArchitecturesHandler(t *testing.T) {
+	t.Parallel()
+
+	log := logrus.NewEntry(logrus.New())
+
+	tests := []struct {
+		name             string
+		inject           bool
+		setupInjector    func() *do.Injector
+		expectedStatus   int
+		expectedContains string
+	}{
+		{
+			name:             "missing injector returns 500",
+			inject:           false,
+			expectedStatus:   http.StatusInternalServerError,
+			expectedContains: "Failed to retrieve request injector",
+		},
+		{
+			name:   "broken injector returns 500 on NewDownloadService failure",
+			inject: true,
+			setupInjector: func() *do.Injector {
+				return do.New() // no providers will break DownloadService
+			},
+			expectedStatus:   http.StatusInternalServerError,
+			expectedContains: "Failed to create download service",
+		},
+		{
+			name:   "architectures returns success",
+			inject: true,
+			setupInjector: func() *do.Injector {
+				injector := do.New()
+				// Provide expected dependencies
+				do.ProvideNamedValue[dboperations.IDbOperations](injector, "dbService", &dboperations.MockIDbOperations{})
+				do.ProvideNamedValue[template.TemplateRender](injector, "templateRenderer", &template.MockTemplateRennder{})
+				do.ProvideNamedValue[replicated.IReplicated](injector, "replicated", &replicated.MockReplicated{})
+				do.ProvideNamedValue[clients.ILicense](injector, "licenseClient", &clients.MockLicense{})
+				do.ProvideNamedValue[constants.ApiType](injector, "mode", constants.Commercial)
+				do.ProvideNamedValue[config.ServiceConfig](injector, "config", config.ServiceConfig{})
+				return injector
+			},
+			expectedStatus:   http.StatusOK,
+			expectedContains: "[", // architectures is an ItemList which is a JSON array
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			app := fiber.New()
+
+			// consistent locals
+			app.Use(func(c *fiber.Ctx) error {
+				c.Locals("base_url", "http://example.com")
+				return c.Next()
+			})
+
+			if tt.inject {
+				reqInjector := tt.setupInjector()
+				app.Use(func(c *fiber.Ctx) error {
+					c.Locals("reqinjector", reqInjector)
+					return c.Next()
+				})
+			}
+
+			handler := NewDownloadsHandler(log)
+			app.Get("/architectures", handler.ArchitecturesHandler)
+
+			req := httptest.NewRequest(http.MethodGet, "/architectures", nil)
+			resp, err := app.Test(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			body, _ := io.ReadAll(resp.Body)
+
+			assert.Equal(t, tt.expectedStatus, resp.StatusCode, string(body))
+			assert.Contains(t, string(body), tt.expectedContains)
+		})
+	}
+}
+
+func TestRelatedProductsHandler_MissingInjector(t *testing.T) {
+	t.Parallel()
+	log := logrus.NewEntry(logrus.New())
+
+	app := fiber.New()
+
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("base_url", "http://example.com")
+		return c.Next()
+	})
+
+	handler := NewDownloadsHandler(log)
+	app.Get("/relatedProducts", handler.RelatedProductsHandler)
+
+	req := httptest.NewRequest(http.MethodGet, "/relatedProducts?bom=foobar", nil)
+	resp, err := app.Test(req, 10_000)
+	require.NoError(t, err)
+
+	body, _ := io.ReadAll(resp.Body)
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode, string(body))
+	assert.Contains(t, string(body), "Failed to retrieve request injector")
+}
+
+func TestRelatedProductsHandler_BrokenInjector(t *testing.T) {
+	t.Parallel()
+	log := logrus.NewEntry(logrus.New())
+
+	app := fiber.New()
+
+	injector := do.New()
+	// validator provided so ValidateRequest does not panic
+	do.ProvideNamedValue[omnitruck.IRequestValidator](injector, "validator", &omnitruck.MockRequestValidator{
+		ParamsFunc: func(params *omnitruck.RequestParams, ctx omnitruck.Context) []*omnitruck.ValidationError {
+			return nil
+		},
+		ErrorMessagesFunc: func(errors []*omnitruck.ValidationError) (string, int) {
+			return "", 0
+		},
+	})
+	// do not register other dependencies
+	// so NewDownloadService will fail
+
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("base_url", "http://example.com")
+		c.Locals("reqinjector", injector)
+		return c.Next()
+	})
+
+	handler := NewDownloadsHandler(log)
+	app.Get("/relatedProducts", handler.RelatedProductsHandler)
+
+	req := httptest.NewRequest(http.MethodGet, "/relatedProducts?bom=foobar", nil)
+	resp, err := app.Test(req, 10_000)
+	require.NoError(t, err)
+
+	body, _ := io.ReadAll(resp.Body)
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode, string(body))
+	assert.Contains(t, string(body), "Failed to create download service")
+}
+

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 
@@ -20,76 +21,78 @@ import (
 )
 
 type DownloadService struct {
-	Log               *log.Entry
-	Validator         omnitruck.RequestValidator
-	DatabaseService   dboperations.IDbOperations
+	log               *log.Entry
+	databaseService   dboperations.IDbOperations
+	templateRenderer  template.TemplateRender
+	replicated        replicated.IReplicated
+	licenseClient     clients.ILicense
+	licenseServiceUrl string
+	mode              constants.ApiType
+	locals            map[string]interface{}
+	config            config.ServiceConfig
+}
+
+type DownloadServiceDeps struct {
+	Db                dboperations.IDbOperations
 	TemplateRenderer  template.TemplateRender
 	Replicated        replicated.IReplicated
 	LicenseClient     clients.ILicense
 	LicenseServiceUrl string
 	Mode              constants.ApiType
-	locals            map[string]interface{}
 	Config            config.ServiceConfig
 }
 
-func NewDownloadService(c *fiber.Ctx, log *log.Entry) (*DownloadService, error) {
-	service := DownloadService{}
-	service.SetLocals(c)
-	service.Log = log
-	// Retrieve the injector from the Fiber context
-	reqInjectorI := c.Locals("reqinjector")
-	reqInjector, ok := reqInjectorI.(*do.Injector)
-	if !ok {
-		return nil, fiber.NewError(fiber.StatusInternalServerError, "Failed to retrieve request injector")
+func NewDownloadService(injector *do.Injector, log *log.Entry, locals map[string]interface{}) (*DownloadService, error) {
+	service := &DownloadService{
+		log:    log,
+		locals: locals,
 	}
 
-	validator := do.MustInvokeNamed[omnitruck.RequestValidator](reqInjector, "validator")
-	databaseService := do.MustInvokeNamed[dboperations.IDbOperations](reqInjector, "dbService")
-	templateRenderer := do.MustInvokeNamed[template.TemplateRender](reqInjector, "templateRenderer")
-	replicatedService := do.MustInvokeNamed[replicated.IReplicated](reqInjector, "replicated")
-	licenseClient := do.MustInvokeNamed[clients.ILicense](reqInjector, "licenseClient")
-	mode := do.MustInvokeNamed[constants.ApiType](reqInjector, "mode")
-	config := do.MustInvokeNamed[config.ServiceConfig](reqInjector, "config")
-	service.Validator = validator
-	service.DatabaseService = databaseService
-	service.TemplateRenderer = templateRenderer
-	service.Replicated = replicatedService
-	service.LicenseClient = licenseClient
-	service.Mode = mode
-	service.LicenseServiceUrl = config.LicenseServiceUrl
-	service.Config = config
-	return &service, nil
+	var err error
+
+	if service.databaseService, err = do.InvokeNamed[dboperations.IDbOperations](injector, "dbService"); err != nil {
+		return nil, fmt.Errorf("could not resolve dbService: %w", err)
+	}
+	if service.templateRenderer, err = do.InvokeNamed[template.TemplateRender](injector, "templateRenderer"); err != nil {
+		return nil, fmt.Errorf("could not resolve templateRenderer: %w", err)
+	}
+	if service.replicated, err = do.InvokeNamed[replicated.IReplicated](injector, "replicated"); err != nil {
+		return nil, fmt.Errorf("could not resolve replicated: %w", err)
+	}
+	if service.licenseClient, err = do.InvokeNamed[clients.ILicense](injector, "licenseClient"); err != nil {
+		return nil, fmt.Errorf("could not resolve licenseClient: %w", err)
+	}
+	if service.mode, err = do.InvokeNamed[constants.ApiType](injector, "mode"); err != nil {
+		return nil, fmt.Errorf("could not resolve mode: %w", err)
+	}
+	if cfg, err := do.InvokeNamed[config.ServiceConfig](injector, "config"); err != nil {
+		return nil, fmt.Errorf("could not resolve config: %w", err)
+	} else {
+		service.config = cfg
+		service.licenseServiceUrl = cfg.LicenseServiceUrl
+	}
+
+	return service, nil
 }
-func (svc *DownloadService) SetLocals(c *fiber.Ctx) {
-	locals := map[string]interface{}{}
-	if c.Locals("valid_license") != nil {
-		requestId := c.Locals("valid_license").(bool)
-		locals["valid_license"] = requestId
 
-	} else {
-		locals["valid_license"] = false
+func (svc *DownloadService) Dependencies() DownloadServiceDeps {
+	return DownloadServiceDeps{
+		Db:                svc.databaseService,
+		TemplateRenderer:  svc.templateRenderer,
+		Replicated:        svc.replicated,
+		LicenseClient:     svc.licenseClient,
+		LicenseServiceUrl: svc.licenseServiceUrl,
+		Mode:              svc.mode,
+		Config:            svc.config,
 	}
+}
 
-	if c.Locals("request_id") != nil {
-		requestId := c.Locals("request_id").(string)
-		locals["request_id"] = requestId
+func (svc *DownloadService) SetMode(mode constants.ApiType) {
+	svc.mode = mode
+}
 
-	} else {
-		locals["request_id"] = ""
-	}
-	if c.Locals("base_url") != nil {
-		baseUrl := c.Locals("base_url").(string)
-		locals["base_url"] = baseUrl
-	} else {
-		locals["base_url"] = c.BaseURL()
-	}
-	if c.Locals("license_id") != nil {
-		licenseId := c.Locals("license_id").(string)
-		locals["license_id"] = licenseId
-	} else {
-		locals["license_id"] = ""
-	}
-	svc.locals = locals
+func (d *DownloadService) SetLocals(locals map[string]interface{}) {
+	d.locals = locals
 }
 
 func (svc *DownloadService) Omnitruck() *omnitruck.Omnitruck {
@@ -104,9 +107,9 @@ func (svc *DownloadService) DynamoServices(db dboperations.IDbOperations) *omnit
 	return &service
 }
 
-func (svc *DownloadService) PlatformServices() *omnitruck.PlatformServices {
+func (svc *DownloadService) PlatformServices() omnitruck.IPlatformServices {
 	service := omnitruck.NewPlatformServices(svc.logCtx())
-	return &service
+	return service
 }
 
 func (svc *DownloadService) ReplicatedService(config config.ReplicatedConfig, log logger.Logger) replicated.IReplicated {
@@ -115,15 +118,15 @@ func (svc *DownloadService) ReplicatedService(config config.ReplicatedConfig, lo
 }
 
 func (svc *DownloadService) logCtx() *log.Entry {
-	return svc.Log.WithField("license_id", svc.locals["license_id"])
+	return svc.log.WithField("license_id", svc.locals["license_id"])
 }
 
 func (svc *DownloadService) Products(params *omnitruck.RequestParams) (data omnitruck.ItemList, request *clients.Request) {
 	request = svc.Omnitruck().Products(params, &data)
 
-	data = svc.DynamoServices(svc.DatabaseService).Products(data, params.Eol)
+	data = svc.DynamoServices(svc.databaseService).Products(data, params.Eol)
 
-	getServerStrategy := strategy.SelectModeStrategy(svc.Mode)
+	getServerStrategy := strategy.SelectModeStrategy(svc.mode)
 	eol := params.Eol == "true"
 	data = getServerStrategy.FilterProducts(data, eol)
 
@@ -151,7 +154,7 @@ func (svc *DownloadService) Products(params *omnitruck.RequestParams) (data omni
 func (svc *DownloadService) Platforms() (data omnitruck.PlatformList, request *clients.Request) {
 	request = svc.Omnitruck().Platforms().ParseData(&data)
 
-	data = svc.DynamoServices(svc.DatabaseService).Platforms(data)
+	data = svc.DynamoServices(svc.databaseService).Platforms(data)
 
 	return data, request
 }
@@ -269,7 +272,7 @@ func (svc *DownloadService) ProductMetadata(params *omnitruck.RequestParams) (da
 func (svc *DownloadService) RelatedProducts(params *omnitruck.RequestParams) (data map[string]interface{}, request *clients.Request) {
 	svc.logCtx().Info("Validating related products API for " + params.BOM)
 
-	relatedProducts, err := svc.DynamoServices(svc.DatabaseService).GetRelatedProducts(params)
+	relatedProducts, err := svc.DynamoServices(svc.databaseService).GetRelatedProducts(params)
 
 	if err != nil {
 		code, msg := helpers.GetErrorCodeAndMsg(err)
@@ -295,7 +298,7 @@ func (svc *DownloadService) RelatedProducts(params *omnitruck.RequestParams) (da
 func (svc *DownloadService) GetFileName(params *omnitruck.RequestParams) (string, *clients.Request) {
 	// Two-Level Strategy: select both product and mode strategies
 	productStrategy := strategy.SelectProductStrategy(params.Product, params.Channel, svc.ProductStrategyDeps())
-	modeStrategy := strategy.SelectModeStrategy(svc.Mode)
+	modeStrategy := strategy.SelectModeStrategy(svc.mode)
 
 	// Get all versions using product strategy
 	versions, req := productStrategy.GetAllVersions(params)
@@ -310,14 +313,6 @@ func (svc *DownloadService) GetFileName(params *omnitruck.RequestParams) (string
 			Ok:      false,
 			Code:    fiber.StatusNotFound,
 			Message: "No versions found for this product/mode",
-		}
-	}
-
-	if len(filtered) == 0 {
-		return "", &clients.Request{
-			Ok:      false,
-			Code:    fiber.StatusNotFound,
-			Message: params.Product + " is not supported for opensource",
 		}
 	}
 
@@ -349,11 +344,11 @@ func (svc *DownloadService) GetFileName(params *omnitruck.RequestParams) (string
 }
 
 func (svc *DownloadService) GetLinuxScript(params *omnitruck.RequestParams) (string, *clients.Request) {
-	if svc.Mode == constants.Opensource {
+	if svc.mode == constants.Opensource {
 		params.LicenseId = ""
 	}
 	filePath := "templates/install.sh.tmpl"
-	resp, err := svc.TemplateRenderer.GetScript(svc.locals["base_url"].(string), params, filePath)
+	resp, err := svc.templateRenderer.GetScript(svc.locals["base_url"].(string), params, filePath)
 	if err != nil {
 		return "", &clients.Request{
 			Ok:      false,
@@ -369,11 +364,11 @@ func (svc *DownloadService) GetLinuxScript(params *omnitruck.RequestParams) (str
 }
 
 func (svc *DownloadService) GetWindowsScript(params *omnitruck.RequestParams) (string, *clients.Request) {
-	if svc.Mode == constants.Opensource {
+	if svc.mode == constants.Opensource {
 		params.LicenseId = ""
 	}
 	filePath := "templates/install.ps1.tmpl"
-	resp, err := svc.TemplateRenderer.GetScript(svc.locals["base_url"].(string), params, filePath)
+	resp, err := svc.templateRenderer.GetScript(svc.locals["base_url"].(string), params, filePath)
 	if err != nil {
 		return "", &clients.Request{
 			Ok:      false,
@@ -392,7 +387,7 @@ func (svc *DownloadService) ProductDownload(params *omnitruck.RequestParams, c *
 	svc.logCtx().Infof("Received product download request for %s", params.Product)
 	// Two-Level Strategy: select both product and mode strategies
 	productStrategy := strategy.SelectProductStrategy(params.Product, params.Channel, svc.ProductStrategyDeps())
-	modeStrategy := strategy.SelectModeStrategy(svc.Mode)
+	modeStrategy := strategy.SelectModeStrategy(svc.mode)
 
 	// Get all versions using product strategy
 	versions, req := productStrategy.GetAllVersions(params)
@@ -420,7 +415,7 @@ func (svc *DownloadService) ProductDownload(params *omnitruck.RequestParams, c *
 
 func (svc *DownloadService) GetPackageManagers() (data omnitruck.ItemList, request *clients.Request) {
 	svc.logCtx().Info("Fetching package managers")
-	packageManagers, err := svc.DynamoServices(svc.DatabaseService).GetPackageManagers()
+	packageManagers, err := svc.DynamoServices(svc.databaseService).GetPackageManagers()
 	if err != nil {
 		code, msg := helpers.GetErrorCodeAndMsg(err)
 		return nil, &clients.Request{
@@ -442,21 +437,21 @@ func isLatest(v string) bool {
 
 func (svc *DownloadService) ProductStrategyDeps() *strategy.ProductStrategyDeps {
 	return &strategy.ProductStrategyDeps{
-		DynamoService:     svc.DynamoServices(svc.DatabaseService),
+		DynamoService:     svc.DynamoServices(svc.databaseService),
 		PlatformService:   svc.PlatformServices(),
 		OmnitruckService:  svc.Omnitruck(),
 		Log:               svc.logCtx(),
-		Replicated:        svc.Replicated,
-		LicenseClient:     svc.LicenseClient,
-		LicenseServiceUrl: svc.LicenseServiceUrl,
-		Mode:              svc.Mode,
-		Config:            svc.Config,
+		Replicated:        svc.replicated,
+		LicenseClient:     svc.licenseClient,
+		LicenseServiceUrl: svc.licenseServiceUrl,
+		Mode:              svc.mode,
+		Config:            svc.config,
 	}
 }
 
 func (svc *DownloadService) getFilteredVersions(params *omnitruck.RequestParams) ([]omnitruck.ProductVersion, *clients.Request) {
 	productStrategy := strategy.SelectProductStrategy(params.Product, params.Channel, svc.ProductStrategyDeps())
-	modeStrategy := strategy.SelectModeStrategy(svc.Mode)
+	modeStrategy := strategy.SelectModeStrategy(svc.mode)
 	versions, req := productStrategy.GetAllVersions(params)
 	if !req.Ok || len(versions) == 0 {
 		return nil, req

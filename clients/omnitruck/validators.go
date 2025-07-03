@@ -33,6 +33,11 @@ type RequestValidator struct {
 	validators []ValidatorInterface
 }
 
+type IRequestValidator interface {
+	Params(params *RequestParams, c Context) []*ValidationError
+	ErrorMessages(errors []*ValidationError) (string, int)
+}
+
 func NewValidator() RequestValidator {
 	rv := RequestValidator{
 		validators: []ValidatorInterface{},

@@ -1,11 +1,13 @@
 package helpers
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
 	"github.com/chef/omnitruck-service/clients/omnitruck"
 	_ "github.com/chef/omnitruck-service/docs"
+	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -256,6 +258,122 @@ func TestVerifyRequestType(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := VerifyRequestType(tt.args.params)
 			assert.Equal(t, got, tt.want)
+		})
+	}
+}
+
+func TestValidateOrSetVersion(t *testing.T) {
+	tests := []struct {
+		name        string
+		params      *omnitruck.RequestParams
+		filtered    []omnitruck.ProductVersion
+		expectError bool
+		expectVer   string
+	}{
+		{
+			name: "valid version exists",
+			params: &omnitruck.RequestParams{
+				Version: "2.0.0",
+			},
+			filtered:    []omnitruck.ProductVersion{"1.0.0", "2.0.0"},
+			expectError: false,
+			expectVer:   "2.0.0",
+		},
+		{
+			name: "invalid version returns error",
+			params: &omnitruck.RequestParams{
+				Version: "3.0.0",
+			},
+			filtered:    []omnitruck.ProductVersion{"1.0.0", "2.0.0"},
+			expectError: true,
+		},
+		{
+			name: "empty version picks latest from filtered",
+			params: &omnitruck.RequestParams{
+				Version: "",
+			},
+			filtered:    []omnitruck.ProductVersion{"1.0.0", "2.0.0"},
+			expectError: false,
+			expectVer:   "2.0.0",
+		},
+		{
+			name: "version latest uses filtered",
+			params: &omnitruck.RequestParams{
+				Version: "latest",
+			},
+			filtered:    []omnitruck.ProductVersion{"4.0.0", "5.0.0"},
+			expectError: false,
+			expectVer:   "5.0.0",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateOrSetVersion(tt.params, tt.filtered)
+			if tt.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectVer, tt.params.Version)
+			}
+		})
+	}
+}
+
+func TestGetFileNameFromURL(t *testing.T) {
+	tests := []struct {
+		name     string
+		url      string
+		expected string
+	}{
+		{
+			name:     "simple file name",
+			url:      "https://myhost.com/path/to/file.txt",
+			expected: "file.txt",
+		},
+		{
+			name:     "no file in path",
+			url:      "https://myhost.com/path/to/",
+			expected: "",
+		},
+		{
+			name:     "plain domain",
+			url:      "https://myhost.com",
+			expected: "myhost.com",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := GetFileNameFromURL(tt.url)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestGetErrorCodeAndMsg(t *testing.T) {
+	tests := []struct {
+		name         string
+		err          error
+		expectedCode int
+		expectedMsg  string
+	}{
+		{
+			name:         "fiber error",
+			err:          fiber.NewError(fiber.StatusBadRequest, "bad request"),
+			expectedCode: fiber.StatusBadRequest,
+			expectedMsg:  "bad request",
+		},
+		{
+			name:         "generic error fallback",
+			err:          errors.New("some error"),
+			expectedCode: fiber.StatusInternalServerError,
+			expectedMsg:  "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			code, msg := GetErrorCodeAndMsg(tt.err)
+			assert.Equal(t, tt.expectedCode, code)
+			assert.Equal(t, tt.expectedMsg, msg)
 		})
 	}
 }
