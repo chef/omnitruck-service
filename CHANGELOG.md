@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.73 -->
-## [0.0.73](https://github.com/chef/omnitruck-service/tree/0.0.73) (2025-07-04)
+<!-- latest_release 0.0.74 -->
+## [0.0.74](https://github.com/chef/omnitruck-service/tree/0.0.74) (2025-07-04)
 
 #### Merged Pull Requests
-- Code improvements [#95](https://github.com/chef/omnitruck-service/pull/95) ([rishabhjhs](https://github.com/rishabhjhs))
+- Filename api changes [#99](https://github.com/chef/omnitruck-service/pull/99) ([vipin230](https://github.com/vipin230))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Filename api changes [#99](https://github.com/chef/omnitruck-service/pull/99) ([vipin230](https://github.com/vipin230)) <!-- 0.0.74 -->
 - Code improvements [#95](https://github.com/chef/omnitruck-service/pull/95) ([rishabhjhs](https://github.com/rishabhjhs)) <!-- 0.0.73 -->
 - CHEF-22581 : Omnitruck URL moved to config [#96](https://github.com/chef/omnitruck-service/pull/96) ([VarshiSB](https://github.com/VarshiSB)) <!-- 0.0.72 -->
 - Added fixes for the script [#84](https://github.com/chef/omnitruck-service/pull/84) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.71 -->
