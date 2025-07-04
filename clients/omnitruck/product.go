@@ -76,9 +76,14 @@ var supportedProducts = map[string]Product{
 		OpensourceVersion: NewConstraint("<= 14.15.6"),
 	},
 	"chef-ice": {
-		Name:              "chef-ice",
-		ProductName:       "Chef Infra Client Enterprise",
-		SupportedVersion:  NewConstraint(">= 0"),
+		Name:             "chef-ice",
+		ProductName:      "Chef Infra Client Enterprise",
+		SupportedVersion: NewConstraint(">= 0"),
+	},
+	"migration-tool": {
+		Name:             "migration-tool",
+		ProductName:      "Migration Tool",
+		SupportedVersion: NewConstraint(">= 0"),
 	},
 }
 
