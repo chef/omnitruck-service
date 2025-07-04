@@ -354,6 +354,7 @@ tmp_dir="$tmp/install.sh.$$"
 # $version: Requested version to be installed.
 # $channel: Channel to install the product from
 # $project: Project to be installed
+# $package-manager: Package manager used to install the product.
 # $cmdline_filename: Name of the package downloaded on local disk.
 # $cmdline_dl_dir: Name of the directory downloaded package will be saved to on local disk.
 # $install_strategy: Method of package installations. default strategy is to always install upon exec. Set to "once" to skip if project is installed
@@ -364,8 +365,9 @@ tmp_dir="$tmp/install.sh.$$"
 # Defaults
 channel="stable"
 project="chef"
+package_manager=""
 
-while getopts pnv:c:f:P:d:s:l:a opt
+while getopts pnv:c:f:P:d:s:l:a:i: opt
 do
   case "$opt" in
 
@@ -379,15 +381,15 @@ do
     s)  install_strategy="$OPTARG";;
     l)  download_url_override="$OPTARG";;
     a)  checksum="$OPTARG";;
+    i)  package_manager="$OPTARG";; 
     \?)   # unknown flag
       echo >&2 \
-      "usage: $0 [-P project] [-c release_channel] [-v version] [-f filename | -d download_dir] [-s install_strategy] [-l download_url_override] [-a checksum]"
+      "usage: $0 [-P project] [-c release_channel] [-v version] [-f filename | -d download_dir] [-s install_strategy] [-l download_url_override] [-a checksum] [-i package_manager]"
       exit 1;;
   esac
 done
 
 shift `expr $OPTIND - 1`
-
 
 if test -d "/opt/$project" && test "x$install_strategy" = "xonce"; then
   echo "$project installation detected"
@@ -405,6 +407,7 @@ fi
 # Outputs:
 # $platform: Name of the platform.
 # $platform_version: Version of the platform.
+# $package_manager: Package manager used to install the product.
 # $machine: System's architecture.
 ############
 
@@ -605,7 +608,55 @@ if test "x$platform" = "xsolaris2"; then
   export PATH
 fi
 
-echo "$platform $platform_version $machine"
+determine_package_type() {
+  case "$platform" in
+    "debian"|"ubuntu"|"linuxmint")
+      echo "deb"
+      ;;
+    "centos"|"redhat"|"fedora"|"rocky"|"amazon"|"el")
+      echo "rpm"
+      ;;
+    "sles"|"opensuseleap")
+      $platform="linux"
+      $platform_version="pm"
+      echo "rpm"
+      ;;
+    "aix")
+      echo "bff"
+      ;;
+    "solaris2")
+      echo "pkg"
+      ;;
+    "mac_os_x")
+      echo "dmg"
+      ;;
+    *)
+      echo "Unknown package type"
+      report_bug
+      exit 1
+      ;;
+  esac
+}
+
+# Ensure the package_manager field is correctly set based on the -i flag or dynamically determined.
+if [ "$project" = "chef-ice" ]; then 
+  if [ -z "$package_manager" ]; then
+    package_manager=$(determine_package_type)
+    platform="linux"
+    platform_version="pv"
+  else
+    package_manager="$package_manager"
+    platform="linux"
+    platform_version="pv"
+  fi
+else
+  package_manager="pm"
+fi
+
+if [ "$project" = "migration-tools" ]; then
+  echo "Error: Script generation is not supported for the product 'migration-tools'."
+  exit 1
+fi
 
 ############
 # end of platform_detection.sh
@@ -649,7 +700,6 @@ if test "x$no_proxy" != "x"; then
   export no_proxy
 fi
 
-
 # fetch_metadata.sh
 # ###########
 # This section calls omnitruck to get the information about the build to be
@@ -664,23 +714,23 @@ fi
 # $machine:
 # $tmp_dir:
 # $license_id
+# $package_manager:
 # Outputs:
 # $download_url:
 # $sha256:
 ###########
 
 if test "x$download_url_override" = "x"; then
-  echo "Getting information for $project $channel $version for $platform..."
+  echo "Getting information for $project $channel $version for $platform..." 
 
   metadata_filename="$tmp_dir/metadata.txt"
-  metadata_url="{{.BaseUrl}}/$channel/$project/metadata?v=$version&p=$platform&pv=$platform_version&m=$machine{{if .LicenseId}}&license_id={{.LicenseId}}{{end}}"
+  metadata_url="{{.BaseUrl}}/$channel/$project/metadata?v=$version&p=$platform&pv=$platform_version&m=$machine&pm=$package_manager{{if .LicenseId}}&license_id={{.LicenseId}}{{end}}"
 
   do_download "$metadata_url"  "$metadata_filename"
   meta_response=$(cat "$metadata_filename")
   modify_response $meta_response $metadata_filename
   cat "$metadata_filename"
 
-  echo ""
   # check that all the mandatory fields in the downloaded metadata are there
   if grep '^url' $metadata_filename > /dev/null && grep '^sha256' $metadata_filename > /dev/null; then
     echo "downloaded metadata file looks valid..."
@@ -720,7 +770,7 @@ fi
 # $download_filename: Name of the downloaded file on local disk.
 # $filetype: Type of the file downloaded.
 ############
-filenameurl="{{.BaseUrl}}/$channel/$project/fileName?v=$version&p=$platform&pv=$platform_version&m=$machine{{if .LicenseId}}&license_id={{.LicenseId}}{{end}}"
+filenameurl="{{.BaseUrl}}/$channel/$project/fileName?v=$version&p=$platform&pv=$platform_version&m=$machine&pm=$package_manager{{if .LicenseId}}&license_id={{.LicenseId}}{{end}}"
 filepath="$tmp_dir/filename.txt"
 do_download $filenameurl $filepath
 # filename=`echo $download_url | sed -e 's/?.*//' | sed -e 's/^.*\///'`
