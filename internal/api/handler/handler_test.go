@@ -539,7 +539,7 @@ func TestProductMetadataHandler(t *testing.T) {
 		{
 			name:             "package manager parameter missing",
 			serverMode:       constants.Trial,
-			requestPath:      "/stable/migration-tools/metadata?p=linux&m=amd64&eol=false&v=latest",
+			requestPath:      "/stable/migration-tool/metadata?p=linux&m=amd64&eol=false&v=latest",
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"Package Manager (pm) params cannot be empty", "status_text":"Bad Request"}`,
 			metadata:         models.MetaData{},
@@ -550,11 +550,11 @@ func TestProductMetadataHandler(t *testing.T) {
 			versions_err:     nil,
 		},
 		{
-			name:             "migration-tools success",
+			name:             "migration-tool success",
 			serverMode:       constants.Trial,
-			requestPath:      "/stable/migration-tools/metadata?p=linux&m=amd64&pm=deb&eol=false&v=latest",
+			requestPath:      "/stable/migration-tool/metadata?p=linux&m=amd64&pm=deb&eol=false&v=latest",
 			expectedStatus:   fiber.StatusOK,
-			expectedResponse: `{"sha1":"", "sha256":"abcd", "url":"http://example.com/stable/migration-tools/download?eol=false&m=amd64&p=linux&pm=deb&v=latest", "version":"latest"}`,
+			expectedResponse: `{"sha1":"", "sha256":"abcd", "url":"http://example.com/stable/migration-tool/download?eol=false&m=amd64&p=linux&pm=deb&v=latest", "version":"latest"}`,
 			metadata: models.MetaData{
 				Architecture:   "amd64",
 				Platform:       "linux",
@@ -570,9 +570,9 @@ func TestProductMetadataHandler(t *testing.T) {
 			versions_err: nil,
 		},
 		{
-			name:             "migration-tools failure for opensource server",
+			name:             "migration-tool failure for opensource server",
 			serverMode:       constants.Opensource,
-			requestPath:      "/stable/migration-tools/metadata?p=linux&m=amd64&pm=deb&eol=false&v=latest",
+			requestPath:      "/stable/migration-tool/metadata?p=linux&m=amd64&pm=deb&eol=false&v=latest",
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"No versions found for this product/mode", "status_text":"Bad Request"}`,
 			metadata:         models.MetaData{},
@@ -849,9 +849,9 @@ func TestProductPackagesHandler(t *testing.T) {
 			versions_err: nil,
 		},
 		{
-			name:           "migration-tools product success",
+			name:           "migration-tool product success",
 			serverMode:     constants.Commercial,
-			requestPath:    "/stable/migration-tools/packages?eol=false&license_id=tmns-e88dafdb-06e1-4676-908f-87503da14c4d-3413&v=19.0.1",
+			requestPath:    "/stable/migration-tool/packages?eol=false&license_id=tmns-e88dafdb-06e1-4676-908f-87503da14c4d-3413&v=19.0.1",
 			expectedStatus: fiber.StatusOK,
 			expectedResponse: `{
 				"linux": {
@@ -859,20 +859,20 @@ func TestProductPackagesHandler(t *testing.T) {
 						"deb": {
 							"sha1": "dcf75b37bb80128af4657501bfd41eac52820191",
 							"sha256": "2c501d02b16d67e9d5a28578b95f8d3155bed940ee4946229213f41a2e8b798e",
-							"url": "http://example.com/stable/migration-tools/download?eol=false&license_id=tmns-e88dafdb-06e1-4676-908f-87503da14c4d-3413&m=x86_64&p=linux&pm=deb&v=19.0.1",
+							"url": "http://example.com/stable/migration-tool/download?eol=false&license_id=tmns-e88dafdb-06e1-4676-908f-87503da14c4d-3413&m=x86_64&p=linux&pm=deb&v=19.0.1",
 							"version": "19.0.1"
 						}
 					}
 				}
 			}`,
 			details: &models.PackageDetails{
-				Product: "migration-tools",
+				Product: "migration-tool",
 				Version: "19.0.1",
 				Metadata: map[string]models.Platform{
 					"linux": {
 						"x86_64": {
 							"deb": models.PackageType{
-								Filename: "migration-tools_19.0.1_amd64.deb",
+								Filename: "migration-tool_19.0.1_amd64.deb",
 								SHA1:     "dcf75b37bb80128af4657501bfd41eac52820191",
 								SHA256:   "2c501d02b16d67e9d5a28578b95f8d3155bed940ee4946229213f41a2e8b798e",
 							},
@@ -1802,7 +1802,7 @@ func TestProductsHandler(t *testing.T) {
 			serverMode:       constants.Commercial,
 			eolParam:         "false",
 			expectedStatus:   fiber.StatusOK,
-			expectedContains: []string{"chef-360", "chef-ice", "migration-tools"},
+			expectedContains: []string{"chef-360", "chef-ice", "migration-tool"},
 		},
 		{
 			name:             "constants.Trial mode with eol true includes Chef Infra Client Enterprise and automate-1",
@@ -1816,21 +1816,21 @@ func TestProductsHandler(t *testing.T) {
 			serverMode:       constants.Commercial,
 			eolParam:         "true",
 			expectedStatus:   fiber.StatusOK,
-			expectedContains: []string{"chef-360", "chef-ice", "migration-tools", "automate-1"},
+			expectedContains: []string{"chef-360", "chef-ice", "migration-tool", "automate-1"},
 		},
 		{
 			name:             "constants.Trial mode returns formatted products",
 			serverMode:       constants.Trial,
 			eolParam:         "false",
 			expectedStatus:   fiber.StatusOK,
-			expectedContains: []string{"automate:Chef Automate", "chef:Chef Infra Client", "chef-server:Chef Infra Server", "chef-workstation:Chef Workstation", "habitat:Chef Habitat", "inspec:InSpec", "chef-ice:Chef Infra Client Enterprise", "migration-tools:Migration Tools"},
+			expectedContains: []string{"automate:Chef Automate", "chef:Chef Infra Client", "chef-server:Chef Infra Server", "chef-workstation:Chef Workstation", "habitat:Chef Habitat", "inspec:InSpec", "chef-ice:Chef Infra Client Enterprise", "migration-tool:Migration Tool"},
 		},
 		{
 			name:             "constants.Commercial mode returns full product list",
 			serverMode:       constants.Commercial,
 			eolParam:         "false",
 			expectedStatus:   fiber.StatusOK,
-			expectedContains: []string{"automate", "chef", "chef-backend", "chef-server", "chef-workstation", "habitat", "inspec", "manage", "supermarket", "chef-360", "chef-ice", "migration-tools"},
+			expectedContains: []string{"automate", "chef", "chef-backend", "chef-server", "chef-workstation", "habitat", "inspec", "manage", "supermarket", "chef-360", "chef-ice", "migration-tool"},
 		},
 	}
 
@@ -1911,7 +1911,7 @@ func TestProductDownloadHandler(t *testing.T) {
 		},
 		{
 			name:             "package manager parameter missing",
-			requestPath:      "/stable/migration-tools/download?p=linux&m=amd64&eol=false&v=latest",
+			requestPath:      "/stable/migration-tool/download?p=linux&m=amd64&eol=false&v=latest",
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"Package Manager (pm) params cannot be empty", "status_text":"Bad Request"}`,
 		},
