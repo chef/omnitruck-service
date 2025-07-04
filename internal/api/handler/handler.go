@@ -605,12 +605,12 @@ func setLocals(c *fiber.Ctx) map[string]interface{} {
 		locals["valid_license"] = false
 	}
 
-	if c.Locals("request_id") != nil {
-		requestId := c.Locals("request_id").(string)
-		locals["request_id"] = requestId
+	if c.Locals("requestid") != nil {
+		requestId := c.Locals("requestid").(string)
+		locals["requestid"] = requestId
 
 	} else {
-		locals["request_id"] = ""
+		locals["requestid"] = ""
 	}
 	if c.Locals("base_url") != nil {
 		baseUrl := c.Locals("base_url").(string)
