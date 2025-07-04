@@ -80,9 +80,9 @@ var supportedProducts = map[string]Product{
 		ProductName:      "Chef Infra Client Enterprise",
 		SupportedVersion: NewConstraint(">= 0"),
 	},
-	"migration-tools": {
-		Name:             "migration-tools",
-		ProductName:      "Migration Tools",
+	"migration-tool": {
+		Name:             "migration-tool",
+		ProductName:      "Migration Tool",
 		SupportedVersion: NewConstraint(">= 0"),
 	},
 }
