@@ -34,6 +34,7 @@ type ProductStrategyDeps struct {
 	LicenseServiceUrl string
 	Mode              constants.ApiType
 	Config            config.ServiceConfig
+	Locals            map[string]interface{}
 }
 
 // SelectProductStrategy returns the appropriate ProductStrategy based on the product.
@@ -50,6 +51,7 @@ func SelectProductStrategy(product string, channel string, deps *ProductStrategy
 			LicenseClient:     deps.LicenseClient,
 			LicenseServiceUrl: deps.LicenseServiceUrl,
 			Mode:              deps.Mode,
+			Locals:            deps.Locals,
 		}
 	case constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT:
 		if channel == constants.CURRENT_CHANNEL {

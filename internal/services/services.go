@@ -410,6 +410,7 @@ func (svc *DownloadService) ProductStrategyDeps() *strategy.ProductStrategyDeps 
 		LicenseServiceUrl: svc.licenseServiceUrl,
 		Mode:              svc.mode,
 		Config:            svc.config,
+		Locals:            svc.locals,
 	}
 }
 

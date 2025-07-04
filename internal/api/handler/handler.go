@@ -363,28 +363,23 @@ func (h *DownloadsHandler) ProductDownloadHandler(c *fiber.Ctx) error {
 			buf := make([]byte, 32*1024) // 32KB buffer
 			for {
 				n, err := downloadResp.Read(buf)
+				if n > 0 {
+					if _, writeErr := w.Write(buf[:n]); writeErr != nil {
+						h.Log.Errorf("Error while streaming : %s", writeErr.Error())
+						w.Flush()
+						break
+					}
+					if err := w.Flush(); err != nil {
+						h.Log.Errorf("Error while streaming : %s", err.Error())
+						break
+					}
+				}
 				if err == io.EOF {
 					break
 				}
 				if err != nil {
 					h.Log.Errorf("Error while streaming : %s", err.Error())
-					return
-				}
-				if n > 0 {
-					if _, writeErr := w.Write(buf[:n]); writeErr != nil {
-						h.Log.Errorf("Error while streaming : %s", writeErr.Error())
-						if err := w.Flush(); err != nil {
-							h.Log.Errorf("Error while streaming : %s", err.Error())
-							break
-						}
-						return
-
-					}
-					// Explicitly flush the response
-					if err := w.Flush(); err != nil {
-						h.Log.Errorf("Error while streaming : %s", err.Error())
-						break
-					}
+					break
 				}
 			}
 			defer downloadResp.Close()
@@ -611,12 +606,12 @@ func setLocals(c *fiber.Ctx) map[string]interface{} {
 		locals["valid_license"] = false
 	}
 
-	if c.Locals("request_id") != nil {
-		requestId := c.Locals("request_id").(string)
-		locals["request_id"] = requestId
+	if c.Locals("requestid") != nil {
+		requestId := c.Locals("requestid").(string)
+		locals["requestid"] = requestId
 
 	} else {
-		locals["request_id"] = ""
+		locals["requestid"] = ""
 	}
 	if c.Locals("base_url") != nil {
 		baseUrl := c.Locals("base_url").(string)
