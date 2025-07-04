@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.72 -->
-## [0.0.72](https://github.com/chef/omnitruck-service/tree/0.0.72) (2025-07-02)
+<!-- latest_release 0.0.73 -->
+## [0.0.73](https://github.com/chef/omnitruck-service/tree/0.0.73) (2025-07-04)
 
 #### Merged Pull Requests
-- CHEF-22581 : Omnitruck URL moved to config [#96](https://github.com/chef/omnitruck-service/pull/96) ([VarshiSB](https://github.com/VarshiSB))
+- Code improvements [#95](https://github.com/chef/omnitruck-service/pull/95) ([rishabhjhs](https://github.com/rishabhjhs))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Code improvements [#95](https://github.com/chef/omnitruck-service/pull/95) ([rishabhjhs](https://github.com/rishabhjhs)) <!-- 0.0.73 -->
 - CHEF-22581 : Omnitruck URL moved to config [#96](https://github.com/chef/omnitruck-service/pull/96) ([VarshiSB](https://github.com/VarshiSB)) <!-- 0.0.72 -->
 - Added fixes for the script [#84](https://github.com/chef/omnitruck-service/pull/84) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.71 -->
 - Update the existing downloads API to support Infra 19 product. [#90](https://github.com/chef/omnitruck-service/pull/90) ([shanmugapriya-tr](https://github.com/shanmugapriya-tr)) <!-- 0.0.70 -->
