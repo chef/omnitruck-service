@@ -211,7 +211,7 @@ function Get-ProjectMetadata {
         # Version of the application to install.
         [string]$version,
 
-        # Release channel t install from.
+        # Release channel to install from.
         [validateset('current', 'stable', 'unstable')]
         [string]$channel = 'stable',
 
@@ -349,6 +349,7 @@ function Get-ProjectFileName {
   $package_filename
 }
 
+
 function Install-Project {
     [cmdletbinding(SupportsShouldProcess=$true)]
     param (
@@ -463,9 +464,14 @@ function Install-Project {
   $download_directory = (resolve-path $download_directory).providerpath
   # Ensure -UseBasicParsing is used in Invoke-WebRequest to avoid dependency on Internet Explorer
   $request = Invoke-WebRequest -Uri $download_url -MaximumRedirection 0 -ErrorAction Ignore -UseBasicParsing
-  $sourceFileLocation = $request.Headers.Location
-  $sourceFileName = $sourceFileLocation.SubString($sourceFileLocation.LastIndexOf('/') + 1)
-
+  if (-not [string]::IsNullOrEmpty($request.Headers.Location)) {
+    $sourceFileLocation = $request.Headers.Location
+    $sourceFileName = $filename_resp.filename
+  } else {
+    # Fallback: Extract file name from the URL if Location header is missing
+    Write-Verbose "Location header is missing. Deriving file name from URL."
+    $sourceFileName = (([System.Uri]$download_url).AbsolutePath -split '/')[-1]
+  }
   if (-not [string]::IsNullOrEmpty($filename) -and $filename -ne "download") {
       $download_destination = join-path $download_directory $filename
   }
