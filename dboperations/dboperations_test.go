@@ -176,7 +176,7 @@ func TestGetVersionAllSuccess(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "SuccessFull",
+			name: "Successful",
 			args: args{
 				partitionValue: "autoamte",
 			},
@@ -187,7 +187,7 @@ func TestGetVersionAllSuccess(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "SuccessFull",
+			name: "Successful",
 			args: args{
 				partitionValue: "chef-ice",
 			},
@@ -198,7 +198,7 @@ func TestGetVersionAllSuccess(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "SuccessFull",
+			name: "Successful",
 			args: args{
 				partitionValue: "migration-tool",
 			},
