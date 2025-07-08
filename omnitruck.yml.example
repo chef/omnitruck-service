@@ -13,3 +13,4 @@ commercial:
 logging:
   # can be text or json
   format: json
+  
