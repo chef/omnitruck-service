@@ -212,7 +212,7 @@ function Get-ProjectMetadata {
         [string]$version,
 
         # Release channel to install from.
-        [validateset('current', 'stable', 'unstable')]
+        [validateset('current', 'stable')]
         [string]$channel = 'stable',
 
         # Legacy switches for the current channel.
@@ -287,7 +287,7 @@ function Get-ProjectFileName {
         [string]$version,
 
         # Release channel t install from.
-        [validateset('current', 'stable', 'unstable')]
+        [validateset('current', 'stable')]
         [string]$channel = 'stable',
 
         # Legacy switches for the current channel.
@@ -357,7 +357,7 @@ function Install-Project {
         [string]$project = 'chef',
 
         # Release channel to install from
-        [validateset('current', 'stable', 'unstable')]
+        [validateset('current', 'stable')]
         [string]$channel = 'stable',
 
         # Version of the application to install
