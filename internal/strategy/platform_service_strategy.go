@@ -22,7 +22,7 @@ type PlatformServiceStrategy struct {
 	LicenseServiceUrl string
 	Log               *log.Entry
 	Mode              constants.ApiType
-	locals            map[string]interface{}
+	Locals            map[string]interface{}
 }
 
 var JsonUnmarshal = func(data []byte, v any) error {
@@ -105,7 +105,7 @@ func (s *PlatformServiceStrategy) DownloadChefPlatform(params *omnitruck.Request
 	s.Log.Debug("Successfully fetched replicated customer email")
 
 	//2. Run a search customer on replicated with email
-	requestId := s.locals["requestId"].(string)
+	requestId := s.Locals["requestid"].(string)
 	customers, err := s.Replicated.SearchCustomersByEmail(replicatedEmailResp.ReplicatedEmail, requestId)
 
 	if err != nil {
