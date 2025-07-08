@@ -801,7 +801,7 @@ func TestProductPackages(t *testing.T) {
 			wantErr:     false,
 			package_err: nil,
 			version_err: nil,
-		},		
+		},
 		{
 			name: "failure unknown data type",
 			args: args{
@@ -994,18 +994,18 @@ func TestVersionAll(t *testing.T) {
 			versions_err: nil,
 		},
 		{
-			name: "Success for chef-ice product",
+			name:     "Success for chef-ice product",
 			versions: []string{"0.70.0", "0.71.0", "0.72.0", "0.73.0"},
 			args: args{
-				p: &RequestParams{	
+				p: &RequestParams{
 					Channel:   "stable",
 					Product:   "chef-ice",
 					Eol:       "",
 					LicenseId: "",
 				},
 			},
-			want:        []ProductVersion{ProductVersion("0.70.0"), ProductVersion("0.71.0"), ProductVersion("0.72.0"), ProductVersion("0.73.0")},
-			wantErr:     false,
+			want:         []ProductVersion{ProductVersion("0.70.0"), ProductVersion("0.71.0"), ProductVersion("0.72.0"), ProductVersion("0.73.0")},
+			wantErr:      false,
 			versions_err: nil,
 		},
 		{
@@ -1124,10 +1124,10 @@ func TestVersionLatest(t *testing.T) {
 			version_err: nil,
 		},
 		{
-			name: "Success for chef-ice product",
+			name:    "Success for chef-ice product",
 			version: "0.70.0",
 			args: args{
-				p: &RequestParams{	
+				p: &RequestParams{
 					Channel:   "stable",
 					Product:   "chef-ice",
 					Eol:       "",
@@ -1158,7 +1158,7 @@ func TestVersionLatest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDbService := new(dboperations.MockIDbOperations)
-			
+
 			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
 				return tt.version, tt.version_err
 			}
@@ -1463,6 +1463,62 @@ func TestGetFilename(t *testing.T) {
 			version:      "",
 			version_err:  nil,
 		},
+		{
+			name: "success chef-ice",
+			args: args{
+				params: &RequestParams{
+					Channel:         "stable",
+					Product:         "chef-ice",
+					Version:         "",
+					Platform:        "windows",
+					PlatformVersion: "pv",
+					Architecture:    "x86_64",
+					Eol:             "",
+					LicenseId:       "",
+					BOM:             "",
+					PackageManager:  "msi",
+				},
+			},
+			want:    "chef-19.0.1-windows-x86_64.msi",
+			wantErr: false,
+			errMsg:  "",
+			metadata: &models.MetaData{
+				Architecture:    "x86_64",
+				FileName:        "chef-19.0.1-windows-x86_64.msi",
+				Platform:        "windows",
+				PlatformVersion: "",
+				SHA1:            "abcd",
+				SHA256:          "",
+				PackageManager:  "msi",
+			},
+			metadata_err: nil,
+			version:      "latest",
+			version_err:  nil,
+		},
+		{
+			name: "failure validation package manager",
+			args: args{
+				params: &RequestParams{
+					Channel:         "stable",
+					Product:         "automate",
+					Version:         "",
+					Platform:        "linux",
+					PlatformVersion: "pv",
+					Architecture:    "m",
+					Eol:             "",
+					LicenseId:       "",
+					BOM:             "",
+					PackageManager:  "",
+				},
+			},
+			want:         "",
+			wantErr:      true,
+			errMsg:       "Package Manager (pm) params cannot be empty",
+			metadata:     &models.MetaData{},
+			metadata_err: nil,
+			version:      "",
+			version_err:  nil,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1479,11 +1535,11 @@ func TestGetFilename(t *testing.T) {
 			}
 			got, err := svc.GetFilename(tt.args.params)
 			if tt.wantErr {
-				assert.Equal(t, tt.errMsg, err.Error())
-				return
-			}
-			if got != tt.want {
-				t.Errorf("DynamoServices.GetFilename() = %v, want %v", got, tt.want)
+				assert.Error(t, err)
+				assert.EqualError(t, err, tt.errMsg)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, got)
 			}
 		})
 	}

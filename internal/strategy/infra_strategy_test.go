@@ -15,6 +15,8 @@ import (
 	s3aws "github.com/chef/omnitruck-service/clients/omnitruck/aws"
 	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/constants"
+	"github.com/chef/omnitruck-service/dboperations"
+	"github.com/chef/omnitruck-service/models"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -179,4 +181,140 @@ func TestDownloadFromS3_Success(t *testing.T) {
 	assert.Empty(t, msg)
 	assert.Equal(t, 0, code)
 	assert.NoError(t, err)
+}
+
+func TestInfraProductStrategy_GetFileName(t *testing.T) {
+	tests := []struct {
+		name                 string
+		params               *omnitruck.RequestParams
+		want                 string
+		mockGetMetaData      func(partitionValue, sortValue, platform, platformVersion, architecture, packageManager string) (*models.MetaData, error)
+		mockGetVersionLatest func(partitionValue string) (string, error)
+		wantErr              bool
+		errorMsg             string
+	}{
+		{
+			name: "chef-ice Success",
+			params: &omnitruck.RequestParams{
+				Channel:         constants.CURRENT_CHANNEL,
+				Product:         constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT,
+				Version:         "19.1.01",
+				Platform:        "linux",
+				PlatformVersion: "pv",
+				Architecture:    "x86_64",
+				PackageManager:  "deb",
+			},
+			want: "chef_19.1.01-1_amd64.deb",
+			mockGetMetaData: func(partitionValue, sortValue, platform, platformVersion, architecture, packageManager string) (*models.MetaData, error) {
+				return &models.MetaData{
+					FileName: "chef_19.1.01-1_amd64.deb",
+				}, nil
+			},
+			mockGetVersionLatest: func(partitionValue string) (string, error) {
+				return "19.1.01", nil
+			},
+			wantErr: false,
+		},
+		{
+			name: "automate Success",
+			params: &omnitruck.RequestParams{
+				Channel:         constants.STABLE_CHANNEL,
+				Product:         constants.AUTOMATE_PRODUCT,
+				Version:         "latest",
+				Platform:        "linux",
+				PlatformVersion: "pv",
+				Architecture:    "amd64",
+				PackageManager:  "pm",
+			},
+			want: "automate_cli.zip",
+			mockGetMetaData: func(partitionValue, sortValue, platform, platformVersion, architecture, packageManager string) (*models.MetaData, error) {
+				return &models.MetaData{
+					FileName: "automate_cli.zip",
+				}, nil
+			},
+			mockGetVersionLatest: func(partitionValue string) (string, error) {
+				return "latest", nil
+			},
+			wantErr: false,
+		},
+		{
+			name: "parameter validation failure",
+			params: &omnitruck.RequestParams{
+				Channel:         constants.CURRENT_CHANNEL,
+				Product:         constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT,
+				Version:         "19.1.01",
+				Platform:        "linux",
+				PlatformVersion: "pv",
+				Architecture:    "x86_64",
+			},
+			want: "",
+			mockGetMetaData: func(partitionValue, sortValue, platform, platformVersion, architecture, packageManager string) (*models.MetaData, error) {
+				return nil, nil
+			},
+			wantErr:  true,
+			errorMsg: "Package Manager (pm) params cannot be empty",
+		},
+		{
+			name: "data not found for given params",
+			params: &omnitruck.RequestParams{
+				Channel:         constants.CURRENT_CHANNEL,
+				Product:         constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT,
+				Version:         "latest",
+				Platform:        "linux",
+				PlatformVersion: "pv",
+				Architecture:    "x86_64",
+				PackageManager:  "msi",
+			},
+			want: "",
+			mockGetMetaData: func(partitionValue, sortValue, platform, platformVersion, architecture, packageManager string) (*models.MetaData, error) {
+				return &models.MetaData{}, nil
+			},
+			mockGetVersionLatest: func(partitionValue string) (string, error) {
+				return "19.1.01", nil
+			},
+			wantErr:  true,
+			errorMsg: "Product information not found. Please check the input parameters.",
+		},
+		{
+			name: "error in fetching latest version",
+			params: &omnitruck.RequestParams{
+				Channel:         constants.CURRENT_CHANNEL,
+				Product:         constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT,
+				Platform:        "linux",
+				PlatformVersion: "pv",
+				Architecture:    "x86_64",
+				PackageManager:  "deb",
+			},
+			want: "",
+			mockGetMetaData: func(partitionValue, sortValue, platform, platformVersion, architecture, packageManager string) (*models.MetaData, error) {
+				return &models.MetaData{}, nil
+			},
+			mockGetVersionLatest: func(partitionValue string) (string, error) {
+				return "", errors.New("db error")
+			},
+			wantErr:  true,
+			errorMsg: "Error while fetching the information for the product from DB.",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := dboperations.MockIDbOperations{}
+			db.GetMetaDatafunc = tt.mockGetMetaData
+			db.GetVersionLatestfunc = tt.mockGetVersionLatest
+			log := logrus.NewEntry(logrus.New())
+			dynamoService := omnitruck.NewDynamoServices(&db, log)
+			s := &InfraProductStrategy{
+				DynamoService: &dynamoService,
+				Log:           log,
+			}
+			got, err := s.GetFileName(tt.params)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.EqualError(t, err, tt.errorMsg)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
 }
