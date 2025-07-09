@@ -76,6 +76,7 @@ func testInjector(
 		return c.Next()
 	}
 }
+
 func TestProductsHandler(t *testing.T) {
 	t.Parallel()
 
