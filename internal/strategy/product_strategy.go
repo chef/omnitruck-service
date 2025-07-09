@@ -53,7 +53,7 @@ func SelectProductStrategy(product string, channel string, deps *ProductStrategy
 			Mode:              deps.Mode,
 			Locals:            deps.Locals,
 		}
-	case constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT, constants.MIGRATION_TOOL:
+	case constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT, constants.MIGRATE_ICE:
 		if channel == constants.CURRENT_CHANNEL {
 			deps.DynamoService.SetDbInfo(deps.Config.PackageDetailsCurrentTable, reflect.TypeOf(models.PackageDetails{}))
 		} else {

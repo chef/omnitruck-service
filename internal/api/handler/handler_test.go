@@ -79,6 +79,15 @@ func testInjector(
 func TestProductsHandler(t *testing.T) {
 	t.Parallel()
 
+	// Mock DB Service
+	mockDb := new(dboperations.MockIDbOperations)
+	mockDb.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
+		return []string{"0.1.0"}, nil
+	}
+	mockDb.GetVersionLatestfunc = func(partitionValue string) (string, error) {
+		return "0.1.0", nil
+	}
+
 	log := logrus.NewEntry(logrus.New())
 
 	tests := []struct {
@@ -86,13 +95,15 @@ func TestProductsHandler(t *testing.T) {
 		inject           bool
 		customMiddleware func(*fiber.Ctx) error
 		expectedStatus   int
-		expectedContains string
+		expectedContains []string
+		eolParam         string
 	}{
 		{
 			name:             "missing injector returns 500",
 			inject:           false,
 			expectedStatus:   http.StatusInternalServerError,
-			expectedContains: "Not able to process the request.",
+			eolParam:         "false",
+			expectedContains: []string{"{\"code\":500,\"status_text\":\"Internal Server Error\",\"message\":\"Not able to process the request.\"}"},
 		},
 		{
 			name:   "broken injector returns 500 on NewDownloadService failure",
@@ -102,19 +113,73 @@ func TestProductsHandler(t *testing.T) {
 				c.Locals("reqinjector", reqInjector)
 				return c.Next()
 			},
+			eolParam:         "false",
 			expectedStatus:   http.StatusInternalServerError,
-			expectedContains: "Failed to create download service",
+			expectedContains: []string{"Failed to create download service"},
 		},
 		{
-			name:   "products returns success",
-			inject: true,
-			customMiddleware: testInjector(
-				&dboperations.MockIDbOperations{},
-				constants.Commercial,
-				&template.MockTemplateRenderer{},
-			),
+			name:             "products returns success",
+			inject:           true,
+			customMiddleware: testInjector(mockDb, constants.Commercial, &template.MockTemplateRenderer{}),
+			eolParam:         "false",
 			expectedStatus:   http.StatusOK,
-			expectedContains: "chef",
+			expectedContains: []string{"chef"},
+		},
+		{
+			name:             "constants.Opensource mode filters products",
+			inject:           true,
+			customMiddleware: testInjector(mockDb, constants.Opensource, &template.MockTemplateRenderer{}),
+			eolParam:         "false",
+			expectedStatus:   fiber.StatusOK,
+			expectedContains: []string{"habitat"},
+		},
+		{
+			name:             "constants.Trial mode adds enterprise product",
+			inject:           true,
+			customMiddleware: testInjector(mockDb, constants.Trial, &template.MockTemplateRenderer{}),
+			eolParam:         "false",
+			expectedStatus:   fiber.StatusOK,
+			expectedContains: []string{"Chef Infra Client Enterprise"},
+		},
+		{
+			name:             "constants.Commercial mode adds products",
+			inject:           true,
+			customMiddleware: testInjector(mockDb, constants.Commercial, &template.MockTemplateRenderer{}),
+			eolParam:         "false",
+			expectedStatus:   fiber.StatusOK,
+			expectedContains: []string{"chef-360", "chef-ice", "migrate-ice"},
+		},
+		{
+			name:             "constants.Trial mode with eol true includes Chef Infra Client Enterprise and automate-1",
+			inject:           true,
+			customMiddleware: testInjector(mockDb, constants.Trial, &template.MockTemplateRenderer{}),
+			eolParam:         "true",
+			expectedStatus:   fiber.StatusOK,
+			expectedContains: []string{"Chef Infra Client Enterprise", "automate-1"},
+		},
+		{
+			name:             "constants.Commercial mode with eol true includes automate-1",
+			inject:           true,
+			customMiddleware: testInjector(mockDb, constants.Commercial, &template.MockTemplateRenderer{}),
+			eolParam:         "true",
+			expectedStatus:   fiber.StatusOK,
+			expectedContains: []string{"chef-360", "chef-ice", "migrate-ice", "automate-1"},
+		},
+		{
+			name:             "constants.Trial mode returns formatted products",
+			inject:           true,
+			customMiddleware: testInjector(mockDb, constants.Trial, &template.MockTemplateRenderer{}),
+			eolParam:         "false",
+			expectedStatus:   fiber.StatusOK,
+			expectedContains: []string{"automate:Chef Automate", "chef:Chef Infra Client (Legacy)", "chef-server:Chef Infra Server", "chef-workstation:Chef Workstation", "habitat:Chef Habitat", "inspec:InSpec", "chef-ice:Chef Infra Client Enterprise", "migrate-ice:Chef Infra Client Legacy Migration"},
+		},
+		{
+			name:             "constants.Commercial mode returns full product list",
+			inject:           true,
+			customMiddleware: testInjector(mockDb, constants.Commercial, &template.MockTemplateRenderer{}),
+			eolParam:         "false",
+			expectedStatus:   fiber.StatusOK,
+			expectedContains: []string{"automate", "chef", "chef-backend", "chef-server", "chef-workstation", "habitat", "inspec", "manage", "supermarket", "chef-360", "chef-ice", "migrate-ice"},
 		},
 	}
 
@@ -135,14 +200,17 @@ func TestProductsHandler(t *testing.T) {
 			handler := NewDownloadsHandler(log)
 			app.Get("/products", handler.ProductsHandler)
 
-			resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/products?eol=false", nil), 2000)
+			resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/products?eol="+tt.eolParam, nil), 100*1000) // 100 seconds timeout
 			require.NoError(t, err)
 			defer resp.Body.Close()
 
-			body, _ := io.ReadAll(resp.Body)
+			bodyBytes, _ := io.ReadAll(resp.Body)
+			body := string(bodyBytes)
 
 			assert.Equal(t, tt.expectedStatus, resp.StatusCode, string(body))
-			assert.Contains(t, string(body), tt.expectedContains)
+			for _, expected := range tt.expectedContains {
+				assert.Contains(t, body, expected)
+			}
 		})
 	}
 }
@@ -547,7 +615,7 @@ func TestProductMetadataHandler(t *testing.T) {
 		{
 			name:             "package manager parameter missing",
 			serverMode:       constants.Trial,
-			requestPath:      "/stable/migration-tool/metadata?p=linux&m=amd64&eol=false&v=latest",
+			requestPath:      "/stable/migrate-ice/metadata?p=linux&m=amd64&eol=false&v=latest",
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"Package Manager (pm) params cannot be empty", "status_text":"Bad Request"}`,
 			metadata:         models.MetaData{},
@@ -558,11 +626,11 @@ func TestProductMetadataHandler(t *testing.T) {
 			versions_err:     nil,
 		},
 		{
-			name:             "migration-tool success",
+			name:             "migrate-ice success",
 			serverMode:       constants.Trial,
-			requestPath:      "/stable/migration-tool/metadata?p=linux&m=amd64&pm=deb&eol=false&v=latest",
+			requestPath:      "/stable/migrate-ice/metadata?p=linux&m=amd64&pm=deb&eol=false&v=latest",
 			expectedStatus:   fiber.StatusOK,
-			expectedResponse: `{"sha1":"", "sha256":"abcd", "url":"http://example.com/stable/migration-tool/download?eol=false&m=amd64&p=linux&pm=deb&v=latest", "version":"latest"}`,
+			expectedResponse: `{"sha1":"", "sha256":"abcd", "url":"http://example.com/stable/migrate-ice/download?eol=false&m=amd64&p=linux&pm=deb&v=latest", "version":"latest"}`,
 			metadata: models.MetaData{
 				Architecture:   "amd64",
 				Platform:       "linux",
@@ -578,9 +646,9 @@ func TestProductMetadataHandler(t *testing.T) {
 			versions_err: nil,
 		},
 		{
-			name:             "migration-tool failure for opensource server",
+			name:             "migrate-ice failure for opensource server",
 			serverMode:       constants.Opensource,
-			requestPath:      "/stable/migration-tool/metadata?p=linux&m=amd64&pm=deb&eol=false&v=latest",
+			requestPath:      "/stable/migrate-ice/metadata?p=linux&m=amd64&pm=deb&eol=false&v=latest",
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"No versions found for this product/mode", "status_text":"Bad Request"}`,
 			metadata:         models.MetaData{},
@@ -857,9 +925,9 @@ func TestProductPackagesHandler(t *testing.T) {
 			versions_err: nil,
 		},
 		{
-			name:           "migration-tool product success",
+			name:           "migrate-ice product success",
 			serverMode:     constants.Commercial,
-			requestPath:    "/stable/migration-tool/packages?eol=false&license_id=tmns-e88dafdb-06e1-4676-908f-87503da14c4d-3413&v=19.0.1",
+			requestPath:    "/stable/migrate-ice/packages?eol=false&license_id=tmns-e88dafdb-06e1-4676-908f-87503da14c4d-3413&v=19.0.1",
 			expectedStatus: fiber.StatusOK,
 			expectedResponse: `{
 				"linux": {
@@ -867,14 +935,14 @@ func TestProductPackagesHandler(t *testing.T) {
 						"deb": {
 							"sha1": "dcf75b37bb80128af4657501bfd41eac52820191",
 							"sha256": "2c501d02b16d67e9d5a28578b95f8d3155bed940ee4946229213f41a2e8b798e",
-							"url": "http://example.com/stable/migration-tool/download?eol=false&license_id=tmns-e88dafdb-06e1-4676-908f-87503da14c4d-3413&m=x86_64&p=linux&pm=deb&v=19.0.1",
+							"url": "http://example.com/stable/migrate-ice/download?eol=false&license_id=tmns-e88dafdb-06e1-4676-908f-87503da14c4d-3413&m=x86_64&p=linux&pm=deb&v=19.0.1",
 							"version": "19.0.1"
 						}
 					}
 				}
 			}`,
 			details: &models.PackageDetails{
-				Product: "migration-tool",
+				Product: "migrate-ice",
 				Version: "19.0.1",
 				Metadata: map[string]models.Platform{
 					"linux": {
@@ -1820,7 +1888,7 @@ func TestProductDownloadHandler(t *testing.T) {
 		},
 		{
 			name:             "package manager parameter missing",
-			requestPath:      "/stable/migration-tool/download?p=linux&m=amd64&eol=false&v=latest",
+			requestPath:      "/stable/migrate-ice/download?p=linux&m=amd64&eol=false&v=latest",
 			expectedStatus:   fiber.StatusBadRequest,
 			expectedResponse: `{"code":400, "message":"Package Manager (pm) params cannot be empty", "status_text":"Bad Request"}`,
 		},

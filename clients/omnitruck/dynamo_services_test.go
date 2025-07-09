@@ -65,7 +65,7 @@ func TestProducts(t *testing.T) {
 				p:   []string{"new"},
 				eol: "false",
 			},
-			want: []string{"chef-ice", "habitat", "migration-tool", "new"},
+			want: []string{"chef-ice", "habitat", "migrate-ice", "new"},
 		},
 		{
 			name: "eol true",
@@ -77,7 +77,7 @@ func TestProducts(t *testing.T) {
 				p:   []string{"new"},
 				eol: "true",
 			},
-			want: []string{"automate-1", "chef-ice", "habitat", "migration-tool", "new"},
+			want: []string{"automate-1", "chef-ice", "habitat", "migrate-ice", "new"},
 		},
 	}
 	for _, tt := range tests {
