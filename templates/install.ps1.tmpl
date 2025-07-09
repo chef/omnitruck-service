@@ -1,6 +1,6 @@
 new-module -name Omnitruck -scriptblock {
   [Console]::OutputEncoding = New-Object -typename System.Text.ASCIIEncoding
-  [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12'
+  [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12,Tls13'
 
   function Get-PlatformVersion {
     [version]$osVersion = (Get-Win32OS).version
@@ -425,19 +425,16 @@ new-module -name Omnitruck -scriptblock {
     $verify_checksum = $true
 
     if (-not [string]::IsNullOrEmpty($download_url_override)) {
-      Write-Verbose "Inside If"
       $download_url = $download_url_override
       $sha256 = $checksum
     }
     else {
-      Write-Verbose "Inside Else"
       $package_metadata = Get-ProjectMetadata -project $project -channel $channel -version $version -prerelease:$prerelease -nightlies:$nightlies -architecture $architecture -package_manager $package_manager
       $download_url = $package_metadata.url
       $sha256 = $package_metadata.sha256
     }
 
     if (-not [string]::IsNullOrEmpty($filename)) {
-      Write-Verbose "Inside If 2"
       $download_directory = split-path $filename
       $filename = split-path $filename -leaf
       if ([string]::IsNullOrEmpty($download_directory)) {
@@ -446,12 +443,10 @@ new-module -name Omnitruck -scriptblock {
     }
     else {
       if ($project -eq 'chef-ice') {
-        Write-Verbose "Inside If 3"
         $filename_resp = Get-ProjectFileName -project $project -channel $channel -version $version -prerelease:$prerelease -nightlies:$nightlies -architecture $architecture -package_manager $package_manager
         $filename = $filename_resp.filename
       }
       else {
-        Write-Verbose "Inside Else 3"
         $filename_resp = Get-ProjectFileName -project $project -channel $channel -version $version -prerelease:$prerelease -nightlies:$nightlies -architecture $architecture -package_manager $package_manager
         $filename = $filename_resp.filename
         if (-not [string]::IsNullOrEmpty($filename)) {
