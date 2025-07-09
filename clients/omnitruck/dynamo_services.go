@@ -31,7 +31,7 @@ func (svc *DynamoServices) SetDbInfo(table string, dbModelType reflect.Type) {
 }
 
 func (svc *DynamoServices) Products(products []string, eol string) []string {
-	products = append(products, constants.HABITAT_PRODUCT, constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT, constants.MIGRATION_TOOL)
+	products = append(products, constants.HABITAT_PRODUCT, constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT, constants.MIGRATE_ICE)
 	if eol == "true" {
 		products = append(products, "automate-1")
 	}

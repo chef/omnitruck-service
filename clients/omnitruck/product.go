@@ -25,7 +25,7 @@ var supportedProducts = map[string]Product{
 	},
 	"chef": {
 		Name:              "chef",
-		ProductName:       "Chef Infra Client",
+		ProductName:       "Chef Infra Client (Legacy)",
 		SupportedVersion:  NewConstraint(">= 16.0.0"),
 		OpensourceVersion: NewConstraint("<= 14.15.6"),
 	},
@@ -80,9 +80,9 @@ var supportedProducts = map[string]Product{
 		ProductName:      "Chef Infra Client Enterprise",
 		SupportedVersion: NewConstraint(">= 0"),
 	},
-	"migration-tool": {
-		Name:             "migration-tool",
-		ProductName:      "Migration Tool",
+	"migrate-ice": {
+		Name:             "migrate-ice",
+		ProductName:      "Chef Infra Client Legacy Migration",
 		SupportedVersion: NewConstraint(">= 0"),
 	},
 }

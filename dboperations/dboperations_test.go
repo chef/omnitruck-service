@@ -66,17 +66,17 @@ func TestGetPackagesSuccess(t *testing.T) {
 		},
 		{
 			name:  "Success with PackageDetails",
-			args:  args{"migration-tool", "19.0.1"},
+			args:  args{"migrate-ice", "19.0.1"},
 			model: models.PackageDetails{},
 			mockItem: map[string]*dynamodb.AttributeValue{
-				"product": {S: aws.String("migration-tool")},
+				"product": {S: aws.String("migrate-ice")},
 				"version": {S: aws.String("19.0.1")},
 				"metadata": {
 					M: map[string]*dynamodb.AttributeValue{}, // simulate structure
 				},
 			},
 			want: &models.PackageDetails{
-				Product:  "migration-tool",
+				Product:  "migrate-ice",
 				Version:  "19.0.1",
 				Metadata: map[string]models.Platform{}, // fixed
 			},
@@ -200,7 +200,7 @@ func TestGetVersionAllSuccess(t *testing.T) {
 		{
 			name: "Successful",
 			args: args{
-				partitionValue: "migration-tool",
+				partitionValue: "migrate-ice",
 			},
 			want: []string{
 				version4054,
@@ -259,11 +259,11 @@ func TestGetVersionAllSuccess(t *testing.T) {
 							return &dynamodb.ScanOutput{
 								Items: []map[string]*dynamodb.AttributeValue{
 									{
-										"product": {S: aws.String("migration-tool")},
+										"product": {S: aws.String("migrate-ice")},
 										"version": {S: aws.String(version4054)},
 									},
 									{
-										"product": {S: aws.String("migration-tool")},
+										"product": {S: aws.String("migrate-ice")},
 										"version": {S: aws.String(version4091)},
 									},
 								},
@@ -420,9 +420,9 @@ func TestGetMetaDataSuccess(t *testing.T) {
 			dbModelType: reflect.TypeOf(models.PackageDetails{}),
 		},
 		{
-			name: "Success for migration-tool",
+			name: "Success for migrate-ice",
 			args: args{
-				partitionValue:  "migration-tool",
+				partitionValue:  "migrate-ice",
 				sortValue:       "19.0.1",
 				platform:        "linux",
 				platformVersion: "",
@@ -435,19 +435,19 @@ func TestGetMetaDataSuccess(t *testing.T) {
 				PlatformVersion: "",
 				SHA1:            "SHA1x86_64",
 				SHA256:          "SHA256x86_64",
-				FileName:        "migration-tool-19.0.1-1_amd64.deb",
+				FileName:        "migrate-ice-19.0.1-1_amd64.deb",
 				PackageManager:  "deb",
 			},
 			wantErr: false,
 			dynamodbResp: dynamodb.GetItemOutput{
 				Item: map[string]*dynamodb.AttributeValue{
-					"product": {S: aws.String("migration-tool")},
+					"product": {S: aws.String("migrate-ice")},
 					"version": {S: aws.String("19.0.1")},
 					"metadata": {M: map[string]*dynamodb.AttributeValue{
 						"linux": {M: map[string]*dynamodb.AttributeValue{
 							"x86_64": {M: map[string]*dynamodb.AttributeValue{
 								"deb": {M: map[string]*dynamodb.AttributeValue{
-									"filename":        {S: aws.String("migration-tool-19.0.1-1_amd64.deb")},
+									"filename":        {S: aws.String("migrate-ice-19.0.1-1_amd64.deb")},
 									"install-message": {S: aws.String("")},
 									"sha1":            {S: aws.String("SHA1x86_64")},
 									"sha256":          {S: aws.String("SHA256x86_64")},
@@ -574,7 +574,7 @@ func TestGetMetaDataFailure(t *testing.T) {
 						}
 						return &dynamodb.GetItemOutput{
 							Item: map[string]*dynamodb.AttributeValue{
-								"product": {S: aws.String("migration-tool")},
+								"product": {S: aws.String("migrate-ice")},
 								"version": {S: aws.String("19.0.1")},
 								"metadata": {M: map[string]*dynamodb.AttributeValue{
 									"linux": {M: map[string]*dynamodb.AttributeValue{
@@ -635,7 +635,7 @@ func TestGetVersionLatestSuccess(t *testing.T) {
 			name: "Success",
 			args: args{
 
-				partitionValue: "migration-tool",
+				partitionValue: "migrate-ice",
 			},
 			want:    "19.0.1",
 			wantErr: false,
@@ -698,7 +698,7 @@ func TestGetVersionLatestSuccess(t *testing.T) {
 						GetItemfunc: func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
 							return &dynamodb.GetItemOutput{
 								Item: map[string]*dynamodb.AttributeValue{
-									"product": {S: aws.String("migration-tool")},
+									"product": {S: aws.String("migrate-ice")},
 									"version": {S: aws.String("19.0.1")},
 								},
 							}, nil
@@ -707,7 +707,7 @@ func TestGetVersionLatestSuccess(t *testing.T) {
 							return &dynamodb.ScanOutput{
 								Items: []map[string]*dynamodb.AttributeValue{
 									{
-										"product": {S: aws.String("migration-tool")},
+										"product": {S: aws.String("migrate-ice")},
 										"version": {S: aws.String("19.0.1")},
 									},
 								},
