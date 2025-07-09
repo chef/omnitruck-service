@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.77 -->
-## [0.0.77](https://github.com/chef/omnitruck-service/tree/0.0.77) (2025-07-09)
+<!-- latest_release 0.0.78 -->
+## [0.0.78](https://github.com/chef/omnitruck-service/tree/0.0.78) (2025-07-09)
 
 #### Merged Pull Requests
-- Updated Linux Install script for infra 19 [#97](https://github.com/chef/omnitruck-service/pull/97) ([vviveksharma](https://github.com/vviveksharma))
+- Enhanced test coverage [#100](https://github.com/chef/omnitruck-service/pull/100) ([swathi-s3](https://github.com/swathi-s3))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Enhanced test coverage [#100](https://github.com/chef/omnitruck-service/pull/100) ([swathi-s3](https://github.com/swathi-s3)) <!-- 0.0.78 -->
 - Updated Linux Install script for infra 19 [#97](https://github.com/chef/omnitruck-service/pull/97) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.77 -->
 - CHEF-23154 : Updated product API for Migration tools [#98](https://github.com/chef/omnitruck-service/pull/98) ([VarshiSB](https://github.com/VarshiSB)) <!-- 0.0.76 -->
 - Refactored the Download API Flow [#101](https://github.com/chef/omnitruck-service/pull/101) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.75 -->
