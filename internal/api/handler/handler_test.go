@@ -83,10 +83,10 @@ func TestProductsHandler(t *testing.T) {
 	// Mock DB Service
 	mockDb := new(dboperations.MockIDbOperations)
 	mockDb.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
-		return []string{"0.1.0"}, nil
+		return []string{"0.1.1"}, nil
 	}
 	mockDb.GetVersionLatestfunc = func(partitionValue string) (string, error) {
-		return "0.1.0", nil
+		return "0.1.1", nil
 	}
 
 	log := logrus.NewEntry(logrus.New())
