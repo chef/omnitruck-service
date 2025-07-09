@@ -47,7 +47,7 @@ type ApiServer struct {
 	Validator        omnitruck.RequestValidator
 	Mode             constants.ApiType
 	DatabaseService  dboperations.IDbOperations
-	TemplateRenderer template.TemplateRender
+	TemplateRenderer template.TemplateRenderer
 	Replicated       replicated.IReplicated
 	LicenseClient    clients.ILicense
 	locals           map[string]interface{}
@@ -66,7 +66,7 @@ func (server *ApiServer) Initialize(c Config) *ApiServer {
 	server.Validator = omnitruck.NewValidator()
 	server.Mode = c.Mode
 	server.DatabaseService = dboperations.NewDbOperationsService(dbconnection.NewDbConnectionService(awsutils.NewAwsUtils(), c.ServiceConfig), c.ServiceConfig)
-	server.TemplateRenderer = template.NewTemplateRender()
+	server.TemplateRenderer = template.NewTemplateRenderer()
 
 	engine := html.New("./views", ".html")
 	server.Replicated = replicated.NewReplicatedImpl(c.ServiceConfig.ReplicatedConfig, logrus.NewLogrusStandardLogger())

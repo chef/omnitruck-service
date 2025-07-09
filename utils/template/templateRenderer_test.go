@@ -65,7 +65,7 @@ func TestGetScript(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fu := &template.TemplateRennderImpl{}
+			fu := &template.TemplateRendererImpl{}
 			got, err := fu.GetScript(tt.args.baseUrl, tt.args.params, tt.args.filePath)
 			if err != nil {
 				assert.Equal(t, err.Error(), tt.wantErr.Error())

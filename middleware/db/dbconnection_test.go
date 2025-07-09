@@ -1,6 +1,7 @@
 package dbconnection
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -10,7 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetDbConnection(t *testing.T) {
+func TestGetDbConnection_Success(t *testing.T) {
+	svc = nil
+
 	mockSession := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String("us-east-1"),
 	}))
@@ -21,7 +24,19 @@ func TestGetDbConnection(t *testing.T) {
 		},
 	}, config.ServiceConfig{})
 
-	svc := dbc.GetDbConnection()
+	conn := dbc.GetDbConnection()
+	assert.NotNil(t, conn)
+}
 
-	assert.NotNil(t, svc)
+func TestGetDbConnection_ErrorCase(t *testing.T) {
+	svc = nil
+
+	dbc := NewDbConnectionService(&awsutils.MockAwsUtils{
+		GetNewSessionfunc: func(config config.AWSConfig) (*session.Session, error) {
+			return nil, errors.New("simulated error")
+		},
+	}, config.ServiceConfig{})
+
+	conn := dbc.GetDbConnection()
+	assert.Nil(t, conn)
 }

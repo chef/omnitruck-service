@@ -16,7 +16,7 @@ import (
 
 // PlatformServiceStrategy implements ProductStrategy for PlatformService product
 type PlatformServiceStrategy struct {
-	PlatformService   *omnitruck.PlatformServices
+	PlatformService   omnitruck.IPlatformServices
 	Replicated        replicated.IReplicated
 	LicenseClient     clients.ILicense
 	LicenseServiceUrl string

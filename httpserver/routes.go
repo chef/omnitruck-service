@@ -16,6 +16,7 @@ import (
 	"github.com/gofiber/swagger"
 	"github.com/samber/do"
 )
+
 // @title        Licensed Omnitruck API
 // @version      1.0
 // @description  Licensed Omnitruck API
@@ -64,9 +65,9 @@ func Injector(server *ApiServer) func(*fiber.Ctx) error {
 	return func(c *fiber.Ctx) error {
 		reqInjector := do.New()
 		// Example: set dependencies from ApiServer. Replace or add your actual fields here.
-		do.ProvideNamedValue[omnitruck.RequestValidator](reqInjector, "validator", server.Validator)
+		do.ProvideNamedValue[omnitruck.IRequestValidator](reqInjector, "validator", &server.Validator)
 		do.ProvideNamedValue[dboperations.IDbOperations](reqInjector, "dbService", server.DatabaseService)
-		do.ProvideNamedValue[template.TemplateRender](reqInjector, "templateRenderer", server.TemplateRenderer)
+		do.ProvideNamedValue[template.TemplateRenderer](reqInjector, "templateRenderer", server.TemplateRenderer)
 		do.ProvideNamedValue[replicated.IReplicated](reqInjector, "replicated", server.Replicated)
 		do.ProvideNamedValue[clients.ILicense](reqInjector, "licenseClient", server.LicenseClient)
 		do.ProvideNamedValue[constants.ApiType](reqInjector, "mode", server.Mode)
