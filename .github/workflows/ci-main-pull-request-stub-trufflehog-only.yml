@@ -62,10 +62,10 @@ jobs:
  
       # perform SonarQube scan, with or wihout unit test coverage data
       # requires secrets SONAR_TOKEN and SONAR_HOST_URL (progress.sonar.com)
-      # perform-sonarqube-scan: false
-      perform-sonar-build: true
-      build-profile: 'default' 
-      report-unit-test-coverage: true
+      perform-sonarqube-scan: true
+      # perform-sonar-build: true
+      # build-profile: 'default' 
+      # report-unit-test-coverage: true
 
       # report to central developer dashboard
       report-to-atlassian-dashboard: false
