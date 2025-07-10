@@ -1,6 +1,6 @@
 new-module -name Omnitruck -scriptblock {
   [Console]::OutputEncoding = New-Object -typename System.Text.ASCIIEncoding
-  [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12,Tls13'
+  [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls12,Tls13'
 
   function Get-PlatformVersion {
     [version]$osVersion = (Get-Win32OS).version
@@ -328,6 +328,11 @@ new-module -name Omnitruck -scriptblock {
       $package_manager = 'pm'
     }
 
+    if ($project -eq 'migrate-ice') {
+      Write-Error "The project 'migrate-ice' is not supported by this script."
+      exit 1
+    }
+
     Write-Verbose "Architecture: $architecture"
     Write-Verbose "Project: $project"
 
@@ -471,9 +476,13 @@ new-module -name Omnitruck -scriptblock {
 
     $download_directory = (resolve-path $download_directory).providerpath
     # Ensure -UseBasicParsing is used in Invoke-WebRequest to avoid dependency on Internet Explorer
-    $request = Invoke-WebRequest -Uri $download_url -MaximumRedirection 0 -ErrorAction Ignore -UseBasicParsing
-    if (-not [string]::IsNullOrEmpty($request.Headers.Location)) {
-      $sourceFileLocation = $request.Headers.Location
+    $wc = New-Object System.Net.WebClient
+    $wc.Headers.Add("user-agent", "mixlib-install/3.12.30")
+    $request = $wc.DownloadString($download_url)
+    # Simulate the Location header if a redirect is detected (WebClient does not expose headers directly)
+    $responseUri = $wc.ResponseUri
+    if ($responseUri -ne $download_url) {
+      $sourceFileLocation = $responseUri
       $sourceFileName = $filename_resp.filename
     }
     else {
@@ -516,10 +525,17 @@ new-module -name Omnitruck -scriptblock {
 
     if (-not ($cached_installer_available)) {
       if ($pscmdlet.ShouldProcess("$($download_url)", "Download $project")) {
-        Write-Verbose "Downloading $project from $($download_url) to $download_destination."
+      Write-Verbose "Downloading $project from $($download_url) to $download_destination."
+      # Try BITS first for large files, fallback to WebClient
+      $usedBits = $false
+      try {
+        $usedBits = Use-BitsTransferIfAvailable $download_url $download_destination
+      } catch {}
+      if (-not $usedBits) {
         Get-WebContent $download_url -filepath $download_destination
       }
     }
+  }
 
 
     if ($pscmdlet.ShouldProcess("$download_destination", "Installing")) {
