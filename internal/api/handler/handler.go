@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
@@ -344,33 +345,31 @@ func (h *DownloadsHandler) ProductDownloadHandler(c *fiber.Ctx) error {
 	if err != nil {
 		return h.SendErrorResponse(c, code, msg)
 	}
+	userAgent := c.Get(fiber.HeaderUserAgent)
+	isPowerShell := false
+	if userAgent != "" && (containsIgnoreCase(userAgent, "powershell") || containsIgnoreCase(userAgent, "WebClient") || containsIgnoreCase(userAgent, "WindowsPowerShell")) {
+		isPowerShell = true
+	}
 	if downloadResp != nil {
-		// If the response is not nil, it means we are returning a file download
-
 		// Set response headers
 		for name, values := range header {
 			for _, value := range values {
 				c.Set(name, value)
 			}
 		}
-
-		// Set Headers
 		c.Set(fiber.HeaderContentType, constants.OCTET_STREAM)
 		c.Set(fiber.HeaderContentLength, header.Get(fiber.HeaderContentLength))
-		c.Set(fiber.HeaderTransferEncoding, constants.CHUNKED)
+		if !isPowerShell {
+			c.Set(fiber.HeaderTransferEncoding, constants.CHUNKED)
+		}
 
 		c.Status(200).Context().SetBodyStreamWriter(func(w *bufio.Writer) {
-			buf := make([]byte, 32*1024) // 32KB buffer
+			buf := make([]byte, 256*1024) // 256KB buffer
 			for {
 				n, err := downloadResp.Read(buf)
 				if n > 0 {
 					if _, writeErr := w.Write(buf[:n]); writeErr != nil {
 						h.Log.Errorf("Error while streaming : %s", writeErr.Error())
-						w.Flush()
-						break
-					}
-					if err := w.Flush(); err != nil {
-						h.Log.Errorf("Error while streaming : %s", err.Error())
 						break
 					}
 				}
@@ -382,16 +381,15 @@ func (h *DownloadsHandler) ProductDownloadHandler(c *fiber.Ctx) error {
 					break
 				}
 			}
+			w.Flush()
 			defer downloadResp.Close()
 		})
 		h.Log.Info("Successfully copied response. Returning response")
 		return nil
 	}
 	if url != "" {
-		// If the URL is not empty, we redirect to the download URL
 		return c.Redirect(url, 302)
 	}
-	// If both URL and downloadResp are nil, we return an error
 	return h.SendErrorResponse(c, http.StatusInternalServerError, "No download URL or response available")
 }
 
@@ -626,4 +624,9 @@ func setLocals(c *fiber.Ctx) map[string]interface{} {
 		locals["license_id"] = ""
 	}
 	return locals
+}
+
+// containsIgnoreCase returns true if substr is found in s, case-insensitive
+func containsIgnoreCase(s, substr string) bool {
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }
