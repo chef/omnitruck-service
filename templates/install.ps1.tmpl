@@ -252,6 +252,11 @@ new-module -name Omnitruck -scriptblock {
       $package_manager = 'pm'
     }
 
+    if ($project -eq 'migrate-ice') {
+      Write-Error "The project 'migrate-ice' is not supported by this script."
+      exit 1
+    }
+
     Write-Verbose "Architecture: $architecture"
     Write-Verbose "Project: $project"
 
