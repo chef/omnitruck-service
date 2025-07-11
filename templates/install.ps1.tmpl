@@ -253,8 +253,7 @@ new-module -name Omnitruck -scriptblock {
     }
 
     if ($project -eq 'migrate-ice') {
-      Write-Error "The project 'migrate-ice' is not supported by this script."
-      exit 1
+      throw "The project 'migrate-ice' is not supported by this script."
     }
 
     Write-Verbose "Architecture: $architecture"
@@ -334,8 +333,7 @@ new-module -name Omnitruck -scriptblock {
     }
 
     if ($project -eq 'migrate-ice') {
-      Write-Error "The project 'migrate-ice' is not supported by this script."
-      exit 1
+      throw "The project 'migrate-ice' is not supported by this script."
     }
 
     Write-Verbose "Architecture: $architecture"
@@ -417,6 +415,10 @@ new-module -name Omnitruck -scriptblock {
     }
     else {
       $package_manager = 'pm'
+    }
+
+    if ($project -eq 'migrate-ice') {
+      throw "The project 'migrate-ice' is not supported by this script."
     }
 
     if ((Test-Path "$env:systemdrive\opscode\$project\embedded") -and ($install_strategy -eq 'once')) {
