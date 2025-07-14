@@ -636,7 +636,7 @@ determine_package_type() {
   esac
 }
 
-if test "$package_manager" = "tar"; then
+if [ "$package_manager" = "tar" ]; then
   echo "Error: Script generation is not supported package_manager 'tar'."
   exit 1
 fi
