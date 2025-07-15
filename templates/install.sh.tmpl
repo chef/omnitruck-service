@@ -617,8 +617,6 @@ determine_package_type() {
       echo "rpm"
       ;;
     "sles"|"opensuseleap")
-      $platform="linux"
-      $platform_version="pm"
       echo "rpm"
       ;;
     "aix")
@@ -638,6 +636,11 @@ determine_package_type() {
   esac
 }
 
+if [ "$package_manager" = "tar" ]; then
+  echo "Error: Script generation is not supported package_manager 'tar'."
+  exit 1
+fi
+
 # Ensure the package_manager field is correctly set based on the -i flag or dynamically determined.
 if [ "$project" = "chef-ice" ]; then 
   if [ -z "$package_manager" ]; then
@@ -653,8 +656,8 @@ else
   package_manager="pm"
 fi
 
-if [ "$project" = "migration-tools" ]; then
-  echo "Error: Script generation is not supported for the product 'migration-tools'."
+if [ "$project" = "migrate-ice" ]; then
+  echo "Error: Script generation is not supported for the product 'migrate-ice'."
   exit 1
 fi
 
