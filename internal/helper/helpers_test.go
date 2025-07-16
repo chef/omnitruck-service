@@ -54,6 +54,23 @@ func Test_buildEndpointUrl(t *testing.T) {
 			},
 			want: "https://trial.chef.io/stable/chef-ice/download?eol=false&m=x86_64&p=linux&pm=rpm&v=19.7.17",
 		},
+		{
+			name: "habitat download URL",
+			args: args{
+				baseUrl:  "https://trial.chef.io",
+				endpoint: "download",
+				params: omnitruck.RequestParams{
+					Channel:        "stable",
+					Product:        "habitat",
+					Eol:            "false",
+					Version:        "19.7.17",
+					Architecture:   "x86_64",
+					Platform:       "ubuntu",
+					PackageManager: "pm",
+				},
+			},
+			want: "https://trial.chef.io/stable/habitat/download?eol=false&m=x86_64&p=ubuntu&v=19.7.17",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
