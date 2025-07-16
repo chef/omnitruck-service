@@ -139,6 +139,12 @@ func (svc *DownloadService) Architectures() (data omnitruck.ItemList, request *c
 	return data, request
 }
 
+func (svc *DownloadService) SampleAPI() (data omnitruck.ItemList, request *clients.Request) {
+	request = svc.Omnitruck().SampleAPI().ParseData(&data)
+
+	return data, request
+}
+
 func (svc *DownloadService) LatestVersion(params *omnitruck.RequestParams) (data omnitruck.ProductVersion, request *clients.Request) {
 	// Two-Level Strategy: select both product and mode strategies
 	// Get all versions using product strategy

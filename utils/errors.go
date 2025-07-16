@@ -7,6 +7,7 @@ const (
 	BadRequestError            = "Product information not found. Please check the input parameters."
 	ChannelParamsError         = "Channel can only be stable or current"
 	ArchitectureParamsError    = "Architecture (m) params cannot be empty"
+	SampleAPIParamsError       = " Sample API (s) params cannot be empty"
 	BOMParamsError             = "BOM (bom) params cannot be empty"
 	PlatformParamsError        = "Platfrom (p) params cannot be empty"
 	PlatformVersionParamsError = "Platform Version (pv) params cannot be empty"

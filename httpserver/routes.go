@@ -48,6 +48,7 @@ func (server *ApiServer) buildRouter() {
 	server.App.Get("/products", requestid.New(), handler.ProductsHandler)
 	server.App.Get("/platforms", requestid.New(), handler.PlatformsHandler)
 	server.App.Get("/architectures", requestid.New(), handler.ArchitecturesHandler)
+	server.App.Get("/sampleapi", requestid.New(), handler.SampleAPIHandler)
 	server.App.Get("/package-managers", requestid.New(), handler.PackageManagersHandler)
 	server.App.Get("/:channel/:product/versions/latest", requestid.New(), handler.LatestVersionHandler)
 	server.App.Get("/:channel/:product/versions/all", requestid.New(), handler.ProductVersionsHandler)

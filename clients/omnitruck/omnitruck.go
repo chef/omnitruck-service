@@ -47,6 +47,7 @@ type RequestParams struct {
 	PlatformVersion string
 	PackageManager  string
 	Architecture    string
+	SampleAPI       string
 	Eol             string
 	LicenseId       string
 	BOM             string
@@ -59,6 +60,7 @@ type RequestParamsFlags struct {
 	Platform        bool
 	PlatformVersion bool
 	Architecture    bool
+	SampleAPI       bool
 	Eol             bool
 	LicenseId       bool
 	BOM             bool
@@ -99,6 +101,9 @@ func (rp *RequestParams) UrlParams() url.Values {
 	}
 	if len(rp.Architecture) > 0 {
 		v.Add("m", rp.Architecture)
+	}
+	if len(rp.SampleAPI) > 0 {
+		v.Add("s", rp.SampleAPI)
 	}
 	if len(rp.PackageManager) > 0 {
 		v.Add("pm", rp.PackageManager)
@@ -193,6 +198,12 @@ func (ot *Omnitruck) Architectures() *clients.Request {
 	return ot.Get(url)
 }
 
+func (ot *Omnitruck) SampleAPI() *clients.Request {
+	url := fmt.Sprintf("%s/sampleapi", ot.omnitruckUrl)
+
+	return ot.Get(url)
+}
+
 func (ot *Omnitruck) LatestVersion(p *RequestParams) *clients.Request {
 	flags := RequestParamsFlags{
 		Channel: true,
@@ -241,19 +252,21 @@ func (ot *Omnitruck) ProductMetadata(p *RequestParams) *clients.Request {
 		Platform:        true,
 		PlatformVersion: true,
 		Architecture:    true,
+		SampleAPI:       true,
 	}
 
 	err := ValidateRequest(p, flags)
 	if !err.Ok {
 		return err
 	}
-	url := fmt.Sprintf("%s/%s/%s/metadata?v=%s&p=%s&pv=%s&m=%s", ot.omnitruckUrl,
+	url := fmt.Sprintf("%s/%s/%s/metadata?v=%s&p=%s&pv=%s&m=%s&s=%s", ot.omnitruckUrl,
 		p.Channel,
 		p.Product,
 		p.Version,
 		p.Platform,
 		p.PlatformVersion,
 		p.Architecture,
+		p.SampleAPI,
 	)
 
 	return ot.Get(url)
@@ -278,6 +291,12 @@ func ValidateRequest(p *RequestParams, flags RequestParamsFlags) *clients.Reques
 	if flags.Architecture {
 		if p.Architecture == "" {
 			request.Failure(fiber.StatusBadRequest, utils.ArchitectureParamsError)
+			return &request
+		}
+	}
+	if flags.SampleAPI {
+		if p.SampleAPI == "" {
+			request.Failure(fiber.StatusBadRequest, utils.SampleAPIParamsError)
 			return &request
 		}
 	}

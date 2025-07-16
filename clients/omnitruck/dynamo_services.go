@@ -54,6 +54,7 @@ func (svc *DynamoServices) ProductDownload(params *RequestParams) (string, error
 		Channel:      true,
 		Platform:     true,
 		Architecture: true,
+		SampleAPI:    true,
 	}
 
 	requestParams := ValidateRequest(params, flags)
@@ -101,6 +102,7 @@ func (svc *DynamoServices) ProductMetadata(params *RequestParams) (PackageMetada
 		Channel:        true,
 		Platform:       true,
 		Architecture:   true,
+		SampleAPI:      true,
 		PackageManager: true,
 	}
 
@@ -329,6 +331,7 @@ func (svc *DynamoServices) GetFilename(params *RequestParams) (string, error) {
 		Channel:        true,
 		Platform:       true,
 		Architecture:   true,
+		SampleAPI:      true,
 		PackageManager: true,
 	}
 

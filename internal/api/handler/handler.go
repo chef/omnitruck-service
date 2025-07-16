@@ -152,6 +152,26 @@ func (h *DownloadsHandler) ArchitecturesHandler(c *fiber.Ctx) error {
 	}
 }
 
+func (h *DownloadsHandler) SampleAPIHandler(c *fiber.Ctx) error {
+	reqInjectorI := c.Locals("reqinjector")
+	reqInjector, ok := reqInjectorI.(*do.Injector)
+	if !ok {
+		return h.SendErrorResponse(c, http.StatusInternalServerError, "Not able to process the request.")
+	}
+	locals := setLocals(c)
+	downloadService, err := services.NewDownloadService(reqInjector, h.Log, locals)
+	if err != nil {
+		return h.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create download service")
+	}
+	data, request := downloadService.SampleAPI()
+
+	if request.Ok {
+		return h.SendResponse(c, &data)
+	} else {
+		return h.SendError(c, request)
+	}
+}
+
 // @Summary Get latest version of a product in a channel
 // @description Get the latest version number for a particular channel and product combination.
 // @Accept      json
