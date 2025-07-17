@@ -7,16 +7,22 @@ import (
 	"strings"
 
 	"github.com/chef/omnitruck-service/clients/omnitruck"
+	"github.com/chef/omnitruck-service/constants"
 	"github.com/gofiber/fiber/v2"
 )
 
 const substring = ".metadata.json"
 
 func BuildEndpointUrl(baseUrl string, endpoint string, params *omnitruck.RequestParams) *url.URL {
+	clonedParams := *params
+	if clonedParams.PackageManager == constants.DUMMY_PACKAGE_MANAGER {
+		clonedParams.PackageManager = ""
+	}
 	u, _ := url.Parse(baseUrl)
-	path, _ := url.JoinPath(params.Channel, params.Product, endpoint)
+
+	path, _ := url.JoinPath(clonedParams.Channel, clonedParams.Product, endpoint)
 	u.Path = path
-	u.RawQuery = params.UrlParams().Encode()
+	u.RawQuery = clonedParams.UrlParams().Encode()
 
 	return u
 }

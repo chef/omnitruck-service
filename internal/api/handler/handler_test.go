@@ -437,7 +437,7 @@ func TestProductMetadataHandler(t *testing.T) {
 			serverMode:       constants.Trial,
 			requestPath:      "/stable/automate/metadata?p=linux&m=amd64&eol=false&v=latest",
 			expectedStatus:   fiber.StatusOK,
-			expectedResponse: `{"sha1":"", "sha256":"1234", "url":"http://example.com/stable/automate/download?eol=false&m=amd64&p=linux&pm=pm&v=latest", "version":"latest"}`,
+			expectedResponse: `{"sha1":"", "sha256":"1234", "url":"http://example.com/stable/automate/download?eol=false&m=amd64&p=linux&v=latest", "version":"latest"}`,
 			metadata: models.MetaData{
 				Architecture:    "amd64",
 				FileName:        "",
@@ -539,7 +539,7 @@ func TestProductMetadataHandler(t *testing.T) {
 			serverMode:       constants.Opensource,
 			requestPath:      "/stable/habitat/metadata?p=linux&m=x86_64&eol=false",
 			expectedStatus:   fiber.StatusOK,
-			expectedResponse: `{"sha1":"", "sha256":"abcd", "url":"http://example.com/stable/habitat/download?eol=false&m=x86_64&p=linux&pm=pm&v=0.9.3", "version":"0.9.3"}`,
+			expectedResponse: `{"sha1":"", "sha256":"abcd", "url":"http://example.com/stable/habitat/download?eol=false&m=x86_64&p=linux&v=0.9.3", "version":"0.9.3"}`,
 			metadata: models.MetaData{
 				Architecture:    "x86_64",
 				FileName:        "",
