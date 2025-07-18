@@ -2,8 +2,11 @@ package strategy_test
 
 import (
 	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"testing"
 
@@ -14,6 +17,7 @@ import (
 	"github.com/chef/omnitruck-service/models"
 	"github.com/gofiber/fiber/v2"
 	log "github.com/sirupsen/logrus"
+	"github.com/valyala/fasthttp"
 
 	"github.com/chef/omnitruck-service/internal/strategy"
 	"github.com/stretchr/testify/assert"
@@ -449,6 +453,376 @@ func TestPlatformServiceStrategy_DownloadChefPlatform_Errors(t *testing.T) {
 			assert.Error(t, err)
 			assert.Equal(t, tt.expectedMsg, msg)
 			assert.Equal(t, tt.expectedCode, code)
+		})
+	}
+}
+
+func TestApiService_downloadChefPlatform(t *testing.T) {
+	app := fiber.New()
+	c := app.AcquireCtx(&fasthttp.RequestCtx{})
+	c.Locals("license_id", "lic01")
+	c.Locals("requestid", "req01")
+	type fields struct {
+		Replicated        replicated.IReplicated
+		LicenseClient     clients.ILicense
+		mockUnmarshalFunc func(data []byte, v any) error
+	}
+	type args struct {
+		params *omnitruck.RequestParams
+		c      *fiber.Ctx
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Success",
+			fields: fields{
+				Replicated: replicated.MockReplicated{
+					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
+						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
+					},
+					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
+						mockResponse := http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body"))), Header: make(http.Header)}
+						mockResponse.Header.Set("Content-Type", "application/json")
+						return &mockResponse, nil
+					},
+					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+						return []models.Customer{
+							{
+								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
+								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
+								Name:           "[DEV] George Westwater",
+								Email:          "george.westwater@progress.com",
+								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
+								Airgap:         false,
+								Channels: []models.Channel{
+									{
+										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
+										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
+										AppSlug:     "chef-360",
+										AppName:     "Chef 360",
+										ChannelSlug: "rc",
+										Name:        "RC",
+									},
+								},
+							},
+						}, nil
+					},
+				},
+				LicenseClient: &clients.MockLicense{
+					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+						return &clients.Request{
+							Code: 200,
+							Ok:   true,
+							Body: []byte(`{
+								"replicatedEmail": "abc@gmail.com",
+								"message": "OK",
+								"status_code": 200
+							  }`),
+						}
+					},
+				},
+			},
+			args: args{
+				params: &omnitruck.RequestParams{
+					LicenseId: "abc123",
+				},
+				c: c,
+			},
+			wantErr: false,
+		},
+		{
+			name: "License Client Err",
+			fields: fields{
+				LicenseClient: &clients.MockLicense{
+					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+						return &clients.Request{
+							Code: 200,
+							Ok:   false,
+						}
+					},
+				},
+			},
+			args: args{
+				params: &omnitruck.RequestParams{
+					LicenseId: "abc123",
+				},
+				c: c,
+			},
+			wantErr: true,
+		},
+		{
+			name: "Search Customer error",
+			fields: fields{
+				Replicated: replicated.MockReplicated{
+					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
+						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
+					},
+					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
+						return &http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body")))}, nil
+					},
+					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+						return nil, errors.New("Error fetching customer")
+					},
+				},
+				LicenseClient: &clients.MockLicense{
+					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+						return &clients.Request{
+							Code: 200,
+							Ok:   true,
+							Body: []byte(`{
+								"replicatedEmail": "abc@gmail.com",
+								"message": "OK",
+								"status_code": 200
+							  }`),
+						}
+					},
+				},
+			},
+			args: args{
+				params: &omnitruck.RequestParams{
+					LicenseId: "abc123",
+				},
+				c: c,
+			},
+			wantErr: true,
+		},
+		{
+			name: "0 customers found",
+			fields: fields{
+				Replicated: replicated.MockReplicated{
+					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
+						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
+					},
+					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
+						return &http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body")))}, nil
+					},
+					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+						return []models.Customer{}, nil
+					},
+				},
+				LicenseClient: &clients.MockLicense{
+					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+						return &clients.Request{
+							Code: 200,
+							Ok:   true,
+							Body: []byte(`{
+								"replicatedEmail": "abc@gmail.com",
+								"message": "OK",
+								"status_code": 200
+							  }`),
+						}
+					},
+				},
+			},
+			args: args{
+				params: &omnitruck.RequestParams{
+					LicenseId: "abc123",
+				},
+				c: c,
+			},
+			wantErr: true,
+		},
+		{
+			name: "GetUrl Err",
+			fields: fields{
+				Replicated: replicated.MockReplicated{
+					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
+						return "", errors.New("error getting download url")
+					},
+					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
+						return &http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body")))}, nil
+					},
+					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+						return []models.Customer{
+							{
+								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
+								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
+								Name:           "[DEV] George Westwater",
+								Email:          "george.westwater@progress.com",
+								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
+								Airgap:         false,
+								Channels: []models.Channel{
+									{
+										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
+										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
+										AppSlug:     "chef-360",
+										AppName:     "Chef 360",
+										ChannelSlug: "rc",
+										Name:        "RC",
+									},
+								},
+							},
+						}, nil
+					},
+				},
+				LicenseClient: &clients.MockLicense{
+					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+						return &clients.Request{
+							Code: 200,
+							Ok:   true,
+							Body: []byte(`{
+								"replicatedEmail": "abc@gmail.com",
+								"message": "OK",
+								"status_code": 200
+							  }`),
+						}
+					},
+				},
+			},
+			args: args{
+				params: &omnitruck.RequestParams{
+					LicenseId: "abc123",
+				},
+				c: c,
+			},
+			wantErr: true,
+		},
+		{
+			name: "Download error",
+			fields: fields{
+				Replicated: replicated.MockReplicated{
+					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
+						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
+					},
+					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
+						return nil, errors.New("error downloading")
+					},
+					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+						return []models.Customer{
+							{
+								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
+								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
+								Name:           "[DEV] George Westwater",
+								Email:          "george.westwater@progress.com",
+								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
+								Airgap:         false,
+								Channels: []models.Channel{
+									{
+										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
+										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
+										AppSlug:     "chef-360",
+										AppName:     "Chef 360",
+										ChannelSlug: "rc",
+										Name:        "RC",
+									},
+								},
+							},
+						}, nil
+					},
+				},
+				LicenseClient: &clients.MockLicense{
+					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+						return &clients.Request{
+							Code: 200,
+							Ok:   true,
+							Body: []byte(`{
+								"replicatedEmail": "abc@gmail.com",
+								"message": "OK",
+								"status_code": 200
+							  }`),
+						}
+					},
+				},
+			},
+			args: args{
+				params: &omnitruck.RequestParams{
+					LicenseId: "abc123",
+				},
+				c: c,
+			},
+			wantErr: true,
+		},
+		{
+			name: "Unmarshal Error",
+			fields: fields{
+				Replicated: replicated.MockReplicated{
+					GetDowloadUrlFunc: func(customer models.Customer, requestId string) (url string, err error) {
+						return "https://replicated.app/embedded/app/beta/channel/chef-360", nil
+					},
+					DownloadFromReplicatedFunc: func(url, requestId, authorization string) (res *http.Response, err error) {
+						mockResponse := http.Response{Status: "200", Body: ioutil.NopCloser(bytes.NewBufferString(("This is body"))), Header: make(http.Header)}
+						mockResponse.Header.Set("Content-Type", "application/json")
+						return &mockResponse, nil
+					},
+					SearchCustomersByEmailFunc: func(email, requestId string) (customers []models.Customer, err error) {
+						return []models.Customer{
+							{
+								ID:             "2eDnZGGGSjwJNOoWkRr91WZh74A",
+								TeamID:         "6IopgEQswci9pZWVGGNHU4NyoRbaWe7d",
+								Name:           "[DEV] George Westwater",
+								Email:          "george.westwater@progress.com",
+								InstallationId: "2eDnZGaJ7x912cC4CQ2U9TRtMbf",
+								Airgap:         false,
+								Channels: []models.Channel{
+									{
+										ID:          "2eBqOYbRRv1T0qcIafb9wb0Hvyx",
+										AppID:       "2dbKte6a9ecfZo6Mn0KTjRvDak4",
+										AppSlug:     "chef-360",
+										AppName:     "Chef 360",
+										ChannelSlug: "rc",
+										Name:        "RC",
+									},
+								},
+							},
+						}, nil
+					},
+				},
+				LicenseClient: &clients.MockLicense{
+					GetReplicatedCustomerEmailFunc: func(licenseId, licenseServiceUrl string, data *clients.Response) *clients.Request {
+						return &clients.Request{
+							Code: 200,
+							Ok:   true,
+							Body: []byte(`{
+								"replicatedEmail": "abc@gmail.com",
+								"message": "OK",
+								"status_code": 200
+							  }`),
+						}
+					},
+				},
+				mockUnmarshalFunc: func(data []byte, v any) error {
+					return errors.New("error occurred")
+				},
+			},
+			args: args{
+				params: &omnitruck.RequestParams{
+					LicenseId: "abc123",
+				},
+				c: c,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set up custom unmarshal/ioCopy if provided
+			if tt.fields.mockUnmarshalFunc != nil {
+				strategy.JsonUnmarshal = tt.fields.mockUnmarshalFunc
+			} else {
+				strategy.JsonUnmarshal = func(data []byte, v any) error {
+					return json.Unmarshal(data, &v)
+				}
+			}
+			s := &strategy.PlatformServiceStrategy{
+				Replicated:    tt.fields.Replicated,
+				LicenseClient: tt.fields.LicenseClient,
+				Log:           log.NewEntry(log.New()),
+				Locals:        map[string]interface{}{"requestid": "req01"},
+			}
+
+			_, _, _, msg, code, err := s.DownloadChefPlatform(tt.args.params)
+			if tt.wantErr {
+				assert.NotNil(t, err, "expected error but got nil")
+			} else {
+				assert.Nil(t, err, "expected no error but got one: %v", err)
+			}
+
+			_ = msg // Optionally assert msg/code if needed
+			_ = code
 		})
 	}
 }

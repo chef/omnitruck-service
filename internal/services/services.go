@@ -104,23 +104,6 @@ func (svc *DownloadService) Products(params *omnitruck.RequestParams) (data omni
 	eol := params.Eol == "true"
 	data = getServerStrategy.FilterProducts(data, eol)
 
-	// if svc.Mode == Opensource {
-	// 	svc.logCtx(c).Info("filtering opensource products")
-	// 	data = omnitruck.SelectList(data, omnitruck.OsProductName)
-	// } else if params.Eol != "true" {
-	// 	svc.logCtx(c).Info("filtering eol products")
-	// 	data = omnitruck.FilterList(data, omnitruck.EolProductName)
-	// }
-
-	// if svc.Mode == Trial {
-	// 	data = omnitruck.FilterProductsForFreeTrial(data, omnitruck.ProductsForFreeTrial)
-	// 	omnitruck.ProductDisplayName(data)
-	// }
-
-	// if svc.Mode == Commercial {
-	// 	data = append(data, constants.PLATFORM_SERVICE_PRODUCT)
-	// }
-
 	return data, request
 
 }
