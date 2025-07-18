@@ -51,10 +51,6 @@ func (s *DefaultProductStrategy) Download(params *omnitruck.RequestParams) (url 
 		return "", nil, nil, request.Message, request.Code, fiber.NewError(request.Code, request.Message)
 	}
 	return data.Url, nil, nil, request.Message, request.Code, nil
-	// if request.Ok {
-	// 	return c.Redirect(data.Url, 302)
-	// }
-	// return s.Server.SendError(c, request)
 }
 
 func (s *DefaultProductStrategy) GetFileName(params *omnitruck.RequestParams) (string, error) {
