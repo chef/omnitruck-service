@@ -74,7 +74,6 @@ func (s *PlatformServiceStrategy) Download(params *omnitruck.RequestParams) (url
 		return s.DownloadChefPlatform(params)
 	}
 	return "", nil, nil, "Platform Service does not support download in Open Source mode", http.StatusBadRequest, fmt.Errorf("%d Error: Platform Service does not support download in Open Source mode", http.StatusBadRequest)
-	//return "", nil, fiber.NewError(fiber.StatusBadRequest, "Platform Service does not support download in Open Source mode")
 }
 
 func (s *PlatformServiceStrategy) DownloadChefPlatform(params *omnitruck.RequestParams) (url string, respBody io.ReadCloser, header http.Header, msg string, code int, err error) {
@@ -84,7 +83,6 @@ func (s *PlatformServiceStrategy) DownloadChefPlatform(params *omnitruck.Request
 	if !request.Ok {
 		s.Log.Errorf("Received error response from getReplicatedCustomer")
 		return "", nil, nil, request.Message, request.Code, fmt.Errorf("%d Error while fetching replicated customer email: %s", request.Code, request.Message)
-		//return "", nil, fmt.Errorf("%s Error while fetching replicated customer email: %s", request.Code, request.Message)
 	}
 
 	var replicatedEmailResp clients.GetReplicatedCustomerResponse
@@ -93,14 +91,11 @@ func (s *PlatformServiceStrategy) DownloadChefPlatform(params *omnitruck.Request
 	if err != nil {
 		s.Log.Errorf("Error while unmarshalling getReplicatedCustomer response : %s", err.Error())
 		return "", nil, nil, constants.UNMARSHAL_ERR_MSG, http.StatusInternalServerError, fmt.Errorf("%d Error while fetching replicated customer email: %s", request.Code, request.Message)
-		//return server.SendErrorResponse(c, http.StatusInternalServerError, constants.UNMARSHAL_ERR_MSG+err.Error())
 	}
 
 	if replicatedEmailResp.StatusCode != http.StatusOK {
 		s.Log.Errorf("Received error response from getReplicatedCustomer")
 		return "", nil, nil, replicatedEmailResp.Message, replicatedEmailResp.StatusCode, fmt.Errorf("%d Error while fetching replicated customer email: %s", replicatedEmailResp.StatusCode, replicatedEmailResp.Message)
-		//return server.SendErrorResponse(c, replicatedEmailResp.StatusCode, replicatedEmailResp.Message)
-
 	}
 	s.Log.Debug("Successfully fetched replicated customer email")
 
@@ -111,13 +106,11 @@ func (s *PlatformServiceStrategy) DownloadChefPlatform(params *omnitruck.Request
 	if err != nil {
 		s.Log.Errorf("Error while fetching replicated customers with Email : %s", err.Error())
 		return "", nil, nil, constants.REPLICATED_CUSTOMER_ERROR, http.StatusInternalServerError, fmt.Errorf("%d Error while fetching replicated customers with Email: %s", http.StatusInternalServerError, constants.REPLICATED_CUSTOMER_ERROR)
-		//return server.SendErrorResponse(c, http.StatusInternalServerError, constants.REPLICATED_CUSTOMER_ERROR)
 	}
 
 	if len(customers) == 0 {
 		s.Log.Errorf("No replicated customers found with Email : %s", replicatedEmailResp.ReplicatedEmail)
 		return "", nil, nil, constants.REPLICATED_CUSTOMER_ERROR, http.StatusInternalServerError, fmt.Errorf("%d No replicated customers found with Email: %s", http.StatusInternalServerError, constants.REPLICATED_CUSTOMER_ERROR)
-		//return server.SendErrorResponse(c, http.StatusInternalServerError, constants.REPLICATED_CUSTOMER_ERROR)
 	}
 	customer := customers[0]
 	s.Log.Debug("Successfully fetched replicated customer details")
@@ -127,7 +120,6 @@ func (s *PlatformServiceStrategy) DownloadChefPlatform(params *omnitruck.Request
 	if err != nil {
 		s.Log.Errorf("Error while formulating download url from replicated : %s", err.Error())
 		return "", nil, nil, constants.REPLICATED_DOWNLOAD_ERROR, http.StatusInternalServerError, fmt.Errorf("%d Error while formulating download url from replicated: %s", http.StatusInternalServerError, constants.REPLICATED_DOWNLOAD_ERROR)
-		//return server.SendErrorResponse(c, http.StatusInternalServerError, constants.REPLICATED_DOWNLOAD_ERROR)
 	}
 	s.Log.Info("Successfully formulated download url")
 
@@ -136,7 +128,6 @@ func (s *PlatformServiceStrategy) DownloadChefPlatform(params *omnitruck.Request
 	if err != nil {
 		s.Log.Errorf("Error while downloading from replicated : %s", err.Error())
 		return "", nil, nil, constants.REPLICATED_DOWNLOAD_ERROR, http.StatusInternalServerError, fmt.Errorf("%d Error while downloading from replicated: %s", http.StatusInternalServerError, constants.REPLICATED_DOWNLOAD_ERROR)
-		//return server.SendErrorResponse(c, http.StatusInternalServerError, constants.REPLICATED_DOWNLOAD_ERROR)
 	}
 	s.Log.Info("Successfully downloaded from replicated")
 	headers := downloadResp.Header
