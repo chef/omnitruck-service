@@ -245,11 +245,20 @@ new-module -name Omnitruck -scriptblock {
     }
 
     if ($project -eq 'chef-ice') {
-      $package_manager = 'msi'
-      $platform_version = 'pv'
+      $metadata_array = @(
+      "?v=$($version)",
+      "p=$platform",
+      "m=$architecture",
+      "pm=msi"
+      )
     }
     else {
-      $package_manager = 'pm'
+      $metadata_array = @(
+      "?v=$($version)",
+      "p=$platform",
+      "pv=$platform_version",
+      "m=$architecture"
+      )
     }
 
     if ($project -eq 'migrate-ice') {
@@ -260,12 +269,8 @@ new-module -name Omnitruck -scriptblock {
     Write-Verbose "Project: $project"
 
     $metadata_base_url = "/$($channel)/$($project)/metadata"
-    $metadata_array = ("?v=$($version)",
-      "p=$platform",
-      "pv=$platform_version",
-      "m=$architecture",
-      "pm=$package_manager")
-    $metadata_array += "license_id=afd2c0a2-957f-4caf-9fa2-7233fe7894d9"
+    {{if .LicenseId}}$metadata_array += "license_id={{.LicenseId}}"{{end}}
+    Write-Verbose "Metadata array: $metadata_array"
     $metadata_base_url += [string]::join('&', $metadata_array)
     $metadata_url = new-uri $base_server_uri $metadata_base_url
 
@@ -325,11 +330,20 @@ new-module -name Omnitruck -scriptblock {
     }
 
     if ($project -eq 'chef-ice') {
-      $package_manager = 'msi'
-      $platform_version = 'pv'
+      $filename_array = @(
+      "?v=$($version)",
+      "p=$platform",
+      "m=$architecture",
+      "pm=msi"
+      )
     }
     else {
-      $package_manager = 'pm'
+      $filename_array = @(
+      "?v=$($version)",
+      "p=$platform",
+      "pv=$platform_version",
+      "m=$architecture"
+      )
     }
 
     if ($project -eq 'migrate-ice') {
@@ -340,12 +354,7 @@ new-module -name Omnitruck -scriptblock {
     Write-Verbose "Project: $project"
 
     $filename_base_url = "/$($channel)/$($project)/filename"
-    $filename_array = ("?v=$($version)",
-      "p=$platform",
-      "pv=$platform_version",
-      "m=$architecture",
-      "pm=$package_manager")
-    $filename_array += "license_id=afd2c0a2-957f-4caf-9fa2-7233fe7894d9"
+    {{if .LicenseId}}$filename_array += "license_id={{.LicenseId}}"{{end}}
     $filename_base_url += [string]::join('&', $filename_array)
     $filename_url = new-uri $base_server_uri $filename_base_url
 
