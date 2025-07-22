@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.81 -->
-## [0.0.81](https://github.com/chef/omnitruck-service/tree/0.0.81) (2025-07-21)
+<!-- latest_release 0.0.82 -->
+## [0.0.82](https://github.com/chef/omnitruck-service/tree/0.0.82) (2025-07-22)
 
 #### Merged Pull Requests
-- Adjusted the URL when the package manager is not required for certain products [#105](https://github.com/chef/omnitruck-service/pull/105) ([swathi-s3](https://github.com/swathi-s3))
+- Added the fix for script  [#106](https://github.com/chef/omnitruck-service/pull/106) ([vviveksharma](https://github.com/vviveksharma))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Added the fix for script  [#106](https://github.com/chef/omnitruck-service/pull/106) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.82 -->
 - Adjusted the URL when the package manager is not required for certain products [#105](https://github.com/chef/omnitruck-service/pull/105) ([swathi-s3](https://github.com/swathi-s3)) <!-- 0.0.81 -->
 - Updated windows script for infra 19 [#103](https://github.com/chef/omnitruck-service/pull/103) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.80 -->
 - name updated from migration-tool to migrate-ice [#104](https://github.com/chef/omnitruck-service/pull/104) ([vipin230](https://github.com/vipin230)) <!-- 0.0.79 -->
