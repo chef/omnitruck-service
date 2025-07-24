@@ -63,12 +63,6 @@ func (s *ProductDynamoStrategy) GetMetadata(params *omnitruck.RequestParams) (om
 func (s *ProductDynamoStrategy) Download(params *omnitruck.RequestParams) (url string, resp io.ReadCloser, header http.Header, msg string, code int, err error) {
 	url, err = s.DynamoService.ProductDownload(params)
 	return url, nil, nil, "", 0, err
-	// if err != nil {
-	// 	code, msg := helpers.GetErrorCodeAndMsg(err)
-	// 	return s.Server.SendErrorResponse(c, code, msg)
-	// }
-	// s.Log.Infof("Redirecting user to %s", url)
-	// return c.Redirect(url, 302)
 }
 
 func (s *ProductDynamoStrategy) GetFileName(params *omnitruck.RequestParams) (string, error) {
