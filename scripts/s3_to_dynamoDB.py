@@ -10,6 +10,7 @@ logger.setLevel(logging.DEBUG)
 PACKAGE_MANAGER_TABLES = ['package-manager-production', 'package-manager-acceptance']
 ARCH_LIST = ["aarch64", "armv7l", "i386", "powerpc", "ppc64", "ppc64le", "s390x", "sparc", "universal", "x86_64"]
 ASSUME_ROLE_ARN = "arn:aws:iam::712624343120:role/cross-account-s3-role"
+PLATFORM_LIST = ["linux", "windows"]
 
 sts_client = boto3.client('sts')
 
@@ -55,7 +56,7 @@ def process_metadata_file(s3_client, dynamodb_client, bucket_name, object_key, c
     for product_name, product_versions in json_content.items():
         logger.debug(f"Processing product '{product_name}' with versions: {product_versions}")
         for version, version_data in product_versions.items():
-            filtered_metadata = {key: value for key, value in version_data.items() if key != 'product-version-metadata'}
+            filtered_metadata = {key: value for key, value in version_data.items() if key.lower() in PLATFORM_LIST}
             logger.debug(f"Filtered metadata for {product_name} version {version}: {filtered_metadata}")
 
             for table_suffix in ['acceptance', 'production']:
@@ -69,7 +70,7 @@ def process_metadata_file(s3_client, dynamodb_client, bucket_name, object_key, c
                     }
                 )
             logger.info("Successfully updated DynamoDB tables for product: %s, version: %s", product_name, version)
-            process_package_manager_data(dynamodb_client, version_data)
+            process_package_manager_data(dynamodb_client, filtered_metadata)
             logger.info("Processed package manager data successfully")
 
 def process_package_manager_data(dynamodb_client, version_data):
