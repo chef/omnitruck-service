@@ -59,6 +59,7 @@ func (s *PlatformServiceStrategy) GetPackages(params *omnitruck.RequestParams) (
 
 func (s *PlatformServiceStrategy) GetMetadata(params *omnitruck.RequestParams) (omnitruck.PackageMetadata, *clients.Request) {
 	request := &clients.Request{}
+	params.PackageManager = constants.DUMMY_PACKAGE_MANAGER
 	data, err := s.PlatformService.PlatformMetadata(params, int(s.Mode))
 	if err != nil {
 		code, msg := helpers.GetErrorCodeAndMsg(err)
