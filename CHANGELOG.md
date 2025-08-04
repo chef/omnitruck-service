@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.84 -->
-## [0.0.84](https://github.com/chef/omnitruck-service/tree/0.0.84) (2025-07-30)
+<!-- latest_release 0.0.85 -->
+## [0.0.85](https://github.com/chef/omnitruck-service/tree/0.0.85) (2025-08-04)
 
 #### Merged Pull Requests
-- Added fix for script [#109](https://github.com/chef/omnitruck-service/pull/109) ([vviveksharma](https://github.com/vviveksharma))
+- Changes in the script to import BOM-to-product mappings from Excel into DynamoDB [#108](https://github.com/chef/omnitruck-service/pull/108) ([swathi-s3](https://github.com/swathi-s3))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Changes in the script to import BOM-to-product mappings from Excel into DynamoDB [#108](https://github.com/chef/omnitruck-service/pull/108) ([swathi-s3](https://github.com/swathi-s3)) <!-- 0.0.85 -->
 - Added fix for script [#109](https://github.com/chef/omnitruck-service/pull/109) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.84 -->
 - CHEF-22175 : Unit tests and code cleanup [#107](https://github.com/chef/omnitruck-service/pull/107) ([shanmugapriya-tr](https://github.com/shanmugapriya-tr)) <!-- 0.0.83 -->
 - Added the fix for script  [#106](https://github.com/chef/omnitruck-service/pull/106) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.82 -->
