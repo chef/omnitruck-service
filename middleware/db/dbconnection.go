@@ -1,22 +1,22 @@
 package dbconnection
 
 import (
+	"context"
 	"log"
 
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/utils/awsutils"
 )
 
-var svc *dynamodb.DynamoDB
-
 type DbConnection interface {
-	GetDbConnection() *dynamodb.DynamoDB
+	GetDbConnection() *dynamodb.Client
 }
 
 type DbConectionService struct {
 	AwsUtil awsutils.AwsUtils
 	Config  config.ServiceConfig
+	svc     *dynamodb.Client
 }
 
 func NewDbConnectionService(awsutils awsutils.AwsUtils, config config.ServiceConfig) *DbConectionService {
@@ -26,14 +26,15 @@ func NewDbConnectionService(awsutils awsutils.AwsUtils, config config.ServiceCon
 	}
 }
 
-func (dbc *DbConectionService) GetDbConnection() *dynamodb.DynamoDB {
-	if svc == nil {
-		sess, err := dbc.AwsUtil.GetNewSession(dbc.Config.AWSConfig)
+func (dbc *DbConectionService) GetDbConnection() *dynamodb.Client {
+	if dbc.svc == nil {
+		// TODO: Implement GetNewConfig in AwsUtils for aws-sdk-go-v2
+		cfg, err := dbc.AwsUtil.GetNewConfig(context.TODO(), dbc.Config.AWSConfig)
 		if err != nil {
-			log.Printf("Error while reading the session: %v", err)
+			log.Printf("Error while creating AWS config: %v", err)
 			return nil
 		}
-		svc = dynamodb.New(sess)
+		dbc.svc = dynamodb.NewFromConfig(cfg)
 	}
-	return svc
+	return dbc.svc
 }

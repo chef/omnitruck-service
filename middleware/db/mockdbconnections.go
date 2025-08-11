@@ -1,13 +1,13 @@
 package dbconnection
 
 import (
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
 type MockDbConnectionService struct {
-	GetDbConnectionfunc func() (*dynamodb.DynamoDB )
+	GetDbConnectionfunc func() *dynamodb.Client
 }
 
-func (mdbc *MockDbConnectionService) GetDbConnection() (*dynamodb.DynamoDB ) {
+func (mdbc *MockDbConnectionService) GetDbConnection() *dynamodb.Client {
 	return mdbc.GetDbConnectionfunc()
 }

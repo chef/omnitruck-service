@@ -4,16 +4,14 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/chef/omnitruck-service/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	omnitruckConfig "github.com/chef/omnitruck-service/config"
 )
 
 func TestValidateS3Config(t *testing.T) {
-	cfg := config.AWSConfig{
+	cfg := omnitruckConfig.AWSConfig{
 		Region: "us-east-1",
-		S3Config: config.S3Config{
+		S3Config: omnitruckConfig.S3Config{
 			Bucket:  "bucket",
 			RoleArn: "role",
 		},
@@ -41,27 +39,34 @@ func TestValidateS3Config(t *testing.T) {
 }
 
 func TestNewS3Session(t *testing.T) {
-	sess, err := NewS3Session("us-east-1")
+	cfg, err := NewS3Session("us-east-1")
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
-	if sess == nil {
-		t.Error("expected session, got nil")
+	// aws.Config is a struct, not a pointer, so just check region
+	if cfg.Region == "" {
+		t.Error("expected region to be set in config")
 	}
 }
 
 func TestNewS3Credentials(t *testing.T) {
-	sess, _ := session.NewSession(&aws.Config{Region: aws.String("us-east-1")})
-	creds := NewS3Credentials(sess, "arn:aws:iam::123456789012:role/test-role")
+	cfg, err := NewS3Session("us-east-1")
+	if err != nil {
+		t.Fatalf("failed to create config: %v", err)
+	}
+	creds := NewS3Credentials(cfg, "arn:aws:iam::123456789012:role/test-role")
 	if creds == nil {
 		t.Error("expected credentials, got nil")
 	}
 }
 
 func TestGetS3Object_Error(t *testing.T) {
-	sess, _ := session.NewSession(&aws.Config{Region: aws.String("us-east-1")})
-	creds := credentials.NewStaticCredentials("fake", "fake", "")
-	_, err := GetS3Object(context.Background(), sess, creds, "fake-bucket", "fake-key")
+	cfg, err := NewS3Session("us-east-1")
+	if err != nil {
+		t.Fatalf("failed to create config: %v", err)
+	}
+	creds := credentials.NewStaticCredentialsProvider("fake", "fake", "")
+	_, err = GetS3Object(context.Background(), cfg, creds, "fake-bucket", "fake-key")
 	if err == nil {
 		t.Error("expected error for fake bucket/key, got nil")
 	}

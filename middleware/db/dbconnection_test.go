@@ -1,26 +1,20 @@
 package dbconnection
 
 import (
+	"context"
 	"errors"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/utils/awsutils"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetDbConnection_Success(t *testing.T) {
-	svc = nil
-
-	mockSession := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String("us-east-1"),
-	}))
-
 	dbc := NewDbConnectionService(&awsutils.MockAwsUtils{
-		GetNewSessionfunc: func(config config.AWSConfig) (*session.Session, error) {
-			return mockSession, nil
+		GetNewConfigFunc: func(ctx context.Context, awsConfig config.AWSConfig) (aws.Config, error) {
+			return aws.Config{Region: "us-east-1"}, nil
 		},
 	}, config.ServiceConfig{})
 
@@ -29,11 +23,9 @@ func TestGetDbConnection_Success(t *testing.T) {
 }
 
 func TestGetDbConnection_ErrorCase(t *testing.T) {
-	svc = nil
-
 	dbc := NewDbConnectionService(&awsutils.MockAwsUtils{
-		GetNewSessionfunc: func(config config.AWSConfig) (*session.Session, error) {
-			return nil, errors.New("simulated error")
+		GetNewConfigFunc: func(ctx context.Context, awsConfig config.AWSConfig) (aws.Config, error) {
+			return aws.Config{}, errors.New("simulated error")
 		},
 	}, config.ServiceConfig{})
 
