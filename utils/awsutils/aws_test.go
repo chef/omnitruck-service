@@ -7,17 +7,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCreateAWSSession(t *testing.T) {
-	config := config.AWSConfig{
+func TestGetNewConfig(t *testing.T) {
+	awsCfg := config.AWSConfig{
 		AccessKey: "your_access_key",
 		SecretKey: "your_secret_key",
 		Region:    "your_region",
 	}
 
-	dbc := NewAwsUtils()
-	sess, err := dbc.GetNewSession(config)
+	utils := NewAwsUtils()
+	cfg, err := utils.GetNewConfig(nil, awsCfg)
 
 	assert.NoError(t, err)
-	assert.NotNil(t, sess)
-
+	assert.Equal(t, "your_region", cfg.Region)
 }
