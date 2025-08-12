@@ -6,6 +6,7 @@ import (
 
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
+	"github.com/chef/omnitruck-service/constants"
 	helpers "github.com/chef/omnitruck-service/internal/helper"
 	"github.com/gofiber/fiber/v2"
 	log "github.com/sirupsen/logrus"
@@ -40,6 +41,7 @@ func (s *DefaultProductStrategy) GetPackages(params *omnitruck.RequestParams) (o
 
 func (s *DefaultProductStrategy) GetMetadata(params *omnitruck.RequestParams) (omnitruck.PackageMetadata, *clients.Request) {
 	var data omnitruck.PackageMetadata
+	params.PackageManager = constants.DUMMY_PACKAGE_MANAGER
 	request := s.OmnitruckService.ProductMetadata(params).ParseData(&data)
 	return data, request
 }
