@@ -6,17 +6,19 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/chef/omnitruck-service/models"
 	"github.com/stretchr/testify/assert"
 )
 
 type MDB struct {
 	GetItemfunc func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error)
-	Scanfunc    func(*dynamodb.ScanInput) (*dynamodb.ScanOutput, error)
+	Scanfunc    func(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error)
 }
 
+// Implement IDynamoDBOps interface from dboperations.go (v1 signatures)
 func (mdb *MDB) GetItem(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
 	return mdb.GetItemfunc(input)
 }
@@ -34,16 +36,16 @@ func TestGetPackagesSuccess(t *testing.T) {
 		name     string
 		args     args
 		model    interface{}
-		mockItem map[string]*dynamodb.AttributeValue
+		mockItem map[string]types.AttributeValue
 		want     interface{}
 	}{
 		{
 			name:  "Success with ProductDetails",
 			args:  args{"automate", "4.3.9"},
 			model: models.ProductDetails{},
-			mockItem: map[string]*dynamodb.AttributeValue{
-				"product": {S: aws.String("automate")},
-				"version": {S: aws.String("4.3.9")},
+			mockItem: map[string]types.AttributeValue{
+				"product": &types.AttributeValueMemberS{Value: "automate"},
+				"version": &types.AttributeValueMemberS{Value: "4.3.9"},
 			},
 			want: &models.ProductDetails{Product: "automate", Version: "4.3.9"},
 		},
@@ -51,12 +53,10 @@ func TestGetPackagesSuccess(t *testing.T) {
 			name:  "Success with PackageDetails",
 			args:  args{"chef-ice", "19.1.27"},
 			model: models.PackageDetails{},
-			mockItem: map[string]*dynamodb.AttributeValue{
-				"product": {S: aws.String("chef-ice")},
-				"version": {S: aws.String("19.1.27")},
-				"metadata": {
-					M: map[string]*dynamodb.AttributeValue{}, // simulate structure
-				},
+			mockItem: map[string]types.AttributeValue{
+				"product":  &types.AttributeValueMemberS{Value: "chef-ice"},
+				"version":  &types.AttributeValueMemberS{Value: "19.1.27"},
+				"metadata": &types.AttributeValueMemberM{Value: map[string]types.AttributeValue{}},
 			},
 			want: &models.PackageDetails{
 				Product:  "chef-ice",
@@ -68,12 +68,10 @@ func TestGetPackagesSuccess(t *testing.T) {
 			name:  "Success with PackageDetails",
 			args:  args{"migrate-ice", "19.0.1"},
 			model: models.PackageDetails{},
-			mockItem: map[string]*dynamodb.AttributeValue{
-				"product": {S: aws.String("migrate-ice")},
-				"version": {S: aws.String("19.0.1")},
-				"metadata": {
-					M: map[string]*dynamodb.AttributeValue{}, // simulate structure
-				},
+			mockItem: map[string]types.AttributeValue{
+				"product":  &types.AttributeValueMemberS{Value: "migrate-ice"},
+				"version":  &types.AttributeValueMemberS{Value: "19.0.1"},
+				"metadata": &types.AttributeValueMemberM{Value: map[string]types.AttributeValue{}},
 			},
 			want: &models.PackageDetails{
 				Product:  "migrate-ice",
@@ -107,7 +105,7 @@ func TestGetPackagesFailure(t *testing.T) {
 		name        string
 		args        args
 		model       interface{}
-		mockItem    map[string]*dynamodb.AttributeValue
+		mockItem    map[string]types.AttributeValue
 		expectError string
 	}{
 		{
@@ -120,8 +118,8 @@ func TestGetPackagesFailure(t *testing.T) {
 			name:  "Unknown type fallback",
 			args:  args{"chef", "1.0.0"},
 			model: struct{ Foo string }{}, // unknown type
-			mockItem: map[string]*dynamodb.AttributeValue{
-				"foo": {S: aws.String("bar")},
+			mockItem: map[string]types.AttributeValue{
+				"foo": &types.AttributeValueMemberS{Value: "bar"},
 			},
 			expectError: "",
 		},
@@ -136,9 +134,7 @@ func TestGetPackagesFailure(t *testing.T) {
 				}
 			} else {
 				mockDB.GetItemfunc = func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
-					return nil, &dynamodb.ResourceNotFoundException{
-						Message_: aws.String("Requested resource not found"),
-					}
+					return nil, &types.ResourceNotFoundException{Message: aws.String("Requested resource not found")}
 				}
 			}
 
@@ -215,16 +211,16 @@ func TestGetVersionAllSuccess(t *testing.T) {
 			if tt.args.partitionValue == "automate" {
 				ser = &DbOperationsService{
 					db: &MDB{
-						Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+						Scanfunc: func(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
 							return &dynamodb.ScanOutput{
-								Items: []map[string]*dynamodb.AttributeValue{
+								Items: []map[string]types.AttributeValue{
 									{
-										"product": {S: aws.String("automate")},
-										"version": {S: aws.String(version4054)},
+										"product": &types.AttributeValueMemberS{Value: "automate"},
+										"version": &types.AttributeValueMemberS{Value: version4054},
 									},
 									{
-										"product": {S: aws.String("automate")},
-										"version": {S: aws.String(version4091)},
+										"product": &types.AttributeValueMemberS{Value: "automate"},
+										"version": &types.AttributeValueMemberS{Value: version4091},
 									},
 								},
 							}, nil
@@ -235,16 +231,16 @@ func TestGetVersionAllSuccess(t *testing.T) {
 			} else if tt.args.partitionValue == "chef-ice" {
 				ser = &DbOperationsService{
 					db: &MDB{
-						Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+						Scanfunc: func(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
 							return &dynamodb.ScanOutput{
-								Items: []map[string]*dynamodb.AttributeValue{
+								Items: []map[string]types.AttributeValue{
 									{
-										"product": {S: aws.String("chef-ice")},
-										"version": {S: aws.String(version4054)},
+										"product": &types.AttributeValueMemberS{Value: "chef-ice"},
+										"version": &types.AttributeValueMemberS{Value: version4054},
 									},
 									{
-										"product": {S: aws.String("chef-ice")},
-										"version": {S: aws.String(version4091)},
+										"product": &types.AttributeValueMemberS{Value: "chef-ice"},
+										"version": &types.AttributeValueMemberS{Value: version4091},
 									},
 								},
 							}, nil
@@ -255,16 +251,16 @@ func TestGetVersionAllSuccess(t *testing.T) {
 			} else {
 				ser = &DbOperationsService{
 					db: &MDB{
-						Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+						Scanfunc: func(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
 							return &dynamodb.ScanOutput{
-								Items: []map[string]*dynamodb.AttributeValue{
+								Items: []map[string]types.AttributeValue{
 									{
-										"product": {S: aws.String("migrate-ice")},
-										"version": {S: aws.String(version4054)},
+										"product": &types.AttributeValueMemberS{Value: "migrate-ice"},
+										"version": &types.AttributeValueMemberS{Value: version4054},
 									},
 									{
-										"product": {S: aws.String("migrate-ice")},
-										"version": {S: aws.String(version4091)},
+										"product": &types.AttributeValueMemberS{Value: "migrate-ice"},
+										"version": &types.AttributeValueMemberS{Value: version4091},
 									},
 								},
 							}, nil
@@ -304,10 +300,8 @@ func TestGetVersionAllFailure(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ser := &DbOperationsService{
 				db: &MDB{
-					Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
-						return nil, &dynamodb.ReplicaNotFoundException{
-							Message_: aws.String("Requested resource not found"),
-						}
+					Scanfunc: func(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+						return nil, &types.ReplicaNotFoundException{Message: aws.String("Requested resource not found")}
 					},
 				},
 				dbModelType: reflect.TypeOf(models.ProductDetails{}),
@@ -354,26 +348,22 @@ func TestGetMetaDataSuccess(t *testing.T) {
 			},
 			wantErr: false,
 			dynamodbResp: dynamodb.GetItemOutput{
-				Item: map[string]*dynamodb.AttributeValue{
-					"product": {S: aws.String("automate")},
-					"version": {S: aws.String("4.3.9")},
-					"metaData": {L: []*dynamodb.AttributeValue{
-						{
-							M: map[string]*dynamodb.AttributeValue{
-								"architecture": {S: aws.String(("arch64"))},
-								"platform":     {S: aws.String("amazon")},
-								"sha1":         {S: aws.String("SHA1arch64")},
-								"sha256":       {S: aws.String("SHA256arch64")},
-							},
-						},
-						{
-							M: map[string]*dynamodb.AttributeValue{
-								"architecture": {S: aws.String(("x86_64"))},
-								"platform":     {S: aws.String("windows")},
-								"sha1":         {S: aws.String("SHA1x86_64")},
-								"sha256":       {S: aws.String("SHA256x86_64")},
-							},
-						},
+				Item: map[string]types.AttributeValue{
+					"product": &types.AttributeValueMemberS{Value: "automate"},
+					"version": &types.AttributeValueMemberS{Value: "4.3.9"},
+					"metaData": &types.AttributeValueMemberL{Value: []types.AttributeValue{
+						&types.AttributeValueMemberM{Value: map[string]types.AttributeValue{
+							"architecture": &types.AttributeValueMemberS{Value: "arch64"},
+							"platform":     &types.AttributeValueMemberS{Value: "amazon"},
+							"sha1":         &types.AttributeValueMemberS{Value: "SHA1arch64"},
+							"sha256":       &types.AttributeValueMemberS{Value: "SHA256arch64"},
+						}},
+						&types.AttributeValueMemberM{Value: map[string]types.AttributeValue{
+							"architecture": &types.AttributeValueMemberS{Value: "x86_64"},
+							"platform":     &types.AttributeValueMemberS{Value: "windows"},
+							"sha1":         &types.AttributeValueMemberS{Value: "SHA1x86_64"},
+							"sha256":       &types.AttributeValueMemberS{Value: "SHA256x86_64"},
+						}},
 					}},
 				},
 			},
@@ -400,17 +390,17 @@ func TestGetMetaDataSuccess(t *testing.T) {
 			},
 			wantErr: false,
 			dynamodbResp: dynamodb.GetItemOutput{
-				Item: map[string]*dynamodb.AttributeValue{
-					"product": {S: aws.String("chef-ice")},
-					"version": {S: aws.String("19.1.2")},
-					"metadata": {M: map[string]*dynamodb.AttributeValue{
-						"linux": {M: map[string]*dynamodb.AttributeValue{
-							"x86_64": {M: map[string]*dynamodb.AttributeValue{
-								"deb": {M: map[string]*dynamodb.AttributeValue{
-									"filename":        {S: aws.String("chef_19.1.27-1_amd64.deb")},
-									"install-message": {S: aws.String("")},
-									"sha1":            {S: aws.String("SHA1x86_64")},
-									"sha256":          {S: aws.String("SHA256x86_64")},
+				Item: map[string]types.AttributeValue{
+					"product": &types.AttributeValueMemberS{Value: "chef-ice"},
+					"version": &types.AttributeValueMemberS{Value: "19.1.2"},
+					"metadata": &types.AttributeValueMemberM{Value: map[string]types.AttributeValue{
+						"linux": &types.AttributeValueMemberM{Value: map[string]types.AttributeValue{
+							"x86_64": &types.AttributeValueMemberM{Value: map[string]types.AttributeValue{
+								"deb": &types.AttributeValueMemberM{Value: map[string]types.AttributeValue{
+									"filename":        &types.AttributeValueMemberS{Value: "chef_19.1.27-1_amd64.deb"},
+									"install-message": &types.AttributeValueMemberS{Value: ""},
+									"sha1":            &types.AttributeValueMemberS{Value: "SHA1x86_64"},
+									"sha256":          &types.AttributeValueMemberS{Value: "SHA256x86_64"},
 								}},
 							}},
 						}},
@@ -440,17 +430,17 @@ func TestGetMetaDataSuccess(t *testing.T) {
 			},
 			wantErr: false,
 			dynamodbResp: dynamodb.GetItemOutput{
-				Item: map[string]*dynamodb.AttributeValue{
-					"product": {S: aws.String("migrate-ice")},
-					"version": {S: aws.String("19.0.1")},
-					"metadata": {M: map[string]*dynamodb.AttributeValue{
-						"linux": {M: map[string]*dynamodb.AttributeValue{
-							"x86_64": {M: map[string]*dynamodb.AttributeValue{
-								"deb": {M: map[string]*dynamodb.AttributeValue{
-									"filename":        {S: aws.String("migrate-ice-19.0.1-1_amd64.deb")},
-									"install-message": {S: aws.String("")},
-									"sha1":            {S: aws.String("SHA1x86_64")},
-									"sha256":          {S: aws.String("SHA256x86_64")},
+				Item: map[string]types.AttributeValue{
+					"product": &types.AttributeValueMemberS{Value: "migrate-ice"},
+					"version": &types.AttributeValueMemberS{Value: "19.0.1"},
+					"metadata": &types.AttributeValueMemberM{Value: map[string]types.AttributeValue{
+						"linux": &types.AttributeValueMemberM{Value: map[string]types.AttributeValue{
+							"x86_64": &types.AttributeValueMemberM{Value: map[string]types.AttributeValue{
+								"deb": &types.AttributeValueMemberM{Value: map[string]types.AttributeValue{
+									"filename":        &types.AttributeValueMemberS{Value: "migrate-ice-19.0.1-1_amd64.deb"},
+									"install-message": &types.AttributeValueMemberS{Value: ""},
+									"sha1":            &types.AttributeValueMemberS{Value: "SHA1x86_64"},
+									"sha256":          &types.AttributeValueMemberS{Value: "SHA256x86_64"},
 								}},
 							}},
 						}},
@@ -531,22 +521,20 @@ func TestGetMetaDataFailure(t *testing.T) {
 				db: &MDB{
 					GetItemfunc: func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
 						if tt.wantDBErr {
-							return nil, &dynamodb.ReplicaNotFoundException{
-								Message_: aws.String("Requested resource not found"),
-							}
+							return nil, &types.ReplicaNotFoundException{Message: aws.String("Requested resource not found")}
 						}
 						return &dynamodb.GetItemOutput{
-							Item: map[string]*dynamodb.AttributeValue{
-								"product": {S: aws.String("chef-ice")},
-								"version": {S: aws.String("19.1.2")},
-								"metadata": {M: map[string]*dynamodb.AttributeValue{
-									"linux": {M: map[string]*dynamodb.AttributeValue{
-										"x86_64": {M: map[string]*dynamodb.AttributeValue{
-											"deb": {M: map[string]*dynamodb.AttributeValue{
-												"filename":        {S: aws.String("chef_19.1.27-1_amd64.deb")},
-												"install-message": {S: aws.String("")},
-												"sha1":            {S: aws.String("SHA1x86_64")},
-												"sha256":          {S: aws.String("SHA256x86_64")},
+							Item: map[string]types.AttributeValue{
+								"product": &types.AttributeValueMemberS{Value: "chef-ice"},
+								"version": &types.AttributeValueMemberS{Value: "19.1.2"},
+								"metadata": &types.AttributeValueMemberM{Value: map[string]types.AttributeValue{
+									"linux": &types.AttributeValueMemberM{Value: map[string]types.AttributeValue{
+										"x86_64": &types.AttributeValueMemberM{Value: map[string]types.AttributeValue{
+											"deb": &types.AttributeValueMemberM{Value: map[string]types.AttributeValue{
+												"filename":        &types.AttributeValueMemberS{Value: "chef_19.1.27-1_amd64.deb"},
+												"install-message": &types.AttributeValueMemberS{Value: ""},
+												"sha1":            &types.AttributeValueMemberS{Value: "SHA1x86_64"},
+												"sha256":          &types.AttributeValueMemberS{Value: "SHA256x86_64"},
 											}},
 										}},
 									}},
@@ -568,22 +556,20 @@ func TestGetMetaDataFailure(t *testing.T) {
 				db: &MDB{
 					GetItemfunc: func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
 						if tt.wantDBErr {
-							return nil, &dynamodb.ReplicaNotFoundException{
-								Message_: aws.String("Requested resource not found"),
-							}
+							return nil, &types.ReplicaNotFoundException{Message: aws.String("Requested resource not found")}
 						}
 						return &dynamodb.GetItemOutput{
-							Item: map[string]*dynamodb.AttributeValue{
-								"product": {S: aws.String("migrate-ice")},
-								"version": {S: aws.String("19.0.1")},
-								"metadata": {M: map[string]*dynamodb.AttributeValue{
-									"linux": {M: map[string]*dynamodb.AttributeValue{
-										"x86_64": {M: map[string]*dynamodb.AttributeValue{
-											"deb": {M: map[string]*dynamodb.AttributeValue{
-												"filename":        {S: aws.String("migration-tool_19.0.1-1_amd64.deb")},
-												"install-message": {S: aws.String("")},
-												"sha1":            {S: aws.String("SHA1x86_64")},
-												"sha256":          {S: aws.String("SHA256x86_64")},
+							Item: map[string]types.AttributeValue{
+								"product": &types.AttributeValueMemberS{Value: "migrate-ice"},
+								"version": &types.AttributeValueMemberS{Value: "19.0.1"},
+								"metadata": &types.AttributeValueMemberM{Value: map[string]types.AttributeValue{
+									"linux": &types.AttributeValueMemberM{Value: map[string]types.AttributeValue{
+										"x86_64": &types.AttributeValueMemberM{Value: map[string]types.AttributeValue{
+											"deb": &types.AttributeValueMemberM{Value: map[string]types.AttributeValue{
+												"filename":        &types.AttributeValueMemberS{Value: "migration-tool_19.0.1-1_amd64.deb"},
+												"install-message": &types.AttributeValueMemberS{Value: ""},
+												"sha1":            &types.AttributeValueMemberS{Value: "SHA1x86_64"},
+												"sha256":          &types.AttributeValueMemberS{Value: "SHA256x86_64"},
 											}},
 										}},
 									}},
@@ -649,18 +635,18 @@ func TestGetVersionLatestSuccess(t *testing.T) {
 					db: &MDB{
 						GetItemfunc: func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
 							return &dynamodb.GetItemOutput{
-								Item: map[string]*dynamodb.AttributeValue{
-									"product": {S: aws.String("automate")},
-									"version": {S: aws.String("4.0.91")},
+								Item: map[string]types.AttributeValue{
+									"product": &types.AttributeValueMemberS{Value: "automate"},
+									"version": &types.AttributeValueMemberS{Value: "4.0.91"},
 								},
 							}, nil
 						},
-						Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+						Scanfunc: func(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
 							return &dynamodb.ScanOutput{
-								Items: []map[string]*dynamodb.AttributeValue{
+								Items: []map[string]types.AttributeValue{
 									{
-										"product": {S: aws.String("automate")},
-										"version": {S: aws.String("4.0.91")},
+										"product": &types.AttributeValueMemberS{Value: "automate"},
+										"version": &types.AttributeValueMemberS{Value: "4.0.91"},
 									},
 								},
 							}, nil
@@ -673,18 +659,18 @@ func TestGetVersionLatestSuccess(t *testing.T) {
 					db: &MDB{
 						GetItemfunc: func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
 							return &dynamodb.GetItemOutput{
-								Item: map[string]*dynamodb.AttributeValue{
-									"product": {S: aws.String("chef-ice")},
-									"version": {S: aws.String("19.0.0")},
+								Item: map[string]types.AttributeValue{
+									"product": &types.AttributeValueMemberS{Value: "chef-ice"},
+									"version": &types.AttributeValueMemberS{Value: "19.0.0"},
 								},
 							}, nil
 						},
-						Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+						Scanfunc: func(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
 							return &dynamodb.ScanOutput{
-								Items: []map[string]*dynamodb.AttributeValue{
+								Items: []map[string]types.AttributeValue{
 									{
-										"product": {S: aws.String("chef-ice")},
-										"version": {S: aws.String("19.0.0")},
+										"product": &types.AttributeValueMemberS{Value: "chef-ice"},
+										"version": &types.AttributeValueMemberS{Value: "19.0.0"},
 									},
 								},
 							}, nil
@@ -697,18 +683,18 @@ func TestGetVersionLatestSuccess(t *testing.T) {
 					db: &MDB{
 						GetItemfunc: func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
 							return &dynamodb.GetItemOutput{
-								Item: map[string]*dynamodb.AttributeValue{
-									"product": {S: aws.String("migrate-ice")},
-									"version": {S: aws.String("19.0.1")},
+								Item: map[string]types.AttributeValue{
+									"product": &types.AttributeValueMemberS{Value: "migrate-ice"},
+									"version": &types.AttributeValueMemberS{Value: "19.0.1"},
 								},
 							}, nil
 						},
-						Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+						Scanfunc: func(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
 							return &dynamodb.ScanOutput{
-								Items: []map[string]*dynamodb.AttributeValue{
+								Items: []map[string]types.AttributeValue{
 									{
-										"product": {S: aws.String("migrate-ice")},
-										"version": {S: aws.String("19.0.1")},
+										"product": &types.AttributeValueMemberS{Value: "migrate-ice"},
+										"version": &types.AttributeValueMemberS{Value: "19.0.1"},
 									},
 								},
 							}, nil
@@ -750,14 +736,10 @@ func TestGetVersionLatestFailure(t *testing.T) {
 			ser := &DbOperationsService{
 				db: &MDB{
 					GetItemfunc: func(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
-						return nil, &dynamodb.ReplicaNotFoundException{
-							Message_: aws.String("Requested resource not found"),
-						}
+						return nil, &types.ReplicaNotFoundException{Message: aws.String("Requested resource not found")}
 					},
-					Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
-						return nil, &dynamodb.ReplicaNotFoundException{
-							Message_: aws.String("Requested resource not found"),
-						}
+					Scanfunc: func(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+						return nil, &types.ReplicaNotFoundException{Message: aws.String("Requested resource not found")}
 					},
 				},
 				dbModelType: tt.dbModelType,
@@ -796,13 +778,13 @@ func TestGetRelatedProductsSuccess(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ser := &DbOperationsService{
 				db: &MDB{
-					Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+					Scanfunc: func(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
 						return &dynamodb.ScanOutput{
-							Items: []map[string]*dynamodb.AttributeValue{
+							Items: []map[string]types.AttributeValue{
 								{
-									"bom": {S: aws.String("Chef InSpec")},
-									"products": {M: map[string]*dynamodb.AttributeValue{
-										"inspec": {S: aws.String("Chef InSpec")},
+									"bom": &types.AttributeValueMemberS{Value: "Chef InSpec"},
+									"products": &types.AttributeValueMemberM{Value: map[string]types.AttributeValue{
+										"inspec": &types.AttributeValueMemberS{Value: "Chef InSpec"},
 									}},
 								},
 							},
@@ -840,10 +822,8 @@ func TestGetRelatedProductsFailure(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ser := &DbOperationsService{
 				db: &MDB{
-					Scanfunc: func(si *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
-						return nil, &dynamodb.ReplicaNotFoundException{
-							Message_: aws.String("Requested resource not found"),
-						}
+					Scanfunc: func(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+						return nil, &types.ReplicaNotFoundException{Message: aws.String("Requested resource not found")}
 					},
 				},
 			}
@@ -865,12 +845,12 @@ func TestGetPackageManagers(t *testing.T) {
 		{
 			name: "Success",
 			mockScanOutput: &dynamodb.ScanOutput{
-				Items: []map[string]*dynamodb.AttributeValue{
+				Items: []map[string]types.AttributeValue{
 					{
-						"packages": {S: aws.String("pkg1")},
+						"packages": &types.AttributeValueMemberS{Value: "pkg1"},
 					},
 					{
-						"packages": {S: aws.String("pkg2")},
+						"packages": &types.AttributeValueMemberS{Value: "pkg2"},
 					},
 				},
 			},
@@ -880,8 +860,8 @@ func TestGetPackageManagers(t *testing.T) {
 		{
 			name:           "Scan failure",
 			mockScanOutput: nil,
-			mockScanError: &dynamodb.ReplicaNotFoundException{
-				Message_: aws.String("Requested resource not found"),
+			mockScanError: &types.ReplicaNotFoundException{
+				Message: aws.String("Requested resource not found"),
 			},
 			expectError:           true,
 			expectedErrorContains: "Requested resource not found",
@@ -889,10 +869,10 @@ func TestGetPackageManagers(t *testing.T) {
 		{
 			name: "Unmarshal failure",
 			mockScanOutput: &dynamodb.ScanOutput{
-				Items: []map[string]*dynamodb.AttributeValue{
+				Items: []map[string]types.AttributeValue{
 					{
-						"packages": {M: map[string]*dynamodb.AttributeValue{
-							"invalid": {S: aws.String("oops")},
+						"packages": &types.AttributeValueMemberM{Value: map[string]types.AttributeValue{
+							"invalid": &types.AttributeValueMemberS{Value: "oops"},
 						}},
 					},
 				},
@@ -923,7 +903,30 @@ func TestGetPackageManagers(t *testing.T) {
 			ser := &DbOperationsService{
 				db: &MDB{
 					Scanfunc: func(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
-						return tt.mockScanOutput, tt.mockScanError
+						// Convert v1 mockScanOutput to v2 if needed
+						if tt.mockScanOutput != nil {
+							// Convert Items if they are v1
+							v2Items := []map[string]types.AttributeValue{}
+							for _, item := range tt.mockScanOutput.Items {
+								v2Item := map[string]types.AttributeValue{}
+								for k, v := range item {
+									if s, ok := v.(*types.AttributeValueMemberS); ok {
+										v2Item[k] = &types.AttributeValueMemberS{Value: s.Value}
+									} else if m, ok := v.(*types.AttributeValueMemberM); ok {
+										mapped := map[string]types.AttributeValue{}
+										for mk, mv := range m.Value {
+											if ms, ok := mv.(*types.AttributeValueMemberS); ok {
+												mapped[mk] = &types.AttributeValueMemberS{Value: ms.Value}
+											}
+										}
+										v2Item[k] = &types.AttributeValueMemberM{Value: mapped}
+									}
+								}
+								v2Items = append(v2Items, v2Item)
+							}
+							return &dynamodb.ScanOutput{Items: v2Items}, tt.mockScanError
+						}
+						return nil, tt.mockScanError
 					},
 				},
 				packageManagersTable: "package-manager-dev",

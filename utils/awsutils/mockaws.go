@@ -1,14 +1,16 @@
 package awsutils
 
 import (
-	"github.com/aws/aws-sdk-go/aws/session"
+	"context"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/chef/omnitruck-service/config"
 )
 
 type MockAwsUtils struct {
-	GetNewSessionfunc func(config config.AWSConfig) (*session.Session, error)
+	GetNewConfigFunc func(ctx context.Context, awsConfig config.AWSConfig) (aws.Config, error)
 }
 
-func (mau *MockAwsUtils) GetNewSession(config config.AWSConfig) (*session.Session, error) {
-	return mau.GetNewSessionfunc(config)
+func (mau *MockAwsUtils) GetNewConfig(ctx context.Context, awsConfig config.AWSConfig) (aws.Config, error) {
+	return mau.GetNewConfigFunc(ctx, awsConfig)
 }

@@ -4,47 +4,47 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/chef/omnitruck-service/clients/omnitruck/aws"
-	"github.com/chef/omnitruck-service/config"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	omnitruckaws "github.com/chef/omnitruck-service/clients/omnitruck/aws"
+	omnitruckConfig "github.com/chef/omnitruck-service/config"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMockS3Smoke(t *testing.T) {
 	called := false
 
-	aws.MockValidateS3ConfigFunc = func(cfg config.AWSConfig) error {
+	omnitruckaws.MockValidateS3ConfigFunc = func(cfg omnitruckConfig.AWSConfig) error {
 		called = true
 		return nil
 	}
-	err := aws.MockValidateS3Config(config.AWSConfig{})
+	err := omnitruckaws.MockValidateS3Config(omnitruckConfig.AWSConfig{})
 	assert.NoError(t, err)
 	assert.True(t, called)
 
-	aws.MockNewS3SessionFunc = func(region string) (*session.Session, error) {
+	omnitruckaws.MockNewS3SessionFunc = func(region string) (aws.Config, error) {
 		called = true
-		return &session.Session{}, nil
+		return aws.Config{Region: region}, nil
 	}
-	sess, err := aws.MockNewS3Session("us-east-1")
+	cfg, err := omnitruckaws.MockNewS3Session("us-east-1")
 	assert.NoError(t, err)
-	assert.NotNil(t, sess)
+	assert.Equal(t, "us-east-1", cfg.Region)
 	assert.True(t, called)
 
-	aws.MockNewS3CredentialsFunc = func(sess *session.Session, roleArn string) *credentials.Credentials {
+	omnitruckaws.MockNewS3CredentialsFunc = func(cfg aws.Config, roleArn string) aws.CredentialsProvider {
 		called = true
-		return credentials.AnonymousCredentials
+		return credentials.NewStaticCredentialsProvider("fake", "fake", "")
 	}
-	creds := aws.MockNewS3Credentials(sess, "role")
+	creds := omnitruckaws.MockNewS3Credentials(cfg, "role")
 	assert.NotNil(t, creds)
 	assert.True(t, called)
 
-	aws.MockGetS3ObjectFunc = func(ctx context.Context, sess *session.Session, creds *credentials.Credentials, bucket, key string) (*s3.GetObjectOutput, error) {
+	omnitruckaws.MockGetS3ObjectFunc = func(ctx context.Context, cfg aws.Config, creds aws.CredentialsProvider, bucket, key string) (*s3.GetObjectOutput, error) {
 		called = true
 		return &s3.GetObjectOutput{}, nil
 	}
-	obj, err := aws.MockGetS3Object(context.Background(), sess, creds, "bucket", "key")
+	obj, err := omnitruckaws.MockGetS3Object(context.Background(), cfg, creds, "bucket", "key")
 	assert.NoError(t, err)
 	assert.NotNil(t, obj)
 	assert.True(t, called)
