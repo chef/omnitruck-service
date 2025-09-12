@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.86 -->
-## [0.0.86](https://github.com/chef/omnitruck-service/tree/0.0.86) (2025-08-12)
+<!-- latest_release 0.0.87 -->
+## [0.0.87](https://github.com/chef/omnitruck-service/tree/0.0.87) (2025-09-12)
 
 #### Merged Pull Requests
-- Fix: Remove pm from metadata URL for non-infra products [#110](https://github.com/chef/omnitruck-service/pull/110) ([swathi-s3](https://github.com/swathi-s3))
+- CHEF-24963 : Updated AWS SDK [#112](https://github.com/chef/omnitruck-service/pull/112) ([shanmugapriya-tr](https://github.com/shanmugapriya-tr))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- CHEF-24963 : Updated AWS SDK [#112](https://github.com/chef/omnitruck-service/pull/112) ([shanmugapriya-tr](https://github.com/shanmugapriya-tr)) <!-- 0.0.87 -->
 - Fix: Remove pm from metadata URL for non-infra products [#110](https://github.com/chef/omnitruck-service/pull/110) ([swathi-s3](https://github.com/swathi-s3)) <!-- 0.0.86 -->
 - Changes in the script to import BOM-to-product mappings from Excel into DynamoDB [#108](https://github.com/chef/omnitruck-service/pull/108) ([swathi-s3](https://github.com/swathi-s3)) <!-- 0.0.85 -->
 - Added fix for script [#109](https://github.com/chef/omnitruck-service/pull/109) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.84 -->
