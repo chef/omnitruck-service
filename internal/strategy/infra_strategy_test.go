@@ -8,9 +8,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
 	s3aws "github.com/chef/omnitruck-service/clients/omnitruck/aws"
 	"github.com/chef/omnitruck-service/config"
@@ -29,14 +28,14 @@ func patchS3AWS() func() {
 	s3aws.ValidateS3Config = func(cfg config.AWSConfig) error {
 		return s3aws.MockValidateS3ConfigFunc(cfg)
 	}
-	s3aws.NewS3Session = func(region string) (*session.Session, error) {
+	s3aws.NewS3Session = func(region string) (aws.Config, error) {
 		return s3aws.MockNewS3SessionFunc(region)
 	}
-	s3aws.NewS3Credentials = func(sess *session.Session, roleArn string) *credentials.Credentials {
-		return s3aws.MockNewS3CredentialsFunc(sess, roleArn)
+	s3aws.NewS3Credentials = func(cfg aws.Config, roleArn string) aws.CredentialsProvider {
+		return s3aws.MockNewS3CredentialsFunc(cfg, roleArn)
 	}
-	s3aws.GetS3Object = func(ctx context.Context, sess *session.Session, creds *credentials.Credentials, bucket, key string) (*s3.GetObjectOutput, error) {
-		return s3aws.MockGetS3ObjectFunc(ctx, sess, creds, bucket, key)
+	s3aws.GetS3Object = func(ctx context.Context, cfg aws.Config, creds aws.CredentialsProvider, bucket, key string) (*s3.GetObjectOutput, error) {
+		return s3aws.MockGetS3ObjectFunc(ctx, cfg, creds, bucket, key)
 	}
 	return func() {
 		s3aws.ValidateS3Config = origValidate
@@ -75,8 +74,8 @@ func TestInfraProductStrategy_DownloadFromS3(t *testing.T) {
 			name: "New S3 session fails",
 			setupMocks: func() {
 				s3aws.MockValidateS3ConfigFunc = func(cfg config.AWSConfig) error { return nil }
-				s3aws.MockNewS3SessionFunc = func(region string) (*session.Session, error) {
-					return nil, errors.New("session error")
+				s3aws.MockNewS3SessionFunc = func(region string) (aws.Config, error) {
+					return aws.Config{}, errors.New("session error")
 				}
 			},
 			params: &omnitruck.RequestParams{
@@ -94,11 +93,11 @@ func TestInfraProductStrategy_DownloadFromS3(t *testing.T) {
 			name: "Get S3 object fails",
 			setupMocks: func() {
 				s3aws.MockValidateS3ConfigFunc = func(cfg config.AWSConfig) error { return nil }
-				s3aws.MockNewS3SessionFunc = func(region string) (*session.Session, error) { return session.NewSession() }
-				s3aws.MockNewS3CredentialsFunc = func(sess *session.Session, roleArn string) *credentials.Credentials {
-					return credentials.NewStaticCredentials("AKIA", "SECRET", "")
+				s3aws.MockNewS3SessionFunc = func(region string) (aws.Config, error) { return aws.Config{Region: region}, nil }
+				s3aws.MockNewS3CredentialsFunc = func(cfg aws.Config, roleArn string) aws.CredentialsProvider {
+					return aws.AnonymousCredentials{} // or use a custom provider if needed
 				}
-				s3aws.MockGetS3ObjectFunc = func(ctx context.Context, sess *session.Session, creds *credentials.Credentials, bucket, key string) (*s3.GetObjectOutput, error) {
+				s3aws.MockGetS3ObjectFunc = func(ctx context.Context, cfg aws.Config, creds aws.CredentialsProvider, bucket, key string) (*s3.GetObjectOutput, error) {
 					return nil, errors.New("s3 error")
 				}
 			},
@@ -117,15 +116,15 @@ func TestInfraProductStrategy_DownloadFromS3(t *testing.T) {
 			name: "Successful S3 download",
 			setupMocks: func() {
 				s3aws.MockValidateS3ConfigFunc = func(cfg config.AWSConfig) error { return nil }
-				s3aws.MockNewS3SessionFunc = func(region string) (*session.Session, error) { return session.NewSession() }
-				s3aws.MockNewS3CredentialsFunc = func(sess *session.Session, roleArn string) *credentials.Credentials {
-					return credentials.NewStaticCredentials("AKIA", "SECRET", "")
+				s3aws.MockNewS3SessionFunc = func(region string) (aws.Config, error) { return aws.Config{Region: region}, nil }
+				s3aws.MockNewS3CredentialsFunc = func(cfg aws.Config, roleArn string) aws.CredentialsProvider {
+					return aws.AnonymousCredentials{}
 				}
 				contentType := "application/octet-stream"
 				contentLength := int64(123)
 				contentDisposition := "attachment; filename=file.txt"
 				body := io.NopCloser(bytes.NewBufferString("testdata"))
-				s3aws.MockGetS3ObjectFunc = func(ctx context.Context, sess *session.Session, creds *credentials.Credentials, bucket, key string) (*s3.GetObjectOutput, error) {
+				s3aws.MockGetS3ObjectFunc = func(ctx context.Context, cfg aws.Config, creds aws.CredentialsProvider, bucket, key string) (*s3.GetObjectOutput, error) {
 					return &s3.GetObjectOutput{
 						Body:               body,
 						ContentType:        &contentType,
@@ -246,11 +245,11 @@ func TestInfraProductStrategy_GetLatestVersion(t *testing.T) {
 }
 func TestInfraProductStrategy_GetAllVersions(t *testing.T) {
 	tests := []struct {
-		name           string
-		mockFunc       func(params *omnitruck.RequestParams) ([]omnitruck.ProductVersion, error)
-		expectedOK     bool
-		expectedCode   int
-		expectedData   []omnitruck.ProductVersion
+		name         string
+		mockFunc     func(params *omnitruck.RequestParams) ([]omnitruck.ProductVersion, error)
+		expectedOK   bool
+		expectedCode int
+		expectedData []omnitruck.ProductVersion
 	}{
 		{
 			name: "success",
@@ -300,14 +299,14 @@ func TestInfraProductStrategy_DownloadAndGetFileName(t *testing.T) {
 		expectedMsg    string
 		expectedCode   int
 		expectErr      bool
-		isDownload     bool 
+		isDownload     bool
 	}{
 		{
 			name: "download: filename error",
 			mockFilenameFn: func(params *omnitruck.RequestParams) (string, error) {
 				return "", errors.New("db error")
 			},
-			expectedMsg:  "", 
+			expectedMsg:  "",
 			expectedCode: http.StatusInternalServerError,
 			expectErr:    true,
 			isDownload:   true,

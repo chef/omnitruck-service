@@ -1,6 +1,7 @@
 package dboperations
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -8,10 +9,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/constants"
 	dbconnection "github.com/chef/omnitruck-service/middleware/db"
@@ -31,6 +32,19 @@ type IDbOperations interface {
 type IDynamoDBOps interface {
 	GetItem(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error)
 	Scan(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error)
+}
+
+// Wrapper to adapt *dynamodb.Client to IDynamoDBOps
+type DynamoDBOpsWrapper struct {
+	Client *dynamodb.Client
+}
+
+func (w *DynamoDBOpsWrapper) GetItem(input *dynamodb.GetItemInput) (*dynamodb.GetItemOutput, error) {
+	return w.Client.GetItem(context.TODO(), input)
+}
+
+func (w *DynamoDBOpsWrapper) Scan(input *dynamodb.ScanInput) (*dynamodb.ScanOutput, error) {
+	return w.Client.Scan(context.TODO(), input)
 }
 
 type DbOperationsService struct {
@@ -58,7 +72,7 @@ type PackageManagerItem struct {
 
 func NewDbOperationsService(dbConnection dbconnection.DbConnection, config config.ServiceConfig) *DbOperationsService {
 	return &DbOperationsService{
-		db:                         dbConnection.GetDbConnection(),
+		db:                         &DynamoDBOpsWrapper{Client: dbConnection.GetDbConnection()},
 		productTableName:           config.MetadataDetailsTable,
 		skuTableName:               config.RelatedProductsTable,
 		packageManagersTable:       config.PackageManagersTable,
@@ -79,7 +93,7 @@ func (dbo *DbOperationsService) GetPackages(partitionValue string, sortValue str
 		return nil, err
 	}
 	response := reflect.New(dbo.dbModelType).Interface()
-	if err := dynamodbattribute.UnmarshalMap(res.Item, &response); err != nil {
+	if err := attributevalue.UnmarshalMap(res.Item, &response); err != nil {
 		return nil, err
 	}
 	if v, ok := response.(*models.ProductDetails); ok {
@@ -100,7 +114,7 @@ func (dbo *DbOperationsService) GetVersionAll(partitionValue string) ([]string, 
 	versionsArray := []string{}
 	for _, i := range res.Items {
 		model := reflect.New(dbo.dbModelType).Interface()
-		err = dynamodbattribute.UnmarshalMap(i, &model)
+		err = attributevalue.UnmarshalMap(i, &model)
 		if err != nil {
 			log.Errorf("Got error unmarshalling: %s", err)
 			return nil, err
@@ -121,7 +135,7 @@ func (dbo *DbOperationsService) GetMetaData(partitionValue, sortValue, platform,
 		return nil, err
 	}
 	productDetails := reflect.New(dbo.dbModelType).Interface()
-	if err := dynamodbattribute.UnmarshalMap(res.Item, &productDetails); err != nil {
+	if err := attributevalue.UnmarshalMap(res.Item, &productDetails); err != nil {
 		return nil, err
 	}
 	switch v := productDetails.(type) {
@@ -197,12 +211,12 @@ func (dbo *DbOperationsService) GetRelatedProducts(partitionValue string) (*mode
 		return &models.RelatedProducts{}, nil
 	}
 
-	skuErr := dynamodbattribute.Unmarshal(res.Items[0]["bom"], &sku.Bom)
+	skuErr := attributevalue.Unmarshal(res.Items[0]["bom"], &sku.Bom)
 	if skuErr != nil {
 		log.Errorf("Error in unmarshalling the sku name: %v", skuErr)
 		return nil, skuErr
 	}
-	productErr := dynamodbattribute.Unmarshal(res.Items[0]["products"], &sku.Products)
+	productErr := attributevalue.Unmarshal(res.Items[0]["products"], &sku.Products)
 	if productErr != nil {
 		log.Errorf("Error in unmarshalling the map of products: %v", skuErr)
 		return nil, productErr
@@ -221,7 +235,7 @@ func (dbo *DbOperationsService) fetchDataValues(partitionValue string, tableName
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
 		FilterExpression:          expr.Filter(),
-		TableName:                 aws.String(tableName),
+		TableName:                 &tableName,
 	}
 	res, err := dbo.db.Scan(params)
 	if err != nil {
@@ -233,10 +247,10 @@ func (dbo *DbOperationsService) fetchDataValues(partitionValue string, tableName
 
 func (dbo *DbOperationsService) fetchDataValuesWithSortKey(partitionValue string, sortValue string) (*dynamodb.GetItemOutput, error) {
 	input := &dynamodb.GetItemInput{
-		TableName: aws.String(dbo.productTableName),
-		Key: map[string]*dynamodb.AttributeValue{
-			constants.PRODUCT_PARTITION_KEY: {S: aws.String(partitionValue)},
-			constants.PRODUCT_SORT_KEY:      {S: aws.String(sortValue)},
+		TableName: &dbo.productTableName,
+		Key: map[string]types.AttributeValue{
+			constants.PRODUCT_PARTITION_KEY: &types.AttributeValueMemberS{Value: partitionValue},
+			constants.PRODUCT_SORT_KEY:      &types.AttributeValueMemberS{Value: sortValue},
 		},
 	}
 	res, err := dbo.db.GetItem(input)
@@ -251,7 +265,7 @@ func (dbo *DbOperationsService) GetPackageManagers() ([]string, error) {
 	tableName := dbo.packageManagersTable
 
 	input := &dynamodb.ScanInput{
-		TableName: aws.String(tableName),
+		TableName: &tableName,
 	}
 
 	res, err := dbo.db.Scan(input)
@@ -259,7 +273,7 @@ func (dbo *DbOperationsService) GetPackageManagers() ([]string, error) {
 		log.Errorf("Error scanning table %s: %v", tableName, err)
 		return nil, err
 	}
-	if res == nil || res.Items == nil {
+	if res == nil || res.Items == nil || len(res.Items) == 0 {
 		log.Errorf("Scan result is nil or missing Items from table %s", tableName)
 		return nil, errors.New("scan returned no items")
 	}
@@ -267,7 +281,7 @@ func (dbo *DbOperationsService) GetPackageManagers() ([]string, error) {
 	var results []string
 	for _, item := range res.Items {
 		var pkgItem PackageManagerItem
-		if err := dynamodbattribute.UnmarshalMap(item, &pkgItem); err != nil {
+		if err := attributevalue.UnmarshalMap(item, &pkgItem); err != nil {
 			log.Errorf("Unmarshal error: %v", err)
 			return nil, fmt.Errorf("failed to unmarshal item: %w", err)
 		}
