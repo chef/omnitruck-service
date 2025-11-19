@@ -3,3 +3,5 @@ omnitruck-service
 omnitruck.yml
 .terraform
 *.fiber.gz
+test/coverage/
+cov.out
