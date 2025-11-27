@@ -52,19 +52,34 @@ func TestDefaultProductStrategy_GetPackages(t *testing.T) {
 
 func TestDefaultProductStrategy_Download(t *testing.T) {
 	tests := []struct {
-		name     string
-		body     string
-		ok       bool
-		code     int
-		message  string
-		expected string
-		hasError bool
+		name      string
+		body      string
+		ok        bool
+		code      int
+		message   string
+		licenseId string
+		expected  string
+		hasError  bool
 	}{
 		{
 			name:     "success",
 			body:     `{"url":"http://example.com","version":"2.0.0"}`,
 			ok:       true,
 			expected: "http://example.com",
+		},
+		{
+			name:      "success with licenseId",
+			body:      `{"url":"http://example.com/package.rpm","version":"2.0.0"}`,
+			ok:        true,
+			licenseId: "test-license-123",
+			expected:  "http://example.com/package.rpm?licenseId=test-license-123",
+		},
+		{
+			name:      "success with empty licenseId",
+			body:      `{"url":"http://example.com/file.deb","version":"2.0.0"}`,
+			ok:        true,
+			licenseId: "",
+			expected:  "http://example.com/file.deb",
 		},
 		{
 			name:     "failure",
@@ -83,7 +98,8 @@ func TestDefaultProductStrategy_Download(t *testing.T) {
 				},
 			}
 			s := &strategy.DefaultProductStrategy{OmnitruckService: mock}
-			url, _, _, msg, code, err := s.Download(&omnitruck.RequestParams{})
+			params := &omnitruck.RequestParams{LicenseId: tt.licenseId}
+			url, _, _, msg, code, err := s.Download(params)
 			assert.Equal(t, tt.expected, url)
 			assert.Equal(t, tt.message, msg)
 			assert.Equal(t, tt.code, code)

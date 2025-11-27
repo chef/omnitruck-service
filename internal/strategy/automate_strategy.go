@@ -1,6 +1,7 @@
 package strategy
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 
@@ -62,6 +63,12 @@ func (s *ProductDynamoStrategy) GetMetadata(params *omnitruck.RequestParams) (om
 
 func (s *ProductDynamoStrategy) Download(params *omnitruck.RequestParams) (url string, resp io.ReadCloser, header http.Header, msg string, code int, err error) {
 	url, err = s.DynamoService.ProductDownload(params)
+
+	// Append licenseId query parameter if present
+	if params.LicenseId != "" {
+		url = fmt.Sprintf("%s?licenseId=%s", url, params.LicenseId)
+	}
+
 	return url, nil, nil, "", 0, err
 }
 
