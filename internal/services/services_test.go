@@ -39,7 +39,7 @@ func buildInjector(templateRenderer template.TemplateRenderer, omnitruckURL stri
 	do.ProvideNamedValue[config.ServiceConfig](injector, "config", config.ServiceConfig{
 		LicenseServiceUrl: "http://license-service",
 		OmnitruckUrl:      omnitruckURL,
-		Infra19Enabled:    true,
+		SupportInfra19:    true,
 	})
 	return injector
 }
@@ -363,7 +363,7 @@ func TestDownloadService_Platforms(t *testing.T) {
 	do.ProvideNamedValue[constants.ApiType](injector, "mode", constants.Commercial)
 	do.ProvideNamedValue[config.ServiceConfig](injector, "config", config.ServiceConfig{
 		OmnitruckUrl: ts.URL,
-		Infra19Enabled:    true,
+		SupportInfra19:    true,
 	})
 
 	locals := map[string]interface{}{"license_id": "123"}
