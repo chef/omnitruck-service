@@ -33,6 +33,7 @@ func TestSelectProductStrategy(t *testing.T) {
 			PackageDetailsCurrentTable: "mock_current_table",
 			PackageDetailsStableTable:  "mock_stable_table",
 			AWSConfig:                  config.AWSConfig{},
+			Infra19Enabled:             true,
 		},
 	}
 

@@ -11,6 +11,7 @@ type ServiceConfig struct {
 	PackageManagersTable       string           `json:"packageManagersTable"`
 	PackageDetailsCurrentTable string           `json:"packageDetailsCurrentTable"`
 	PackageDetailsStableTable  string           `json:"packageDetailsStableTable"`
+	Infra19Enabled             bool             `json:"infra19Enabled"`
 }
 
 type ReplicatedConfig struct {

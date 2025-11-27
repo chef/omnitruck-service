@@ -45,6 +45,7 @@ func testInjector(
 		do.ProvideNamedValue[config.ServiceConfig](reqInjector, "config", config.ServiceConfig{
 			LicenseServiceUrl: "http://licenseservice",
 			OmnitruckUrl:      "https://omnitruck.chef.io",
+			Infra19Enabled:    true,
 		})
 
 		do.ProvideNamedValue[omnitruck.IRequestValidator](reqInjector, "validator", &omnitruck.MockRequestValidator{
