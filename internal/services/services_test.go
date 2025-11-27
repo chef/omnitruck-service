@@ -191,35 +191,101 @@ func TestReplicatedService(t *testing.T) {
 func TestGetLinuxScript(t *testing.T) {
 	mockTemplate := &template.MockTemplateRenderer{
 		GetScriptfunc: func(baseUrl string, params *omnitruck.RequestParams, filePath string) (string, error) {
-			return "script", nil
+			return "#!/bin/bash\ninstall script", nil
 		},
 	}
 	injector := buildInjector(mockTemplate, "https://omnitruck.chef.io")
 
 	log := logrus.NewEntry(logrus.New())
-	svc, _ := NewDownloadService(injector, log, map[string]interface{}{"base_url": "http://x"})
-	params := &omnitruck.RequestParams{}
-	script, req := svc.GetLinuxScript(params)
 
-	assert.True(t, req.Ok)
-	assert.Equal(t, "script", script)
+	tests := []struct {
+		name   string
+		mode   constants.ApiType
+		locals map[string]interface{}
+		params *omnitruck.RequestParams
+	}{
+		{
+			name:   "commercial mode with license_id",
+			mode:   constants.Commercial,
+			locals: map[string]interface{}{"base_url": "http://x", "license_id": "test-license"},
+			params: &omnitruck.RequestParams{},
+		},
+		{
+			name:   "trial mode with license_id",
+			mode:   constants.Trial,
+			locals: map[string]interface{}{"base_url": "http://x", "license_id": "test-license"},
+			params: &omnitruck.RequestParams{},
+		},
+		{
+			name:   "opensource mode with license_id",
+			mode:   constants.Opensource,
+			locals: map[string]interface{}{"base_url": "http://x", "license_id": "test-license"},
+			params: &omnitruck.RequestParams{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc, _ := NewDownloadService(injector, log, tt.locals)
+			svc.setMode(tt.mode)
+			script, req := svc.GetLinuxScript(tt.params)
+
+			assert.True(t, req.Ok)
+			assert.Equal(t, fiber.StatusOK, req.Code)
+			assert.NotEmpty(t, script)
+			assert.Contains(t, script, "install")
+		})
+	}
 }
 
 func TestGetWindowsScript(t *testing.T) {
 	mockTemplate := &template.MockTemplateRenderer{
 		GetScriptfunc: func(baseUrl string, params *omnitruck.RequestParams, filePath string) (string, error) {
-			return "script", nil
+			return "# PowerShell install script", nil
 		},
 	}
 	injector := buildInjector(mockTemplate, "https://omnitruck.chef.io")
 
 	log := logrus.NewEntry(logrus.New())
-	svc, _ := NewDownloadService(injector, log, map[string]interface{}{"base_url": "http://x"})
-	params := &omnitruck.RequestParams{}
-	script, req := svc.GetWindowsScript(params)
 
-	assert.True(t, req.Ok)
-	assert.Equal(t, "script", script)
+	tests := []struct {
+		name   string
+		mode   constants.ApiType
+		locals map[string]interface{}
+		params *omnitruck.RequestParams
+	}{
+		{
+			name:   "commercial mode with license_id",
+			mode:   constants.Commercial,
+			locals: map[string]interface{}{"base_url": "http://x", "license_id": "test-license"},
+			params: &omnitruck.RequestParams{},
+		},
+		{
+			name:   "trial mode with license_id",
+			mode:   constants.Trial,
+			locals: map[string]interface{}{"base_url": "http://x", "license_id": "test-license"},
+			params: &omnitruck.RequestParams{},
+		},
+		{
+			name:   "opensource mode with license_id",
+			mode:   constants.Opensource,
+			locals: map[string]interface{}{"base_url": "http://x", "license_id": "test-license"},
+			params: &omnitruck.RequestParams{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc, _ := NewDownloadService(injector, log, tt.locals)
+			svc.setMode(tt.mode)
+			script, req := svc.GetWindowsScript(tt.params)
+
+			assert.True(t, req.Ok)
+			assert.Equal(t, fiber.StatusOK, req.Code)
+			assert.NotEmpty(t, script)
+			assert.Contains(t, script, "install")
+		})
+	}
 }
 
 func TestProductDownload_FailsOnEmptyVersions(t *testing.T) {
@@ -1012,11 +1078,11 @@ func TestDownloadService_GetScripts(t *testing.T) {
 			expectCode:    fiber.StatusInternalServerError,
 		},
 		{
-			name: "opensource mode removes license id",
+			name: "opensource mode with license id",
 			params: &omnitruck.RequestParams{
 				Product:   "chef",
 				Channel:   "stable",
-				LicenseId: "should-be-cleared",
+				LicenseId: "test-license",
 			},
 			isLinux:       true,
 			expectSuccess: true,
@@ -1057,10 +1123,6 @@ func TestDownloadService_GetScripts(t *testing.T) {
 				assert.False(t, req.Ok)
 				assert.Equal(t, tt.expectCode, req.Code)
 				assert.Empty(t, script)
-			}
-
-			if tt.name == "opensource mode removes license id" {
-				assert.Empty(t, paramsCopy.LicenseId, "expected license id to be cleared for opensource")
 			}
 		})
 	}
