@@ -55,6 +55,7 @@ func (s *DefaultProductStrategy) Download(params *omnitruck.RequestParams) (url 
 	}
 
 	// Append licenseId query parameter if present
+	// Note: This URL does not have any existing query parameters
 	if params.LicenseId != "" {
 		data.Url = fmt.Sprintf("%s?licenseId=%s", data.Url, params.LicenseId)
 	}

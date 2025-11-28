@@ -65,6 +65,7 @@ func (s *ProductDynamoStrategy) Download(params *omnitruck.RequestParams) (url s
 	url, err = s.DynamoService.ProductDownload(params)
 
 	// Append licenseId query parameter if present
+	// Note: This URL does not have any existing query parameters
 	if params.LicenseId != "" {
 		url = fmt.Sprintf("%s?licenseId=%s", url, params.LicenseId)
 	}

@@ -65,6 +65,9 @@ func SelectProductStrategy(product string, channel string, deps *ProductStrategy
 			AWSConfig:     deps.Config.AWSConfig,
 		}
 	default:
-		return &DefaultProductStrategy{OmnitruckService: deps.OmnitruckService}
+		return &DefaultProductStrategy{
+			OmnitruckService: deps.OmnitruckService,
+			Log:              deps.Log,
+		}
 	}
 }
