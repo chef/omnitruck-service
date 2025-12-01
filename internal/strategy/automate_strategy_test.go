@@ -47,7 +47,7 @@ func TestProductDynamoStrategy_GetLatestVersion(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt 
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			s := &strategy.ProductDynamoStrategy{
 				DynamoService: tt.mockService(),
@@ -67,7 +67,6 @@ func TestProductDynamoStrategy_GetLatestVersion(t *testing.T) {
 		})
 	}
 }
-
 
 func TestProductDynamoStrategy_GetAllVersions(t *testing.T) {
 	tests := []struct {
@@ -122,7 +121,6 @@ func TestProductDynamoStrategy_GetAllVersions(t *testing.T) {
 		})
 	}
 }
-
 
 func TestProductDynamoStrategy_GetPackages(t *testing.T) {
 	mock := &omnitruck.MockDynamoServices{
@@ -194,23 +192,52 @@ func TestProductDynamoStrategy_GetMetadata(t *testing.T) {
 }
 
 func TestProductDynamoStrategy_Download(t *testing.T) {
-	mock := &omnitruck.MockDynamoServices{
-		ProductDownloadFunc: func(p *omnitruck.RequestParams) (string, error) {
-			return "http://example.com", nil
+	tests := []struct {
+		name        string
+		params      *omnitruck.RequestParams
+		mockURL     string
+		expectedURL string
+	}{
+		{
+			name:        "without licenseId",
+			params:      &omnitruck.RequestParams{Product: "automate"},
+			mockURL:     "http://example.com",
+			expectedURL: "http://example.com",
+		},
+		{
+			name:        "with licenseId",
+			params:      &omnitruck.RequestParams{Product: "automate", LicenseId: "test-license-123"},
+			mockURL:     "http://example.com/package.rpm",
+			expectedURL: "http://example.com/package.rpm?licenseId=test-license-123",
+		},
+		{
+			name:        "with empty licenseId",
+			params:      &omnitruck.RequestParams{Product: "habitat", LicenseId: ""},
+			mockURL:     "http://example.com/hab.tar.gz",
+			expectedURL: "http://example.com/hab.tar.gz",
 		},
 	}
-	s := &strategy.ProductDynamoStrategy{
-		DynamoService: mock,
-		Log:           log.NewEntry(log.New()),
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mock := &omnitruck.MockDynamoServices{
+				ProductDownloadFunc: func(p *omnitruck.RequestParams) (string, error) {
+					return tt.mockURL, nil
+				},
+			}
+			s := &strategy.ProductDynamoStrategy{
+				DynamoService: mock,
+				Log:           log.NewEntry(log.New()),
+			}
+			url, rc, hdr, msg, code, err := s.Download(tt.params)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedURL, url)
+			assert.Nil(t, rc)
+			assert.Nil(t, hdr)
+			assert.Empty(t, msg)
+			assert.Equal(t, 0, code)
+		})
 	}
-	params := &omnitruck.RequestParams{Product: "automate"}
-	url, rc, hdr, msg, code, err := s.Download(params)
-	assert.NoError(t, err)
-	assert.Equal(t, "http://example.com", url)
-	assert.Nil(t, rc)
-	assert.Nil(t, hdr)
-	assert.Empty(t, msg)
-	assert.Equal(t, 0, code)
 }
 
 func TestProductDynamoStrategy_GetFileName(t *testing.T) {

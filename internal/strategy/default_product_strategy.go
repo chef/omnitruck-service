@@ -1,6 +1,7 @@
 package strategy
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 
@@ -52,6 +53,13 @@ func (s *DefaultProductStrategy) Download(params *omnitruck.RequestParams) (url 
 	if !request.Ok {
 		return "", nil, nil, request.Message, request.Code, fiber.NewError(request.Code, request.Message)
 	}
+
+	// Append licenseId query parameter if present
+	// Note: This URL does not have any existing query parameters
+	if params.LicenseId != "" {
+		data.Url = fmt.Sprintf("%s?licenseId=%s", data.Url, params.LicenseId)
+	}
+
 	return data.Url, nil, nil, request.Message, request.Code, nil
 }
 
