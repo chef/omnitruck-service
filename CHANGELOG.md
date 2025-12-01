@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.89 -->
-## [0.0.89](https://github.com/chef/omnitruck-service/tree/0.0.89) (2025-10-22)
+<!-- latest_release 0.0.90 -->
+## [0.0.90](https://github.com/chef/omnitruck-service/tree/0.0.90) (2025-12-01)
 
 #### Merged Pull Requests
-- Run common pipeline [#114](https://github.com/chef/omnitruck-service/pull/114) ([sandhi18](https://github.com/sandhi18))
+- changes to add licenseId in packages.chef.io api calls [#118](https://github.com/chef/omnitruck-service/pull/118) ([vipin230](https://github.com/vipin230))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- changes to add licenseId in packages.chef.io api calls [#118](https://github.com/chef/omnitruck-service/pull/118) ([vipin230](https://github.com/vipin230)) <!-- 0.0.90 -->
 - Run common pipeline [#114](https://github.com/chef/omnitruck-service/pull/114) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.89 -->
 - Run common pipeline [#113](https://github.com/chef/omnitruck-service/pull/113) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.88 -->
 - CHEF-24963 : Updated AWS SDK [#112](https://github.com/chef/omnitruck-service/pull/112) ([shanmugapriya-tr](https://github.com/shanmugapriya-tr)) <!-- 0.0.87 -->
