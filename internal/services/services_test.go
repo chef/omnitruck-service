@@ -39,6 +39,7 @@ func buildInjector(templateRenderer template.TemplateRenderer, omnitruckURL stri
 	do.ProvideNamedValue[config.ServiceConfig](injector, "config", config.ServiceConfig{
 		LicenseServiceUrl: "http://license-service",
 		OmnitruckUrl:      omnitruckURL,
+		SupportInfra19:    true,
 	})
 	return injector
 }
@@ -362,6 +363,7 @@ func TestDownloadService_Platforms(t *testing.T) {
 	do.ProvideNamedValue[constants.ApiType](injector, "mode", constants.Commercial)
 	do.ProvideNamedValue[config.ServiceConfig](injector, "config", config.ServiceConfig{
 		OmnitruckUrl: ts.URL,
+		SupportInfra19:    true,
 	})
 
 	locals := map[string]interface{}{"license_id": "123"}
@@ -822,6 +824,89 @@ func TestDownloadService_RelatedProducts(t *testing.T) {
 		})
 	}
 }
+
+func TestDownloadService_RelatedProducts_SupportInfra19(t *testing.T) {
+	t.Parallel()
+
+	logEntry := logrus.NewEntry(logrus.New())
+	locals := map[string]interface{}{"base_url": "http://example.com"}
+
+	tests := []struct {
+		name               string
+		supportInfra19     bool
+		expectedProducts   []string
+		unexpectedProducts []string
+	}{
+		{
+			name:               "SupportInfra19 true - includes infra products",
+			supportInfra19:     true,
+			expectedProducts:   []string{"chef", "chef-ice", "migrate-ice"},
+			unexpectedProducts: []string{},
+		},
+		{
+			name:               "SupportInfra19 false - excludes infra products",
+			supportInfra19:     false,
+			expectedProducts:   []string{"chef"},
+			unexpectedProducts: []string{"chef-ice", "migrate-ice"},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			injector := do.New()
+			do.ProvideNamedValue[dboperations.IDbOperations](injector, "dbService", &dboperations.MockIDbOperations{
+				GetRelatedProductsfunc: func(partitionValue string) (*models.RelatedProducts, error) {
+					return &models.RelatedProducts{
+						Bom: "test-bom",
+						Products: map[string]string{
+							"chef":        "Chef Infra Client",
+							"chef-ice":    "Chef Infra Client Enterprise",
+							"migrate-ice": "Migrate ICE",
+							"automate":    "Chef Automate",
+						},
+					}, nil
+				},
+			})
+			do.ProvideNamedValue[template.TemplateRenderer](injector, "templateRenderer", &template.MockTemplateRenderer{})
+			do.ProvideNamedValue[replicated.IReplicated](injector, "replicated", &replicated.MockReplicated{})
+			do.ProvideNamedValue[clients.ILicense](injector, "licenseClient", &clients.MockLicense{})
+			do.ProvideNamedValue[constants.ApiType](injector, "mode", constants.Commercial)
+			do.ProvideNamedValue[config.ServiceConfig](injector, "config", config.ServiceConfig{
+				SupportInfra19: tt.supportInfra19,
+			})
+
+			svc, err := NewDownloadService(injector, logEntry, locals)
+			require.NoError(t, err)
+
+			params := &omnitruck.RequestParams{
+				BOM: "test-bom",
+			}
+
+			data, req := svc.RelatedProducts(params)
+
+			assert.True(t, req.Ok, "expected ok true")
+			assert.Equal(t, fiber.StatusOK, req.Code)
+			assert.NotNil(t, data)
+
+			products, ok := data["relatedProducts"].(map[string]string)
+			assert.True(t, ok, "expected relatedProducts to be map[string]string")
+
+			// Check expected products are present
+			for _, product := range tt.expectedProducts {
+				assert.Contains(t, products, product, "expected product %s to be present", product)
+			}
+
+			// Check unexpected products are not present
+			for _, product := range tt.unexpectedProducts {
+				assert.NotContains(t, products, product, "expected product %s to be excluded", product)
+			}
+		})
+	}
+}
+
 func TestDownloadService_GetFileName_InvalidProduct(t *testing.T) {
 	t.Parallel()
 

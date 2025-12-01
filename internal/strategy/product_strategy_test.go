@@ -33,6 +33,7 @@ func TestSelectProductStrategy(t *testing.T) {
 			PackageDetailsCurrentTable: "mock_current_table",
 			PackageDetailsStableTable:  "mock_stable_table",
 			AWSConfig:                  config.AWSConfig{},
+			SupportInfra19:             true,
 		},
 	}
 
@@ -109,6 +110,89 @@ func TestSelectProductStrategy(t *testing.T) {
 				lastCall := mockDynamo.SetDbInfoCalledWith[len(mockDynamo.SetDbInfoCalledWith)-1]
 				assert.Equal(t, tt.expectDbInfo.table, lastCall.Table)
 				assert.Equal(t, tt.expectDbInfo.model, lastCall.Model)
+			}
+		})
+	}
+}
+
+func TestSelectProductStrategy_SupportInfra19(t *testing.T) {
+	mockDynamo := &omnitruck.MockDynamoServices{}
+	mockPlatform := &omnitruck.PlatformServices{}
+	mockOmnitruck := &omnitruck.Omnitruck{}
+	mockLog := log.NewEntry(log.New())
+
+	tests := []struct {
+		name           string
+		product        string
+		channel        string
+		supportInfra19 bool
+		expectedType   reflect.Type
+		expectDbInfo   bool
+	}{
+		{
+			name:           "infra product with SupportInfra19=true should return InfraProductStrategy",
+			product:        constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT,
+			channel:        constants.CURRENT_CHANNEL,
+			supportInfra19: true,
+			expectedType:   reflect.TypeOf(&strategy.InfraProductStrategy{}),
+			expectDbInfo:   true,
+		},
+		{
+			name:           "infra product with SupportInfra19=false should return DefaultProductStrategy",
+			product:        constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT,
+			channel:        constants.CURRENT_CHANNEL,
+			supportInfra19: false,
+			expectedType:   reflect.TypeOf(&strategy.DefaultProductStrategy{}),
+			expectDbInfo:   false,
+		},
+		{
+			name:           "migrate ice with SupportInfra19=true should return InfraProductStrategy",
+			product:        constants.MIGRATE_ICE,
+			channel:        constants.STABLE_CHANNEL,
+			supportInfra19: true,
+			expectedType:   reflect.TypeOf(&strategy.InfraProductStrategy{}),
+			expectDbInfo:   true,
+		},
+		{
+			name:           "migrate ice with SupportInfra19=false should return DefaultProductStrategy",
+			product:        constants.MIGRATE_ICE,
+			channel:        constants.STABLE_CHANNEL,
+			supportInfra19: false,
+			expectedType:   reflect.TypeOf(&strategy.DefaultProductStrategy{}),
+			expectDbInfo:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Reset mock for each test
+			mockDynamo.SetDbInfoCalledWith = nil
+
+			deps := &strategy.ProductStrategyDeps{
+				DynamoService:     mockDynamo,
+				PlatformService:   mockPlatform,
+				OmnitruckService:  mockOmnitruck,
+				Log:               mockLog,
+				Replicated:        nil,
+				LicenseClient:     nil,
+				LicenseServiceUrl: "http://mock-license",
+				Mode:              constants.Opensource,
+				Config: config.ServiceConfig{
+					MetadataDetailsTable:       "mock_metadata_table",
+					PackageDetailsCurrentTable: "mock_current_table",
+					PackageDetailsStableTable:  "mock_stable_table",
+					AWSConfig:                  config.AWSConfig{},
+					SupportInfra19:             tt.supportInfra19,
+				},
+			}
+
+			strat := strategy.SelectProductStrategy(tt.product, tt.channel, deps)
+			assert.Equal(t, tt.expectedType, reflect.TypeOf(strat))
+
+			if tt.expectDbInfo {
+				assert.NotEmpty(t, mockDynamo.SetDbInfoCalledWith, "expected SetDbInfo to be called when SupportInfra19=true")
+			} else {
+				assert.Empty(t, mockDynamo.SetDbInfoCalledWith, "expected SetDbInfo NOT to be called when SupportInfra19=false")
 			}
 		})
 	}
