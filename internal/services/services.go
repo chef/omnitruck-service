@@ -114,6 +114,18 @@ func (svc *DownloadService) Products(params *omnitruck.RequestParams) (data omni
 	eol := params.Eol == "true"
 	data = getServerStrategy.FilterProducts(data, eol)
 
+	if !svc.config.SupportInfra19 {
+		var filtered omnitruck.ItemList
+		for _, item := range data {
+			if item == constants.CHEF_INFRA_CLIENT_NEW_VALUE {
+				filtered = append(filtered, constants.CHEF_INFRA_CLIENT_OLD_VALUE)
+			} else {
+				filtered = append(filtered, item)
+			}
+		}
+		data = filtered
+	}
+	
 	return data, request
 
 }
