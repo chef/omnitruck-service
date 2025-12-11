@@ -288,7 +288,7 @@ func TestValidateOrSetVersion(t *testing.T) {
 		expectVer   string
 	}{
 		{
-			name: "valid version exists",
+			name: "valid version exists - full version",
 			params: &omnitruck.RequestParams{
 				Version: "2.0.0",
 			},
@@ -321,6 +321,57 @@ func TestValidateOrSetVersion(t *testing.T) {
 			filtered:    []omnitruck.ProductVersion{"4.0.0", "5.0.0"},
 			expectError: false,
 			expectVer:   "5.0.0",
+		},
+		{
+			name: "major version only - gets latest of that major",
+			params: &omnitruck.RequestParams{
+				Version: "16",
+			},
+			filtered:    []omnitruck.ProductVersion{"15.0.0", "16.1.0", "16.2.5", "16.3.10", "17.0.0"},
+			expectError: false,
+			expectVer:   "16.3.10",
+		},
+		{
+			name: "major.minor version - gets latest patch of that combo",
+			params: &omnitruck.RequestParams{
+				Version: "16.2",
+			},
+			filtered:    []omnitruck.ProductVersion{"16.1.0", "16.2.0", "16.2.3", "16.2.5", "16.3.0", "17.0.0"},
+			expectError: false,
+			expectVer:   "16.2.5",
+		},
+		{
+			name: "major version not found",
+			params: &omnitruck.RequestParams{
+				Version: "99",
+			},
+			filtered:    []omnitruck.ProductVersion{"1.0.0", "2.0.0"},
+			expectError: true,
+		},
+		{
+			name: "major.minor version not found",
+			params: &omnitruck.RequestParams{
+				Version: "16.99",
+			},
+			filtered:    []omnitruck.ProductVersion{"16.1.0", "16.2.0", "17.0.0"},
+			expectError: true,
+		},
+		{
+			name: "full version with multiple matching major.minor",
+			params: &omnitruck.RequestParams{
+				Version: "16.2.3",
+			},
+			filtered:    []omnitruck.ProductVersion{"16.2.0", "16.2.3", "16.2.5"},
+			expectError: false,
+			expectVer:   "16.2.3",
+		},
+		{
+			name: "full version not found even with matching major.minor",
+			params: &omnitruck.RequestParams{
+				Version: "16.2.4",
+			},
+			filtered:    []omnitruck.ProductVersion{"16.2.0", "16.2.3", "16.2.5"},
+			expectError: true,
 		},
 	}
 	for _, tt := range tests {
