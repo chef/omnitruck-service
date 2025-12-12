@@ -67,17 +67,28 @@ func VerifyRequestType(params *omnitruck.RequestParams) bool {
 }
 
 func ValidateOrSetVersion(params *omnitruck.RequestParams, filtered []omnitruck.ProductVersion) error {
-	if params.Version != "" && params.Version != "latest" {
-		for _, v := range filtered {
-			if string(v) == params.Version {
+	if params.Version == "" || params.Version == "latest" {
+		// Use the latest version from filtered list if not provided
+		params.Version = string(filtered[len(filtered)-1])
+		return nil
+	}
+
+	// Iterate backwards to find the latest matching version efficiently
+	requestedVersion := params.Version
+	for i := len(filtered) - 1; i >= 0; i-- {
+		vStr := string(filtered[i])
+		// Check if version starts with the requested prefix (e.g., "16" matches "16.1.0", "16.2.5")
+		if strings.HasPrefix(vStr, requestedVersion) {
+			// Ensure it's a proper version boundary (e.g., "16" shouldn't match "160.0.0")
+			if len(vStr) == len(requestedVersion) || vStr[len(requestedVersion)] == '.' {
+				// Found the latest match, set and return immediately
+				params.Version = vStr
 				return nil
 			}
 		}
-		return fmt.Errorf("the requested version is not supported on the selected persona or channel")
 	}
-	// Use the latest version from filtered list if not provided
-	params.Version = string(filtered[len(filtered)-1])
-	return nil
+
+	return fmt.Errorf("the requested version is not supported on the selected persona or channel")
 }
 
 func GetFileNameFromURL(url string) string {

@@ -1,16 +1,18 @@
 # Changelog
 
-<!-- latest_release 0.0.91 -->
-## [0.0.91](https://github.com/chef/omnitruck-service/tree/0.0.91) (2025-12-01)
+<!-- latest_release 0.0.93 -->
+## [0.0.93](https://github.com/chef/omnitruck-service/tree/0.0.93) (2025-12-11)
 
 #### Merged Pull Requests
-- Chef 28431 [#119](https://github.com/chef/omnitruck-service/pull/119) ([rishabhjhs](https://github.com/rishabhjhs))
+- Partial version support [#122](https://github.com/chef/omnitruck-service/pull/122) ([sandhi18](https://github.com/sandhi18))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Partial version support [#122](https://github.com/chef/omnitruck-service/pull/122) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.93 -->
+- Remove legacy from products api [#121](https://github.com/chef/omnitruck-service/pull/121) ([rishabhjhs](https://github.com/rishabhjhs)) <!-- 0.0.92 -->
 - Chef 28431 [#119](https://github.com/chef/omnitruck-service/pull/119) ([rishabhjhs](https://github.com/rishabhjhs)) <!-- 0.0.91 -->
 - changes to add licenseId in packages.chef.io api calls [#118](https://github.com/chef/omnitruck-service/pull/118) ([vipin230](https://github.com/vipin230)) <!-- 0.0.90 -->
 - Run common pipeline [#114](https://github.com/chef/omnitruck-service/pull/114) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.89 -->
