@@ -1,6 +1,7 @@
 package license
 
 import (
+	"io"
 	"net/http/httptest"
 	"testing"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMissingLicenseRequired(t *testing.T) {
+func TestNoLicenseIDWithRequiredTrue(t *testing.T) {
 	app := fiber.New()
 
 	app.Use(New(Config{
@@ -29,9 +30,14 @@ func TestMissingLicenseRequired(t *testing.T) {
 		return c.SendString("OK")
 	})
 
-	resp, err := app.Test(httptest.NewRequest("GET", "/", nil))
+	req := httptest.NewRequest("GET", "/", nil)
+	resp, err := app.Test(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 403, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	assert.NoError(t, err)
+	assert.Equal(t, "Missing license_id query param", string(body))
 }
 
 func TestInvalidLicenseProvided(t *testing.T) {
