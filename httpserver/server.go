@@ -159,6 +159,7 @@ func (server *ApiServer) StartService() {
 	server.App.Use(license.New(license.Config{
 		URL:      server.Config.ServiceConfig.LicenseServiceUrl,
 		Required: true,
+		Mode:     server.Mode,
 		Next: func(c *fiber.Ctx) bool {
 			switch c.Path() {
 			case "/status":
