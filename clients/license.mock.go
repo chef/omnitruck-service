@@ -9,6 +9,7 @@ type MockLicense struct {
 	ValidateFunc                   func(id, licenseServiceUrl string, data *Response) *Request
 	GetReplicatedCustomerEmailFunc func(licenseId, licenseServiceUrl string, data *Response) *Request
 	IsTrialFunc                    func(l string) bool
+	IsFreeFunc                     func(l string) bool
 }
 
 type MockClient struct {
@@ -46,4 +47,8 @@ func (m *MockLicense) Validate(id, licenseServiceUrl string, data *Response) *Re
 
 func (m *MockLicense) IsTrial(l string) bool {
 	return m.IsTrialFunc(l)
+}
+
+func (m *MockLicense) IsFree(l string) bool {
+	return m.IsFreeFunc(l)
 }

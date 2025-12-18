@@ -5,4 +5,5 @@ type ILicense interface {
 	Validate(id, licenseServiceUrl string, data *Response) *Request
 	GetReplicatedCustomerEmail(licenseId, licenseServiceUrl string, data *Response) *Request
 	IsTrial(l string) bool
+	IsFree(l string) bool
 }

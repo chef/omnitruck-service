@@ -86,5 +86,9 @@ func (c *License) GetReplicatedCustomerEmail(licenseId, licenseServiceUrl string
 }
 
 func (c *License) IsTrial(l string) bool {
-	return strings.Contains(l, "tmns")
+	return strings.HasPrefix(l, "tmns")
+}
+
+func (c *License) IsFree(l string) bool {
+	return strings.HasPrefix(l, "free")
 }
