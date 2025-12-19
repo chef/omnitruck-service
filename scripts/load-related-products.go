@@ -106,7 +106,7 @@ func readBomProductMap(f *excelize.File, sheetName string) (map[string]map[strin
 					if idx := strings.Index(rawSoftware, " "); idx != -1 {
 						rawSoftware = rawSoftware[:idx]
 					}
-					softwareKey := rawSoftware
+					softwareKey := strings.ToLower(rawSoftware)
 					var uiName string
 					if uiNewCol != -1 && uiNewCol < len(row) && row[uiNewCol] != "" {
 						uiName = row[uiNewCol]
