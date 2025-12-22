@@ -561,6 +561,41 @@ func TestProductMetadata(t *testing.T) {
 			metadata_err: nil,
 		},
 		{
+			name: "success for chef-ice windows",
+			metadata: &models.MetaData{
+				Architecture:    "x86_64",
+				FileName:        "chef-ice-x86_64-windows.zip",
+				Platform:        "windows",
+				PlatformVersion: "",
+				SHA1:            "",
+				PackageManager:  "zip",
+				SHA256:          "1234",
+			},
+			args: args{
+				p: &RequestParams{
+					Channel:         "stable",
+					Product:         "chef-ice",
+					Version:         "",
+					Platform:        "windows",
+					PlatformVersion: "",
+					PackageManager:  "zip",
+					Architecture:    "x86_64",
+					Eol:             "",
+					LicenseId:       "",
+				},
+			},
+			version:     "1.6.862",
+			version_err: nil,
+			want: PackageMetadata{
+				Sha1:    "",
+				Sha256:  "1234",
+				Url:     "",
+				Version: "1.6.862",
+			},
+			wantErr:      false,
+			metadata_err: nil,
+		},
+		{
 			name:     "failure for chef-ice",
 			metadata: &models.MetaData{},
 			args: args{
