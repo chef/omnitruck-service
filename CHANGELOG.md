@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.94 -->
-## [0.0.94](https://github.com/chef/omnitruck-service/tree/0.0.94) (2025-12-19)
+<!-- latest_release 0.0.95 -->
+## [0.0.95](https://github.com/chef/omnitruck-service/tree/0.0.95) (2025-12-31)
 
 #### Merged Pull Requests
-- Updated the load Products list [#125](https://github.com/chef/omnitruck-service/pull/125) ([vviveksharma](https://github.com/vviveksharma))
+- Fixed the timeout issue [#126](https://github.com/chef/omnitruck-service/pull/126) ([vviveksharma](https://github.com/vviveksharma))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Fixed the timeout issue [#126](https://github.com/chef/omnitruck-service/pull/126) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.95 -->
 - Updated the load Products list [#125](https://github.com/chef/omnitruck-service/pull/125) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.94 -->
 - Partial version support [#122](https://github.com/chef/omnitruck-service/pull/122) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.93 -->
 - Remove legacy from products api [#121](https://github.com/chef/omnitruck-service/pull/121) ([rishabhjhs](https://github.com/rishabhjhs)) <!-- 0.0.92 -->
