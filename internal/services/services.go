@@ -99,32 +99,9 @@ func (svc *DownloadService) Products(params *omnitruck.RequestParams) (data omni
 	request = svc.Omnitruck().Products(params, &data)
 
 	data = svc.DynamoServices(svc.databaseService).Products(data, params.Eol)
-	// This a temporary fix to hide CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT when infra19Enabled is false
-	if !svc.config.SupportInfra19 {
-		// Remove CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT from the data array
-		var filtered omnitruck.ItemList
-		for _, item := range data {
-			if item != constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT && item != constants.MIGRATE_ICE {
-				filtered = append(filtered, item)
-			}
-		}
-		data = filtered
-	}
 	getServerStrategy := strategy.SelectModeStrategy(svc.mode)
 	eol := params.Eol == "true"
 	data = getServerStrategy.FilterProducts(data, eol)
-
-	if !svc.config.SupportInfra19 {
-		var filtered omnitruck.ItemList
-		for _, item := range data {
-			if item == constants.CHEF_INFRA_CLIENT_NEW_VALUE {
-				filtered = append(filtered, constants.CHEF_INFRA_CLIENT_OLD_VALUE)
-			} else {
-				filtered = append(filtered, item)
-			}
-		}
-		data = filtered
-	}
 	
 	return data, request
 
@@ -260,12 +237,6 @@ func (svc *DownloadService) RelatedProducts(params *omnitruck.RequestParams) (da
 			Code:    code,
 			Message: msg,
 		}
-	}
-
-	if !svc.config.SupportInfra19 && relatedProducts != nil && relatedProducts.Products != nil {
-		// This a temporary fix to hide CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT when supportInfra19 is false
-		delete(relatedProducts.Products, constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT)
-		delete(relatedProducts.Products, constants.MIGRATE_ICE)
 	}
 
 	response := map[string]interface{}{
