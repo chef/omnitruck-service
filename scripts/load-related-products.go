@@ -31,8 +31,7 @@ func uploadToDynamoDB(tableName string, bomToProducts map[string]map[string]stri
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+
 	for bom, products := range bomToProducts {
 		// Convert products map into DynamoDB map
 		ddbProducts := make(map[string]types.AttributeValue)
@@ -46,7 +45,11 @@ func uploadToDynamoDB(tableName string, bomToProducts map[string]map[string]stri
 				"products": &types.AttributeValueMemberM{Value: ddbProducts},
 			},
 		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		_, err = client.PutItem(ctx, input)
+		cancel()
+
 		if err != nil {
 			return fmt.Errorf("failed to put item for BOM %s: %v", bom, err)
 		}
