@@ -4,6 +4,7 @@ import (
 	"regexp"
 
 	"github.com/chef/omnitruck-service/clients"
+	"github.com/chef/omnitruck-service/constants"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -24,6 +25,7 @@ type Config struct {
 	Next          func(c *fiber.Ctx) bool
 	LicenseClient clients.ILicense
 	Unauthorized  func(code int, msg string, c *fiber.Ctx) error
+	Mode          constants.ApiType
 }
 
 var ConfigDefault = Config{
@@ -75,6 +77,20 @@ func New(config ...Config) fiber.Handler {
 				}
 				// No license id found but not required
 				return c.Next()
+			}
+
+			if cfg.Mode == constants.Opensource {
+				// Only Free licenses are valid in opensource mode
+				if !cfg.LicenseClient.IsFree(id) {
+					return cfg.Unauthorized(403, "Only Free license can be used in Open Source mode", c)
+				}
+			}
+
+			if cfg.Mode == constants.Trial {
+				// Only Free or Trial licenses are valid in trial mode
+				if !cfg.LicenseClient.IsTrial(id) && !cfg.LicenseClient.IsFree(id) {
+					return cfg.Unauthorized(403, "Only Trial or Free license can be used in Trial mode", c)
+				}
 			}
 
 			resp := clients.Response{}
