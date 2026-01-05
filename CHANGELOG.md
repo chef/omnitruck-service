@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.95 -->
-## [0.0.95](https://github.com/chef/omnitruck-service/tree/0.0.95) (2025-12-31)
+<!-- latest_release 0.0.96 -->
+## [0.0.96](https://github.com/chef/omnitruck-service/tree/0.0.96) (2026-01-05)
 
 #### Merged Pull Requests
-- Fixed the timeout issue [#126](https://github.com/chef/omnitruck-service/pull/126) ([vviveksharma](https://github.com/vviveksharma))
+- CHEF-28432 : Mandate license Id and License type for Opensource and Trial [#117](https://github.com/chef/omnitruck-service/pull/117) ([RoyShravani](https://github.com/RoyShravani))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- CHEF-28432 : Mandate license Id and License type for Opensource and Trial [#117](https://github.com/chef/omnitruck-service/pull/117) ([RoyShravani](https://github.com/RoyShravani)) <!-- 0.0.96 -->
 - Fixed the timeout issue [#126](https://github.com/chef/omnitruck-service/pull/126) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.95 -->
 - Updated the load Products list [#125](https://github.com/chef/omnitruck-service/pull/125) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.94 -->
 - Partial version support [#122](https://github.com/chef/omnitruck-service/pull/122) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.93 -->
