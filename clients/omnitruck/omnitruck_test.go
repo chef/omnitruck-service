@@ -430,3 +430,109 @@ func TestOmnitruck_ProductMetadata(t *testing.T) {
 	assert.True(t, req.Ok)
 	assert.Equal(t, 200, req.Code)
 }
+
+func TestSortProductVersions(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []ProductVersion
+		expected []ProductVersion
+	}{
+		{
+			name:     "empty slice",
+			input:    []ProductVersion{},
+			expected: []ProductVersion{},
+		},
+		{
+			name:     "single version",
+			input:    []ProductVersion{"19.1.103"},
+			expected: []ProductVersion{"19.1.103"},
+		},
+		{
+			name: "example data from user",
+			input: []ProductVersion{
+				"19.1.103", "19.1.107", "19.1.109", "19.1.113",
+				"19.1.114", "19.1.115", "19.1.50", "19.1.56",
+				"19.1.96", "19.1.97", "19.1.98", "19.1.99",
+			},
+			expected: []ProductVersion{
+				"19.1.50", "19.1.56", "19.1.96", "19.1.97",
+				"19.1.98", "19.1.99", "19.1.103", "19.1.107",
+				"19.1.109", "19.1.113", "19.1.114", "19.1.115",
+			},
+		},
+		{
+			name: "mixed major versions",
+			input: []ProductVersion{
+				"20.1.5", "19.2.1", "19.1.103", "18.5.0",
+			},
+			expected: []ProductVersion{
+				"18.5.0", "19.1.103", "19.2.1", "20.1.5",
+			},
+		},
+		{
+			name: "versions with different patch numbers",
+			input: []ProductVersion{
+				"1.0.10", "1.0.2", "1.0.1",
+			},
+			expected: []ProductVersion{
+				"1.0.1", "1.0.2", "1.0.10",
+			},
+		},
+		{
+			name: "already sorted",
+			input: []ProductVersion{
+				"1.0.1", "1.0.2", "1.0.10",
+			},
+			expected: []ProductVersion{
+				"1.0.1", "1.0.2", "1.0.10",
+			},
+		},
+		{
+			name: "reverse sorted",
+			input: []ProductVersion{
+				"1.0.10", "1.0.2", "1.0.1",
+			},
+			expected: []ProductVersion{
+				"1.0.1", "1.0.2", "1.0.10",
+			},
+		},
+		{
+			name: "invalid versions mixed with valid",
+			input: []ProductVersion{
+				"19.1.103", "invalid-version", "19.1.50", "another-invalid",
+			},
+			expected: []ProductVersion{
+				"19.1.50", "19.1.103", "another-invalid", "invalid-version",
+			},
+		},
+		{
+			name: "versions with pre-release identifiers",
+			input: []ProductVersion{
+				"1.0.0", "1.0.0-beta.1", "1.0.0-alpha.1", "1.0.0-rc.1",
+			},
+			expected: []ProductVersion{
+				"1.0.0-alpha.1", "1.0.0-beta.1", "1.0.0-rc.1", "1.0.0",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := SortProductVersions(tt.input)
+
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("SortProductVersions() = %v, expected %v", result, tt.expected)
+			}
+
+			// Verify original slice wasn't modified
+			if len(tt.input) > 0 && !reflect.DeepEqual(tt.input, []ProductVersion{
+				"19.1.103", "19.1.107", "19.1.109", "19.1.113",
+				"19.1.114", "19.1.115", "19.1.50", "19.1.56",
+				"19.1.96", "19.1.97", "19.1.98", "19.1.99",
+			}) && tt.name == "example data from user" {
+				// Only check for the user example case
+				t.Errorf("Original slice was modified")
+			}
+		})
+	}
+}

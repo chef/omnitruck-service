@@ -28,6 +28,12 @@ func (s *DefaultProductStrategy) GetLatestVersion(params *omnitruck.RequestParam
 func (s *DefaultProductStrategy) GetAllVersions(params *omnitruck.RequestParams) ([]omnitruck.ProductVersion, *clients.Request) {
 	var data []omnitruck.ProductVersion
 	request := s.OmnitruckService.ProductVersions(params).ParseData(&data)
+
+	// Sort versions if the request was successful
+	if request.Ok {
+		data = omnitruck.SortProductVersions(data)
+	}
+
 	return data, request
 }
 

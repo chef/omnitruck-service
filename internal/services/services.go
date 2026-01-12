@@ -125,7 +125,7 @@ func (svc *DownloadService) Products(params *omnitruck.RequestParams) (data omni
 		}
 		data = filtered
 	}
-	
+
 	return data, request
 
 }
@@ -290,6 +290,7 @@ func (svc *DownloadService) GetFileName(params *omnitruck.RequestParams) (string
 		return "", req
 	}
 
+	// Versions are already sorted by the product strategy
 	// Filter versions using mode strategy
 	filtered := modeStrategy.FilterVersions(versions, params.Product)
 	if len(filtered) == 0 {
@@ -376,6 +377,7 @@ func (svc *DownloadService) ProductDownload(params *omnitruck.RequestParams, c *
 		//return svc.SendError(c, req)
 	}
 
+	// Versions are already sorted by the product strategy
 	// Filter versions using mode strategy
 	filtered := modeStrategy.FilterVersions(versions, params.Product)
 	if len(filtered) == 0 {
@@ -437,6 +439,8 @@ func (svc *DownloadService) getFilteredVersions(params *omnitruck.RequestParams)
 	if !req.Ok || len(versions) == 0 {
 		return nil, req
 	}
+
+	// Versions are already sorted by the product strategy
 	filtered := modeStrategy.FilterVersions(versions, params.Product)
 	if len(filtered) == 0 {
 		return nil, &clients.Request{
