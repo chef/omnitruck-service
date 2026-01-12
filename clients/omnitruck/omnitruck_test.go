@@ -497,21 +497,21 @@ func TestSortProductVersions(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid versions mixed with valid",
-			input: []ProductVersion{
-				"19.1.103", "invalid-version", "19.1.50", "another-invalid",
-			},
-			expected: []ProductVersion{
-				"19.1.50", "19.1.103", "another-invalid", "invalid-version",
-			},
-		},
-		{
 			name: "versions with pre-release identifiers",
 			input: []ProductVersion{
 				"1.0.0", "1.0.0-beta.1", "1.0.0-alpha.1", "1.0.0-rc.1",
 			},
 			expected: []ProductVersion{
 				"1.0.0-alpha.1", "1.0.0-beta.1", "1.0.0-rc.1", "1.0.0",
+			},
+		},
+		{
+			name: "if the product are chef-360 or automate",
+			input: []ProductVersion{
+				"latest",
+			},
+			expected: []ProductVersion{
+				"latest",
 			},
 		},
 	}

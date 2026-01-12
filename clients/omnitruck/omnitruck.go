@@ -316,55 +316,30 @@ func ValidateRequest(p *RequestParams, flags RequestParamsFlags) *clients.Reques
 // It handles version strings like "19.1.103", "19.1.107", etc.
 // Returns a new sorted slice without modifying the original.
 func SortProductVersions(versions []ProductVersion) []ProductVersion {
+	// if the products are automate or chef-360 we maintain only one version that is latest so it will be returned as is
 	if len(versions) <= 1 {
 		return append([]ProductVersion{}, versions...)
 	}
 
-	// Create a copy to avoid modifying the original slice
-	sortedVersions := make([]ProductVersion, len(versions))
-	copy(sortedVersions, versions)
-
-	// Parse versions and create a sortable slice
-	type versionInfo struct {
-		original ProductVersion
-		parsed   *version.Version
-	}
-
-	validVersions := make([]versionInfo, 0, len(sortedVersions))
-	invalidVersions := make([]ProductVersion, 0)
-
-	// Parse all versions
-	for _, v := range sortedVersions {
+	// Parse all versions into an array
+	parsedVersions := make([]*version.Version, 0, len(versions))
+	for _, v := range versions {
 		parsed, err := version.NewVersion(string(v))
 		if err != nil {
-			// Keep invalid versions as-is
-			invalidVersions = append(invalidVersions, v)
+			// Skip invalid versions
 			continue
 		}
-		validVersions = append(validVersions, versionInfo{
-			original: v,
-			parsed:   parsed,
-		})
+		parsedVersions = append(parsedVersions, parsed)
 	}
 
-	// Sort valid versions using semantic version comparison
-	sort.Slice(validVersions, func(i, j int) bool {
-		return validVersions[i].parsed.LessThan(validVersions[j].parsed)
-	})
+	// Sort using semantic version comparison
+	sort.Sort(version.Collection(parsedVersions))
 
-	// Reconstruct the result slice
-	result := make([]ProductVersion, 0, len(versions))
-
-	// Add sorted valid versions
-	for _, v := range validVersions {
-		result = append(result, v.original)
+	// Convert back to ProductVersion
+	result := make([]ProductVersion, len(parsedVersions))
+	for i, v := range parsedVersions {
+		result[i] = ProductVersion(v.String())
 	}
-
-	// Add invalid versions at the end, sorted alphabetically
-	sort.Slice(invalidVersions, func(i, j int) bool {
-		return string(invalidVersions[i]) < string(invalidVersions[j])
-	})
-	result = append(result, invalidVersions...)
 
 	return result
 }
