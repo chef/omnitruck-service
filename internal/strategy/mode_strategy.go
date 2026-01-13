@@ -52,6 +52,9 @@ func (s *TrialModeStrategy) FilterVersions(data []omnitruck.ProductVersion, prod
 	if len(data) == 0 {
 		return data
 	}
+	
+	// Data is already sorted by the product strategy
+	// Return the latest (last) version
 	return []omnitruck.ProductVersion{data[len(data)-1]}
 }
 

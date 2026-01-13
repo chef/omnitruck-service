@@ -40,6 +40,10 @@ func (s *ProductDynamoStrategy) GetAllVersions(params *omnitruck.RequestParams) 
 		request.Failure(code, msg)
 		return nil, &request
 	}
+
+	// Sort versions before returning
+	data = omnitruck.SortProductVersions(data)
+
 	request.Success()
 	return data, &request
 }

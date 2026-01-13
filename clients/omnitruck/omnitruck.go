@@ -5,11 +5,13 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"sort"
 	"time"
 
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/utils"
 	"github.com/gofiber/fiber/v2"
+	version "github.com/hashicorp/go-version"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
@@ -308,4 +310,36 @@ func ValidateRequest(p *RequestParams, flags RequestParamsFlags) *clients.Reques
 
 	request.Success()
 	return &request
+}
+
+// SortProductVersions sorts a slice of ProductVersion using semantic version comparison.
+// It handles version strings like "19.1.103", "19.1.107", etc.
+// Returns a new sorted slice without modifying the original.
+func SortProductVersions(versions []ProductVersion) []ProductVersion {
+	// if the products are automate or chef-360 we maintain only one version that is latest so it will be returned as is
+	if len(versions) <= 1 {
+		return append([]ProductVersion{}, versions...)
+	}
+
+	// Parse all versions into an array
+	parsedVersions := make([]*version.Version, 0, len(versions))
+	for _, v := range versions {
+		parsed, err := version.NewVersion(string(v))
+		if err != nil {
+			// Skip invalid versions
+			continue
+		}
+		parsedVersions = append(parsedVersions, parsed)
+	}
+
+	// Sort using semantic version comparison
+	sort.Sort(version.Collection(parsedVersions))
+
+	// Convert back to ProductVersion
+	result := make([]ProductVersion, len(parsedVersions))
+	for i, v := range parsedVersions {
+		result[i] = ProductVersion(v.String())
+	}
+
+	return result
 }
