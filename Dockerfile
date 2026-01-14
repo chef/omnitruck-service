@@ -1,4 +1,4 @@
-FROM golang:1.23.6-alpine AS stage1
+FROM golang:1.25.6-alpine AS stage1
 
 RUN mkdir /user && \
     echo 'nobody:x:65534:65534:nobody:/:' > /user/passwd && \
@@ -20,7 +20,7 @@ EXPOSE 3001
 EXPOSE 3002 
 USER nobody:nobody
 
-FROM golang:1.23.6-alpine 
+FROM golang:1.25.6-alpine 
 
 COPY --from=stage1 /app/bin/omnitruck-service bin/omnitruck-service
 COPY --from=stage1 /app/templates/ templates/
