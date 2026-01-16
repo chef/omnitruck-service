@@ -323,38 +323,42 @@ func (svc *DownloadService) GetFileName(params *omnitruck.RequestParams) (string
 }
 
 func (svc *DownloadService) GetLinuxScript(params *omnitruck.RequestParams) (string, *clients.Request) {
-
-	filePath := "templates/install.sh.tmpl"
-	resp, err := svc.templateRenderer.GetScript(svc.locals["base_url"].(string), params, filePath)
-	if err != nil {
+	// Call omnitruck API to get the install.sh script
+	client := omnitruck.New(svc.logCtx(), svc.config.OmnitruckUrl)
+	request := client.InstallSh(params.LicenseId)
+	
+	if !request.Ok {
 		return "", &clients.Request{
 			Ok:      false,
-			Code:    fiber.StatusInternalServerError,
-			Message: "Error generating script: " + err.Error(),
+			Code:    request.Code,
+			Message: "Error fetching install.sh from omnitruck: " + request.Message,
 		}
 	}
-	return resp, &clients.Request{
+	
+	return string(request.Body), &clients.Request{
 		Ok:      true,
 		Code:    fiber.StatusOK,
-		Message: "Linux script generated successfully",
+		Message: "Linux script retrieved successfully",
 	}
 }
 
 func (svc *DownloadService) GetWindowsScript(params *omnitruck.RequestParams) (string, *clients.Request) {
-
-	filePath := "templates/install.ps1.tmpl"
-	resp, err := svc.templateRenderer.GetScript(svc.locals["base_url"].(string), params, filePath)
-	if err != nil {
+	// Call omnitruck API to get the install.ps1 script
+	client := omnitruck.New(svc.logCtx(), svc.config.OmnitruckUrl)
+	request := client.InstallPs1(params.LicenseId)
+	
+	if !request.Ok {
 		return "", &clients.Request{
 			Ok:      false,
-			Code:    fiber.StatusInternalServerError,
-			Message: "Error generating script: " + err.Error(),
+			Code:    request.Code,
+			Message: "Error fetching install.ps1 from omnitruck: " + request.Message,
 		}
 	}
-	return resp, &clients.Request{
+	
+	return string(request.Body), &clients.Request{
 		Ok:      true,
 		Code:    fiber.StatusOK,
-		Message: "Windows script generated successfully",
+		Message: "Windows script retrieved successfully",
 	}
 }
 

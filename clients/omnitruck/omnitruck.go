@@ -268,6 +268,26 @@ func (ot *Omnitruck) ProductDownload(p *RequestParams) *clients.Request {
 	return ot.ProductMetadata(p)
 }
 
+// InstallSh fetches the install.sh script from omnitruck with optional license_id
+func (ot *Omnitruck) InstallSh(licenseId string) *clients.Request {
+	url := fmt.Sprintf("%s/install.sh", ot.omnitruckUrl)
+	if licenseId != "" {
+		url = fmt.Sprintf("%s?license_id=%s", url, licenseId)
+	}
+
+	return ot.Get(url)
+}
+
+// InstallPs1 fetches the install.ps1 script from omnitruck with optional license_id
+func (ot *Omnitruck) InstallPs1(licenseId string) *clients.Request {
+	url := fmt.Sprintf("%s/install.ps1", ot.omnitruckUrl)
+	if licenseId != "" {
+		url = fmt.Sprintf("%s?license_id=%s", url, licenseId)
+	}
+
+	return ot.Get(url)
+}
+
 func ValidateRequest(p *RequestParams, flags RequestParamsFlags) *clients.Request {
 	request := clients.Request{}
 
