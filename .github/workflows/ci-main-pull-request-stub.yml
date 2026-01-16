@@ -29,7 +29,7 @@ jobs:
           echo "CI main pull request stub version $STUB_VERSION"
 
   call-ci-main-pr-check-pipeline:
-    uses: chef/common-github-actions/.github/workflows/ci-main-pull-request.yml@main
+    uses: chef/common-github-actions/.github/workflows/ci-main-pull-request.yml@sandhi/fix-unit-test-go
     secrets: inherit
     permissions: 
       id-token: write
@@ -83,7 +83,7 @@ jobs:
       # quality-testing-type: 'Integration' like Unit, Integration, e2e, api, Performance, Security
       quality-testing-type: 'Unit'
       # quality-service-name: 'YourServiceOrRepoName'
-      quality-junit-report: 'path/to/junit/report'
+      quality-junit-report: './bin/cov.out'
 
       # perform native and Habitat packaging, publish to package repositories
       package-binaries: false     # Package binaries (e.g., RPM, DEB, MSI, dpkg + signing + SHA)
