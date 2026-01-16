@@ -428,8 +428,8 @@ func TestDownloadService_Platforms(t *testing.T) {
 	do.ProvideNamedValue[clients.ILicense](injector, "licenseClient", &clients.MockLicense{})
 	do.ProvideNamedValue[constants.ApiType](injector, "mode", constants.Commercial)
 	do.ProvideNamedValue[config.ServiceConfig](injector, "config", config.ServiceConfig{
-		OmnitruckUrl: ts.URL,
-		SupportInfra19:    true,
+		OmnitruckUrl:   ts.URL,
+		SupportInfra19: true,
 	})
 
 	locals := map[string]interface{}{"license_id": "123"}
@@ -552,7 +552,7 @@ func TestDownloadService_ProductVersions(t *testing.T) {
 		case "/stable/inspec/versions/all":
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`["inspec-1.0.0", "inspec-2.0.0"]`))
+			w.Write([]byte(`["4.0.0", "5.0.0"]`))
 		case "/stable/invalid-product/versions/all":
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte(`not found`))
@@ -627,11 +627,11 @@ func TestDownloadService_ProductPackages(t *testing.T) {
 		case strings.Contains(r.URL.Path, "/versions/all"):
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`["chef-1.0.0", "chef-2.0.0"]`))
+			w.Write([]byte(`["16.0.0", "17.0.0"]`))
 		case strings.Contains(r.URL.Path, "/packages"):
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"chef":{"1.0.0":{"x86_64":{"url":"http://example.com/download","version":"1.0.0"}}}}`))
+			w.Write([]byte(`{"chef":{"16.0.0":{"x86_64":{"url":"http://example.com/download","version":"16.0.0"}}}}`))
 		default:
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte(`not found`))
@@ -662,7 +662,7 @@ func TestDownloadService_ProductPackages(t *testing.T) {
 			params: &omnitruck.RequestParams{
 				Product: "chef",
 				Channel: "stable",
-				Version: "chef-1.0.0",
+				Version: "16.0.0",
 			},
 			expectSuccess: true,
 			expectCode:    fiber.StatusOK,
