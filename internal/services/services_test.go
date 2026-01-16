@@ -731,7 +731,7 @@ func TestDownloadService_ProductMetadata(t *testing.T) {
 				"sha1":"fake-sha1",
 				"sha256":"fake-sha256",
 				"url":"http://original-download",
-				"version":"1.0.0"
+				"version":"16.0.0"
 			}`))
 		case strings.Contains(r.URL.Path, "invalid-product"):
 			w.WriteHeader(http.StatusNotFound)
@@ -739,7 +739,7 @@ func TestDownloadService_ProductMetadata(t *testing.T) {
 		case strings.Contains(r.URL.Path, "/versions/all"):
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`["chef-1.0.0","chef-2.0.0"]`))
+			w.Write([]byte(`["16.0.0","17.0.0"]`))
 		default:
 			http.NotFound(w, r)
 		}
@@ -768,7 +768,7 @@ func TestDownloadService_ProductMetadata(t *testing.T) {
 			params: &omnitruck.RequestParams{
 				Product:         "chef",
 				Channel:         "stable",
-				Version:         "chef-1.0.0",
+				Version:         "16.0.0",
 				Platform:        "ubuntu",
 				PlatformVersion: "20.04",
 				Architecture:    "x86_64",
@@ -781,7 +781,7 @@ func TestDownloadService_ProductMetadata(t *testing.T) {
 			params: &omnitruck.RequestParams{
 				Product:         "invalid-product",
 				Channel:         "stable",
-				Version:         "invalid-product-1.0.0",
+				Version:         "1.0.0",
 				Platform:        "ubuntu",
 				PlatformVersion: "20.04",
 				Architecture:    "x86_64",
@@ -812,7 +812,7 @@ func TestDownloadService_ProductMetadata(t *testing.T) {
 				assert.True(t, req.Ok, "expected ProductMetadata to succeed")
 				assert.Equal(t, tt.expectCode, req.Code)
 				assert.NotEmpty(t, data.Url, "expected a remapped download URL")
-				expectedUrl := "http://example.com/stable/chef/download?m=x86_64&p=ubuntu&pv=20.04&v=chef-1.0.0"
+				expectedUrl := "http://example.com/stable/chef/download?m=x86_64&p=ubuntu&pv=20.04&v=16.0.0"
 				assert.Equal(t, expectedUrl, data.Url, "should remap to local download")
 			} else {
 				assert.False(t, req.Ok, "expected ProductMetadata to fail")
