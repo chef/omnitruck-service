@@ -50,6 +50,12 @@ func TestInvalidLicenseProvided(t *testing.T) {
 			ValidateFunc: func(id, url string, resp *clients.Response) *clients.Request {
 				return &clients.Request{Ok: false, Code: 403, Message: "invalid license"}
 			},
+			IsTrialFunc: func(l string) bool {
+				return false
+			},
+			IsFreeFunc: func(l string) bool {
+				return false
+			},
 		},
 		Unauthorized: func(code int, msg string, c *fiber.Ctx) error {
 			return c.Status(code).SendString(msg)
@@ -72,6 +78,12 @@ func TestValidLicenseProvided(t *testing.T) {
 			ValidateFunc: func(id, url string, resp *clients.Response) *clients.Request {
 				resp.Message = "valid license"
 				return &clients.Request{Ok: true, Code: 200, Message: "valid license"}
+			},
+			IsTrialFunc: func(l string) bool {
+				return false
+			},
+			IsFreeFunc: func(l string) bool {
+				return true
 			},
 		},
 		Unauthorized: func(code int, msg string, c *fiber.Ctx) error {
@@ -99,6 +111,12 @@ func TestNextSkipsLicense(t *testing.T) {
 			ValidateFunc: func(id, url string, resp *clients.Response) *clients.Request {
 				resp.Message = "valid license"
 				return &clients.Request{Ok: true, Code: 200, Message: "valid license"}
+			},
+			IsTrialFunc: func(l string) bool {
+				return false
+			},
+			IsFreeFunc: func(l string) bool {
+				return false
 			},
 		},
 		Next: func(c *fiber.Ctx) bool {
@@ -129,6 +147,12 @@ func TestNonRequired_NoLicenseID(t *testing.T) {
 			ValidateFunc: func(id, url string, resp *clients.Response) *clients.Request {
 				resp.Message = "valid license"
 				return &clients.Request{Ok: true, Code: 200, Message: "valid license"}
+			},
+			IsTrialFunc: func(l string) bool {
+				return false
+			},
+			IsFreeFunc: func(l string) bool {
+				return false
 			},
 		},
 		Unauthorized: func(code int, msg string, c *fiber.Ctx) error {
