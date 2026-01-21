@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.99 -->
-## [0.0.99](https://github.com/chef/omnitruck-service/tree/0.0.99) (2026-01-20)
+<!-- latest_release 0.0.100 -->
+## [0.0.100](https://github.com/chef/omnitruck-service/tree/0.0.100) (2026-01-21)
 
 #### Merged Pull Requests
-- Fixed dependabot issue and golang upgrade [#129](https://github.com/chef/omnitruck-service/pull/129) ([rishabhjhs](https://github.com/rishabhjhs))
+- Enable sonarQube in the CI pipeline [#127](https://github.com/chef/omnitruck-service/pull/127) ([swathi-s3](https://github.com/swathi-s3))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Enable sonarQube in the CI pipeline [#127](https://github.com/chef/omnitruck-service/pull/127) ([swathi-s3](https://github.com/swathi-s3)) <!-- 0.0.100 -->
 - Fixed dependabot issue and golang upgrade [#129](https://github.com/chef/omnitruck-service/pull/129) ([rishabhjhs](https://github.com/rishabhjhs)) <!-- 0.0.99 -->
 - Fixed unit test cases [#131](https://github.com/chef/omnitruck-service/pull/131) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.98 -->
 - Added sort fix for versions [#128](https://github.com/chef/omnitruck-service/pull/128) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.97 -->
