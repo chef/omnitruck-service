@@ -7,7 +7,7 @@ import (
 
 type ModeStrategy interface {
 	FilterProducts(data omnitruck.ItemList, eol bool) omnitruck.ItemList
-	FilterVersions(data []omnitruck.ProductVersion, product string) []omnitruck.ProductVersion
+	FilterVersions(data []omnitruck.ProductVersion, product string, eol string) []omnitruck.ProductVersion
 }
 
 type CommercialModeStrategy struct{}
@@ -23,7 +23,10 @@ func (s *CommercialModeStrategy) FilterProducts(data omnitruck.ItemList, eol boo
 	return append(data, constants.PLATFORM_SERVICE_PRODUCT)
 }
 
-func (s *CommercialModeStrategy) FilterVersions(data []omnitruck.ProductVersion, product string) []omnitruck.ProductVersion {
+func (s *CommercialModeStrategy) FilterVersions(data []omnitruck.ProductVersion, product string, eol string) []omnitruck.ProductVersion {
+	if eol == "true" {
+		return data
+	}
 	return omnitruck.FilterProductList(data, product, omnitruck.EolProductVersion)
 }
 
@@ -31,7 +34,7 @@ func (s *OpensourceModeStrategy) FilterProducts(data omnitruck.ItemList, eol boo
 	return omnitruck.SelectList(data, omnitruck.OsProductName)
 }
 
-func (s *OpensourceModeStrategy) FilterVersions(data []omnitruck.ProductVersion, product string) []omnitruck.ProductVersion {
+func (s *OpensourceModeStrategy) FilterVersions(data []omnitruck.ProductVersion, product string, eol string) []omnitruck.ProductVersion {
 	if product != constants.AUTOMATE_PRODUCT {
 		return omnitruck.FilterList(data, func(v omnitruck.ProductVersion) bool {
 			return !omnitruck.OsProductVersion(product, v)
@@ -48,11 +51,11 @@ func (s *TrialModeStrategy) FilterProducts(data omnitruck.ItemList, eol bool) om
 	return omnitruck.ProductDisplayName(data)
 }
 
-func (s *TrialModeStrategy) FilterVersions(data []omnitruck.ProductVersion, product string) []omnitruck.ProductVersion {
+func (s *TrialModeStrategy) FilterVersions(data []omnitruck.ProductVersion, product string, eol string) []omnitruck.ProductVersion {
 	if len(data) == 0 {
 		return data
 	}
-	
+
 	// Data is already sorted by the product strategy
 	// Return the latest (last) version
 	return []omnitruck.ProductVersion{data[len(data)-1]}
