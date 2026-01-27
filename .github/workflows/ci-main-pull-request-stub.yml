@@ -84,7 +84,7 @@ jobs:
       # quality-testing-type: 'Integration' like Unit, Integration, e2e, api, Performance, Security
       quality-testing-type: 'Unit'
       # quality-service-name: 'YourServiceOrRepoName'
-      quality-junit-report: './bin/cov.out'
+      unit-test-output-path: './bin/cov.out'
 
       # perform native and Habitat packaging, publish to package repositories
       package-binaries: false     # Package binaries (e.g., RPM, DEB, MSI, dpkg + signing + SHA)

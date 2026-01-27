@@ -52,24 +52,37 @@ func TestModeStrategies_FilterVersions(t *testing.T) {
 		strategy   strategy.ModeStrategy
 		versions   []omnitruck.ProductVersion
 		product    string
+		eol        string
 		assertFunc func(t *testing.T, result []omnitruck.ProductVersion)
 	}{
 		{
 			name:     "Commercial mode returns non-nil version list",
 			strategy: &strategy.CommercialModeStrategy{},
-			versions: []omnitruck.ProductVersion{"1.2.3", "2.0.0"},
+			versions: []omnitruck.ProductVersion{"1.2.3", "17.0.0"},
 			product:  "chef",
+			eol:      "false",
 			assertFunc: func(t *testing.T, result []omnitruck.ProductVersion) {
-				assert.NotNil(t, result)
+				assert.Equal(t, []omnitruck.ProductVersion{"17.0.0"}, result)
+			},
+		},
+		{
+			name:     "Commercial mode returns non-nil version list",
+			strategy: &strategy.CommercialModeStrategy{},
+			versions: []omnitruck.ProductVersion{"1.2.3", "17.0.0"},
+			product:  "chef",
+			eol:      "true",
+			assertFunc: func(t *testing.T, result []omnitruck.ProductVersion) {
+				assert.Equal(t, []omnitruck.ProductVersion{"1.2.3", "17.0.0"}, result)
 			},
 		},
 		{
 			name:     "Opensource mode returns all versions for 'chef'",
 			strategy: &strategy.OpensourceModeStrategy{},
-			versions: []omnitruck.ProductVersion{"1.2.3", "2.0.0"},
+			versions: []omnitruck.ProductVersion{"14.2.3", "17.0.0"},
 			product:  "chef",
+			eol:      "false",
 			assertFunc: func(t *testing.T, result []omnitruck.ProductVersion) {
-				assert.NotNil(t, result)
+				assert.Equal(t, []omnitruck.ProductVersion{"14.2.3"}, result)
 			},
 		},
 		{
@@ -77,6 +90,7 @@ func TestModeStrategies_FilterVersions(t *testing.T) {
 			strategy: &strategy.OpensourceModeStrategy{},
 			versions: []omnitruck.ProductVersion{"1.2.3", "2.0.0"},
 			product:  constants.AUTOMATE_PRODUCT,
+			eol:      "false",
 			assertFunc: func(t *testing.T, result []omnitruck.ProductVersion) {
 				assert.Equal(t, []omnitruck.ProductVersion{"1.2.3", "2.0.0"}, result)
 			},
@@ -86,6 +100,7 @@ func TestModeStrategies_FilterVersions(t *testing.T) {
 			strategy: &strategy.TrialModeStrategy{},
 			versions: []omnitruck.ProductVersion{"1.0.0", "2.0.0", "3.0.0"},
 			product:  "chef",
+			eol:      "false",
 			assertFunc: func(t *testing.T, result []omnitruck.ProductVersion) {
 				assert.Equal(t, []omnitruck.ProductVersion{"3.0.0"}, result)
 			},
@@ -95,6 +110,7 @@ func TestModeStrategies_FilterVersions(t *testing.T) {
 			strategy: &strategy.TrialModeStrategy{},
 			versions: []omnitruck.ProductVersion{},
 			product:  "chef",
+			eol:      "false",
 			assertFunc: func(t *testing.T, result []omnitruck.ProductVersion) {
 				assert.Empty(t, result)
 			},
@@ -104,7 +120,7 @@ func TestModeStrategies_FilterVersions(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.strategy.FilterVersions(tt.versions, tt.product)
+			result := tt.strategy.FilterVersions(tt.versions, tt.product, tt.eol)
 			tt.assertFunc(t, result)
 		})
 	}
