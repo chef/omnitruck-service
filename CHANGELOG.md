@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.101 -->
-## [0.0.101](https://github.com/chef/omnitruck-service/tree/0.0.101) (2026-01-27)
+<!-- latest_release 0.0.102 -->
+## [0.0.102](https://github.com/chef/omnitruck-service/tree/0.0.102) (2026-02-09)
 
 #### Merged Pull Requests
-- Fix EOL version issue [#133](https://github.com/chef/omnitruck-service/pull/133) ([sandhi18](https://github.com/sandhi18))
+- removed version restriction on supermarket [#134](https://github.com/chef/omnitruck-service/pull/134) ([vipin230](https://github.com/vipin230))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- removed version restriction on supermarket [#134](https://github.com/chef/omnitruck-service/pull/134) ([vipin230](https://github.com/vipin230)) <!-- 0.0.102 -->
 - Fix EOL version issue [#133](https://github.com/chef/omnitruck-service/pull/133) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.101 -->
 - Enable sonarQube in the CI pipeline [#127](https://github.com/chef/omnitruck-service/pull/127) ([swathi-s3](https://github.com/swathi-s3)) <!-- 0.0.100 -->
 - Fixed dependabot issue and golang upgrade [#129](https://github.com/chef/omnitruck-service/pull/129) ([rishabhjhs](https://github.com/rishabhjhs)) <!-- 0.0.99 -->
