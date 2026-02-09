@@ -536,3 +536,145 @@ func TestSortProductVersions(t *testing.T) {
 		})
 	}
 }
+
+func TestInstallSh(t *testing.T) {
+	tests := []struct {
+		name           string
+		licenseId      string
+		baseUrl        string
+		expectedPath   string
+		expectedQuery  string
+		mockResponse   string
+		mockStatusCode int
+	}{
+		{
+			name:           "with license_id",
+			licenseId:      "test-license-123",
+			baseUrl:        "",
+			expectedPath:   "/install.sh",
+			expectedQuery:  "license_id=test-license-123",
+			mockResponse:   "#!/bin/bash\ninstall script",
+			mockStatusCode: 200,
+		},
+		{
+			name:           "without license_id",
+			licenseId:      "",
+			baseUrl:        "",
+			expectedPath:   "/install.sh",
+			expectedQuery:  "",
+			mockResponse:   "#!/bin/bash\ninstall script",
+			mockStatusCode: 200,
+		},
+		{
+			name:           "with license_id and base_url",
+			licenseId:      "test-license-123",
+			baseUrl:        "https://custom.chef.io",
+			expectedPath:   "/install.sh",
+			expectedQuery:  "license_id=test-license-123&base_url=https://custom.chef.io",
+			mockResponse:   "#!/bin/bash\ninstall script",
+			mockStatusCode: 200,
+		},
+		{
+			name:           "with only base_url",
+			licenseId:      "",
+			baseUrl:        "https://custom.chef.io",
+			expectedPath:   "/install.sh",
+			expectedQuery:  "base_url=https://custom.chef.io",
+			mockResponse:   "#!/bin/bash\ninstall script",
+			mockStatusCode: 200,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, tt.expectedPath, r.URL.Path)
+				if tt.expectedQuery != "" {
+					assert.Equal(t, tt.expectedQuery, r.URL.RawQuery)
+				}
+				w.WriteHeader(tt.mockStatusCode)
+				w.Write([]byte(tt.mockResponse))
+			}))
+			defer server.Close()
+
+			log := logrus.NewEntry(logrus.New())
+			client := New(log, server.URL)
+			request := client.InstallSh(tt.licenseId, tt.baseUrl)
+
+			assert.True(t, request.Ok)
+			assert.Equal(t, tt.mockStatusCode, request.Code)
+			assert.Equal(t, tt.mockResponse, string(request.Body))
+		})
+	}
+}
+
+func TestInstallPs1(t *testing.T) {
+	tests := []struct {
+		name           string
+		licenseId      string
+		baseUrl        string
+		expectedPath   string
+		expectedQuery  string
+		mockResponse   string
+		mockStatusCode int
+	}{
+		{
+			name:           "with license_id",
+			licenseId:      "trial-license-456",
+			baseUrl:        "",
+			expectedPath:   "/install.ps1",
+			expectedQuery:  "license_id=trial-license-456",
+			mockResponse:   "# PowerShell install script",
+			mockStatusCode: 200,
+		},
+		{
+			name:           "without license_id",
+			licenseId:      "",
+			baseUrl:        "",
+			expectedPath:   "/install.ps1",
+			expectedQuery:  "",
+			mockResponse:   "# PowerShell install script",
+			mockStatusCode: 200,
+		},
+		{
+			name:           "with license_id and base_url",
+			licenseId:      "trial-license-456",
+			baseUrl:        "https://custom.chef.io",
+			expectedPath:   "/install.ps1",
+			expectedQuery:  "license_id=trial-license-456&base_url=https://custom.chef.io",
+			mockResponse:   "# PowerShell install script",
+			mockStatusCode: 200,
+		},
+		{
+			name:           "with only base_url",
+			licenseId:      "",
+			baseUrl:        "https://custom.chef.io",
+			expectedPath:   "/install.ps1",
+			expectedQuery:  "base_url=https://custom.chef.io",
+			mockResponse:   "# PowerShell install script",
+			mockStatusCode: 200,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, tt.expectedPath, r.URL.Path)
+				if tt.expectedQuery != "" {
+					assert.Equal(t, tt.expectedQuery, r.URL.RawQuery)
+				}
+				w.WriteHeader(tt.mockStatusCode)
+				w.Write([]byte(tt.mockResponse))
+			}))
+			defer server.Close()
+
+			log := logrus.NewEntry(logrus.New())
+			client := New(log, server.URL)
+			request := client.InstallPs1(tt.licenseId, tt.baseUrl)
+
+			assert.True(t, request.Ok)
+			assert.Equal(t, tt.mockStatusCode, request.Code)
+			assert.Equal(t, tt.mockResponse, string(request.Body))
+		})
+	}
+}

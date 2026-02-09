@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/chef/omnitruck-service/clients"
@@ -52,6 +53,7 @@ type RequestParams struct {
 	Eol             string
 	LicenseId       string
 	BOM             string
+	BaseUrl         string
 }
 
 type RequestParamsFlags struct {
@@ -266,6 +268,40 @@ func (ot *Omnitruck) ProductMetadata(p *RequestParams) *clients.Request {
 // ourselves.
 func (ot *Omnitruck) ProductDownload(p *RequestParams) *clients.Request {
 	return ot.ProductMetadata(p)
+}
+
+// InstallSh fetches the install.sh script from omnitruck with optional license_id and base_url
+func (ot *Omnitruck) InstallSh(licenseId string, baseUrl string) *clients.Request {
+	url := fmt.Sprintf("%s/install.sh", ot.omnitruckUrl)
+	queryParams := []string{}
+	if licenseId != "" {
+		queryParams = append(queryParams, fmt.Sprintf("license_id=%s", licenseId))
+	}
+	if baseUrl != "" {
+		queryParams = append(queryParams, fmt.Sprintf("base_url=%s", baseUrl))
+	}
+	if len(queryParams) > 0 {
+		url = fmt.Sprintf("%s?%s", url, strings.Join(queryParams, "&"))
+	}
+
+	return ot.Get(url)
+}
+
+// InstallPs1 fetches the install.ps1 script from omnitruck with optional license_id and base_url
+func (ot *Omnitruck) InstallPs1(licenseId string, baseUrl string) *clients.Request {
+	url := fmt.Sprintf("%s/install.ps1", ot.omnitruckUrl)
+	queryParams := []string{}
+	if licenseId != "" {
+		queryParams = append(queryParams, fmt.Sprintf("license_id=%s", licenseId))
+	}
+	if baseUrl != "" {
+		queryParams = append(queryParams, fmt.Sprintf("base_url=%s", baseUrl))
+	}
+	if len(queryParams) > 0 {
+		url = fmt.Sprintf("%s?%s", url, strings.Join(queryParams, "&"))
+	}
+
+	return ot.Get(url)
 }
 
 func ValidateRequest(p *RequestParams, flags RequestParamsFlags) *clients.Request {
