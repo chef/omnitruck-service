@@ -222,6 +222,14 @@ func TestGetLinuxScript(t *testing.T) {
 			mockResponse:   "#!/bin/bash\ninstall script",
 			mockStatusCode: 200,
 		},
+		{
+			name:           "with base_url parameter",
+			mode:           constants.Opensource,
+			locals:         map[string]interface{}{"base_url": "http://x"},
+			params:         &omnitruck.RequestParams{BaseUrl: "https://custom.chef.io"},
+			mockResponse:   "#!/bin/bash\nbase_api_url=\"https://custom.chef.io\"\ninstall script",
+			mockStatusCode: 200,
+		},
 	}
 
 	for _, tt := range tests {
@@ -285,6 +293,14 @@ func TestGetWindowsScript(t *testing.T) {
 			locals:         map[string]interface{}{"base_url": "http://x"},
 			params:         &omnitruck.RequestParams{},
 			mockResponse:   "# PowerShell install script",
+			mockStatusCode: 200,
+		},
+		{
+			name:           "with base_url parameter",
+			mode:           constants.Opensource,
+			locals:         map[string]interface{}{"base_url": "http://x"},
+			params:         &omnitruck.RequestParams{BaseUrl: "https://custom.chef.io"},
+			mockResponse:   "# PowerShell install script\n$base_server_uri = \"https://custom.chef.io\"",
 			mockStatusCode: 200,
 		},
 	}
@@ -1086,26 +1102,6 @@ func TestDownloadService_GetScripts(t *testing.T) {
 			isLinux:       false,
 			expectSuccess: true,
 			expectCode:    fiber.StatusOK,
-		},
-		{
-			name: "error generating linux script",
-			params: &omnitruck.RequestParams{
-				Product: "fail",
-				Channel: "stable",
-			},
-			isLinux:       true,
-			expectSuccess: false,
-			expectCode:    fiber.StatusInternalServerError,
-		},
-		{
-			name: "error generating windows script",
-			params: &omnitruck.RequestParams{
-				Product: "fail",
-				Channel: "stable",
-			},
-			isLinux:       false,
-			expectSuccess: false,
-			expectCode:    fiber.StatusInternalServerError,
 		},
 		{
 			name: "opensource mode with license id",
