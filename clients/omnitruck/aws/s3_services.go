@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -34,6 +35,28 @@ var GetS3Object = func(ctx context.Context, cfg aws.Config, creds aws.Credential
 		Key:    &key,
 	}
 	return s3Client.GetObject(ctx, getObjInput)
+}
+
+// GetS3PresignedURL generates a presigned URL for S3 object download
+var GetS3PresignedURL = func(ctx context.Context, cfg aws.Config, creds aws.CredentialsProvider, bucket, key string, expirationMinutes int) (string, error) {
+	s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.Credentials = creds
+	})
+	presignClient := s3.NewPresignClient(s3Client)
+	
+	getObjInput := &s3.GetObjectInput{
+		Bucket: &bucket,
+		Key:    &key,
+	}
+	
+	presignedReq, err := presignClient.PresignGetObject(ctx, getObjInput, func(opts *s3.PresignOptions) {
+		opts.Expires = time.Duration(expirationMinutes) * time.Minute
+	})
+	if err != nil {
+		return "", err
+	}
+	
+	return presignedReq.URL, nil
 }
 
 var ValidateS3Config = func(cfg omnitruckConfig.AWSConfig) error {
