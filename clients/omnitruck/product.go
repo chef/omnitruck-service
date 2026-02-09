@@ -67,7 +67,7 @@ var supportedProducts = map[string]Product{
 		Name:              "supermarket",
 		ProductName:       "Chef Supermarket",
 		SupportedVersion:  NewConstraint(">= 5.0.0"),
-		OpensourceVersion: NewConstraint("<= 5.1.63"),
+		OpensourceVersion: NewConstraint(">= 0"),
 	},
 	"desktop": {
 		Name:              "desktop",
