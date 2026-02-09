@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"net/http"
-	"strconv"
 
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
@@ -94,27 +93,15 @@ func (s *InfraProductStrategy) downloadFromS3(params *omnitruck.RequestParams, f
 		return "", nil, nil, "Failed to create AWS session", http.StatusInternalServerError, err
 	}
 	creds := s3aws.NewS3Credentials(sess, roleArn)
-	result, err := s3aws.GetS3Object(context.Background(), sess, creds, bucket, key)
+
+	// Generate presigned URL instead of streaming the file
+	presignedURL, err := s3aws.GetS3PresignedURL(context.TODO(), sess, creds, bucket, key, 5)
 	if err != nil {
-		s.Log.WithError(err).Error("Failed to get object from S3")
-		return "", nil, nil, "Failed to get object from S3", http.StatusInternalServerError, err
+		s.Log.WithError(err).Error("Failed to generate presigned URL")
+		return "", nil, nil, "Failed to generate presigned URL", http.StatusInternalServerError, err
 	}
 
-	headers := http.Header{}
-	if result.ContentType != nil {
-		headers.Set("Content-Type", *result.ContentType)
-	}
-	if result.ContentLength != nil {
-		headers.Set("Content-Length", strconv.FormatInt(*result.ContentLength, 10))
-
-	}
-	if result.ContentDisposition != nil {
-		headers.Set("Content-Disposition", *result.ContentDisposition)
-	} else {
-		headers.Set("Content-Disposition", "attachment; filename="+fileName)
-	}
-
-	return "", result.Body, headers, "", 0, nil
+	return presignedURL, nil, nil, "", http.StatusFound, nil
 }
 
 func (s *InfraProductStrategy) GetPackages(params *omnitruck.RequestParams) (omnitruck.PackageList, error) {
