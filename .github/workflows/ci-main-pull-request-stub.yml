@@ -28,7 +28,24 @@ jobs:
         run: |
           echo "CI main pull request stub version $STUB_VERSION"
 
+  read_version:
+    name: 'Read version from VERSION file'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Read VERSION file
+        id: get_version
+        run: |
+          VERSION=$(cat VERSION)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Read version: $VERSION"
+
   call-ci-main-pr-check-pipeline:
+    needs: read_version
     uses: chef/common-github-actions/.github/workflows/ci-main-pull-request.yml@sandhi/fix-blackduc-sca
     secrets: inherit
     permissions: 
@@ -39,7 +56,7 @@ jobs:
       # go-private-modules: GOPRIVATE for Go private modules, default is 'github.com/progress-platform-services/*
 
       # if version specified, it takes precedence; can be a semver like 1.0.2-xyz or a tag like "latest"
-      version: '0.0.87' # ${{ github.event.repository.version }}
+      version: ${{ needs.read_version.outputs.version }}
       detect-version-source-type: 'none' # options include "none" (do not detect), "file", "github-tag" or "github-release"
       detect-version-source-parameter: '' # use for file name
       language: 'go'
