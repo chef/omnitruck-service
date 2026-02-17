@@ -70,6 +70,7 @@ jobs:
       perform-trufflehog-scan: true
       
       # ADDED TRIVY SCAN
+      trivy-fail-on-high-critical: true
       perform-trivy-scan: true
       
       # BlackDuck SAST (Polaris) and SCA scans (requires a build or download to do SAST)
