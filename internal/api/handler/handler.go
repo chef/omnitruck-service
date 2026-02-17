@@ -476,7 +476,6 @@ func (h *DownloadsHandler) FileNameHandler(c *fiber.Ctx) error {
 // @Accept      json
 // @Produce     json
 // @Param       license_id query    string false "License ID"
-// @Param       base_url   query    string false "Base URL for metadata endpoint"
 // @Success     200        {object} map[string]interface{}
 // @Failure     403        {object} ErrorResponse
 // @Failure     500        {object} ErrorResponse
@@ -512,7 +511,6 @@ func (h *DownloadsHandler) DownloadLinuxScript(c *fiber.Ctx) error {
 // @Accept      json
 // @Produce     json
 // @Param       license_id query    string false "License ID"
-// @Param       base_url   query    string false "Base URL for metadata endpoint"
 // @Success     200        {object} map[string]interface{}
 // @Failure     403        {object} ErrorResponse
 // @Failure     500        {object} ErrorResponse

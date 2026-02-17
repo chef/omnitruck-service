@@ -541,7 +541,6 @@ func TestInstallSh(t *testing.T) {
 	tests := []struct {
 		name           string
 		licenseId      string
-		baseUrl        string
 		expectedPath   string
 		expectedQuery  string
 		mockResponse   string
@@ -550,7 +549,6 @@ func TestInstallSh(t *testing.T) {
 		{
 			name:           "with license_id",
 			licenseId:      "test-license-123",
-			baseUrl:        "",
 			expectedPath:   "/install.sh",
 			expectedQuery:  "license_id=test-license-123",
 			mockResponse:   "#!/bin/bash\ninstall script",
@@ -559,27 +557,8 @@ func TestInstallSh(t *testing.T) {
 		{
 			name:           "without license_id",
 			licenseId:      "",
-			baseUrl:        "",
 			expectedPath:   "/install.sh",
 			expectedQuery:  "",
-			mockResponse:   "#!/bin/bash\ninstall script",
-			mockStatusCode: 200,
-		},
-		{
-			name:           "with license_id and base_url",
-			licenseId:      "test-license-123",
-			baseUrl:        "https://custom.chef.io",
-			expectedPath:   "/install.sh",
-			expectedQuery:  "license_id=test-license-123&base_url=https://custom.chef.io",
-			mockResponse:   "#!/bin/bash\ninstall script",
-			mockStatusCode: 200,
-		},
-		{
-			name:           "with only base_url",
-			licenseId:      "",
-			baseUrl:        "https://custom.chef.io",
-			expectedPath:   "/install.sh",
-			expectedQuery:  "base_url=https://custom.chef.io",
 			mockResponse:   "#!/bin/bash\ninstall script",
 			mockStatusCode: 200,
 		},
@@ -599,7 +578,7 @@ func TestInstallSh(t *testing.T) {
 
 			log := logrus.NewEntry(logrus.New())
 			client := New(log, server.URL)
-			request := client.InstallSh(tt.licenseId, tt.baseUrl)
+			request := client.InstallSh(tt.licenseId)
 
 			assert.True(t, request.Ok)
 			assert.Equal(t, tt.mockStatusCode, request.Code)
@@ -612,7 +591,6 @@ func TestInstallPs1(t *testing.T) {
 	tests := []struct {
 		name           string
 		licenseId      string
-		baseUrl        string
 		expectedPath   string
 		expectedQuery  string
 		mockResponse   string
@@ -621,7 +599,6 @@ func TestInstallPs1(t *testing.T) {
 		{
 			name:           "with license_id",
 			licenseId:      "trial-license-456",
-			baseUrl:        "",
 			expectedPath:   "/install.ps1",
 			expectedQuery:  "license_id=trial-license-456",
 			mockResponse:   "# PowerShell install script",
@@ -630,27 +607,8 @@ func TestInstallPs1(t *testing.T) {
 		{
 			name:           "without license_id",
 			licenseId:      "",
-			baseUrl:        "",
 			expectedPath:   "/install.ps1",
 			expectedQuery:  "",
-			mockResponse:   "# PowerShell install script",
-			mockStatusCode: 200,
-		},
-		{
-			name:           "with license_id and base_url",
-			licenseId:      "trial-license-456",
-			baseUrl:        "https://custom.chef.io",
-			expectedPath:   "/install.ps1",
-			expectedQuery:  "license_id=trial-license-456&base_url=https://custom.chef.io",
-			mockResponse:   "# PowerShell install script",
-			mockStatusCode: 200,
-		},
-		{
-			name:           "with only base_url",
-			licenseId:      "",
-			baseUrl:        "https://custom.chef.io",
-			expectedPath:   "/install.ps1",
-			expectedQuery:  "base_url=https://custom.chef.io",
 			mockResponse:   "# PowerShell install script",
 			mockStatusCode: 200,
 		},
@@ -670,7 +628,7 @@ func TestInstallPs1(t *testing.T) {
 
 			log := logrus.NewEntry(logrus.New())
 			client := New(log, server.URL)
-			request := client.InstallPs1(tt.licenseId, tt.baseUrl)
+			request := client.InstallPs1(tt.licenseId)
 
 			assert.True(t, request.Ok)
 			assert.Equal(t, tt.mockStatusCode, request.Code)
