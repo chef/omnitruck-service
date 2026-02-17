@@ -20,12 +20,6 @@ func TestNoLicenseIDWithRequiredTrue(t *testing.T) {
 			ValidateFunc: func(id, url string, resp *clients.Response) *clients.Request {
 				return &clients.Request{Ok: false, Code: 403, Message: "invalid license"}
 			},
-			IsTrialFunc: func(l string) bool {
-				return false
-			},
-			IsFreeFunc: func(l string) bool {
-				return false
-			},
 		},
 		Unauthorized: func(code int, msg string, c *fiber.Ctx) error {
 			return c.Status(code).SendString(msg)
@@ -80,7 +74,6 @@ func TestValidLicenseProvided(t *testing.T) {
 	app.Use(New(Config{
 		URL:      "http://example.com",
 		Required: true,
-		Mode:     2, // Commercial mode
 		LicenseClient: &clients.MockLicense{
 			ValidateFunc: func(id, url string, resp *clients.Response) *clients.Request {
 				resp.Message = "valid license"
@@ -90,7 +83,7 @@ func TestValidLicenseProvided(t *testing.T) {
 				return false
 			},
 			IsFreeFunc: func(l string) bool {
-				return false
+				return true
 			},
 		},
 		Unauthorized: func(code int, msg string, c *fiber.Ctx) error {

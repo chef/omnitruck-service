@@ -1356,6 +1356,16 @@ func TestDownloadLinuxScriptHandler(t *testing.T) {
 			expectedStatus:   200,
 			expectedResponse: ``,
 		},
+		{
+			name:       "error while parsing the file response",
+			serverMode: 0,
+			mockTemplate: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
+				return "", errors.New("filepath not found")
+			},
+			requestPath:      `/install.sh`,
+			expectedStatus:   500,
+			expectedResponse: ``,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -1400,6 +1410,16 @@ func TestDownloadWindowsScriptHandler(t *testing.T) {
 			},
 			requestPath:      `/install.ps1`,
 			expectedStatus:   200,
+			expectedResponse: ``,
+		},
+		{
+			name:       "error while parsing the file response",
+			serverMode: 0,
+			mockTemplate: func(baseUrl string, params *omnitruck.RequestParams, filepath string) (string, error) {
+				return "", errors.New("filepath not found")
+			},
+			requestPath:      `/install.ps1`,
+			expectedStatus:   500,
 			expectedResponse: ``,
 		},
 	}
