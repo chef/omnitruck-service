@@ -46,13 +46,15 @@ jobs:
 
   call-ci-main-pr-check-pipeline:
     needs: read_version
-    uses: chef/common-github-actions/.github/workflows/ci-main-pull-request.yml@sandhi/fixes-for-chef-org
+    uses: chef/common-github-actions/.github/workflows/ci-main-pull-request.yml@v1.0.22
     secrets: inherit
     permissions: 
       id-token: write
       contents: read
     with:   
       visibility: ${{ github.event.repository.visibility }}   #  private, public, or internal
+      github-event-name: ${{ github.event_name }}
+      github-branch-name: ${{ github.head_ref || github.ref_name }}
       # go-private-modules: GOPRIVATE for Go private modules, default is 'github.com/progress-platform-services/*
 
       # if version specified, it takes precedence; can be a semver like 1.0.2-xyz or a tag like "latest"
@@ -62,12 +64,13 @@ jobs:
       language: 'go'
 
       # complexity-checks
-      perform-complexity-checks: true
+      perform-complexity-checks: false
       # scc-output-filename: 'scc-output.txt'
       perform-language-linting: false    # Perform language-specific linting and pre-compilation checks
 
       # trufflehog secret scanning
       perform-trufflehog-scan: true
+      fail-trufflehog-on-secrets-found: true
       
       # ADDED TRIVY SCAN
       perform-trivy-scan: true
@@ -78,10 +81,10 @@ jobs:
       # requires these secrets: POLARIS_SERVER_URL, POLARIS_ACCESS_TOKEN
       perform-blackduck-polaris: true
       polaris-application-name: "Chef-Agents"  # one of these: Chef-Agents, Chef-Automate, Chef-Chef360, Chef-Habitat, Chef-Infrastructure-Server, Chef-Shared-Services, Chef-Other
-      polaris-project-name: 'omnitruck-service'
+      polaris-project-name: ${{ github.event.repository.name }}
       polaris-blackduck-executable: 'path/to/blackduck/binary'
       polaris-executable-detect-path: 'path/to/detect'
-      polaris-coverity-build-command: 'go build'
+      polaris-coverity-build-command: 'go build ./...'
       polaris-coverity-clean-command: 'go clean'
       polaris-fail-on-critical: true
       polaris-fail-on-high: true
@@ -97,27 +100,27 @@ jobs:
       grype-image-skip-aws: true
  
       # perform application build and unit testing, will use custom repository properties when implemented for chef-primary-application, chef-build-profile, and chef-build-language
-      build: true
+      build: false
       # ga-build-profile: $chef-ga-build-profile   
       # language: $chef-ga-build-language   # this will be removed from stub as autodetected in central GA
-      unit-tests: true
+      unit-tests: false
  
       # perform SonarQube scan, with or without unit test coverage data
       # requires secrets SONAR_TOKEN and SONAR_HOST_URL (progress.sonar.com)
-      perform-sonarqube-scan: true
+      # perform-sonarqube-scan: true
       # perform-sonar-build: true
       # build-profile: 'default' 
-      report-unit-test-coverage: true
+      # report-unit-test-coverage: true
 
       # report to central developer dashboard
       report-to-atlassian-dashboard: false
       # quality-product-name: 'Chef-Agents'   # product name for quality reporting, like Chef360, Courier, Inspec
-      quality-product-name: ${{ github.event.repository.name }}   # like 'Chef-360' - the product name for quality reporting, like Chef360, Courier, Inspec
-      quality-sonar-app-name: ${{ github.event.repository.name }}
+      # quality-product-name: ${{ github.event.repository.name }}   # like 'Chef-360' - the product name for quality reporting, like Chef360, Courier, Inspec
+      # quality-sonar-app-name: ${{ github.event.repository.name }}
       # quality-testing-type: 'Integration' like Unit, Integration, e2e, api, Performance, Security
-      quality-testing-type: 'Unit'
+      # quality-testing-type: 'Unit'
       # quality-service-name: 'YourServiceOrRepoName'
-      unit-test-output-path: './bin/cov.out'
+      # unit-test-output-path: './bin/cov.out'
 
       # perform native and Habitat packaging, publish to package repositories
       package-binaries: false     # Package binaries (e.g., RPM, DEB, MSI, dpkg + signing + SHA)
