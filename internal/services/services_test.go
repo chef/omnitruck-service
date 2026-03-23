@@ -189,43 +189,58 @@ func TestReplicatedService(t *testing.T) {
 }
 
 func TestGetLinuxScript(t *testing.T) {
-	mockTemplate := &template.MockTemplateRenderer{
-		GetScriptfunc: func(baseUrl string, params *omnitruck.RequestParams, filePath string) (string, error) {
-			return "#!/bin/bash\ninstall script", nil
-		},
-	}
-	injector := buildInjector(mockTemplate, "https://omnitruck.chef.io")
-
-	log := logrus.NewEntry(logrus.New())
-
 	tests := []struct {
-		name   string
-		mode   constants.ApiType
-		locals map[string]interface{}
-		params *omnitruck.RequestParams
+		name           string
+		mode           constants.ApiType
+		locals         map[string]interface{}
+		params         *omnitruck.RequestParams
+		omnitruckUrl   string
+		mockResponse   string
+		mockStatusCode int
 	}{
 		{
-			name:   "commercial mode with license_id",
-			mode:   constants.Commercial,
-			locals: map[string]interface{}{"base_url": "http://x", "license_id": "test-license"},
-			params: &omnitruck.RequestParams{},
+			name:           "commercial mode with license_id",
+			mode:           constants.Commercial,
+			locals:         map[string]interface{}{"base_url": "http://x"},
+			params:         &omnitruck.RequestParams{LicenseId: "test-license"},
+			mockResponse:   "#!/bin/bash\n# License ID provided via context\nlicense_id='test-license'\ninstall script",
+			mockStatusCode: 200,
 		},
 		{
-			name:   "trial mode with license_id",
-			mode:   constants.Trial,
-			locals: map[string]interface{}{"base_url": "http://x", "license_id": "test-license"},
-			params: &omnitruck.RequestParams{},
+			name:           "trial mode with license_id",
+			mode:           constants.Trial,
+			locals:         map[string]interface{}{"base_url": "http://x"},
+			params:         &omnitruck.RequestParams{LicenseId: "trial-license"},
+			mockResponse:   "#!/bin/bash\n# License ID provided via context\nlicense_id='trial-license'\ninstall script",
+			mockStatusCode: 200,
 		},
 		{
-			name:   "opensource mode with license_id",
-			mode:   constants.Opensource,
-			locals: map[string]interface{}{"base_url": "http://x", "license_id": "test-license"},
-			params: &omnitruck.RequestParams{},
+			name:           "opensource mode without license_id",
+			mode:           constants.Opensource,
+			locals:         map[string]interface{}{"base_url": "http://x"},
+			params:         &omnitruck.RequestParams{},
+			mockResponse:   "#!/bin/bash\ninstall script",
+			mockStatusCode: 200,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Create mock HTTP server
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "/install.sh", r.URL.Path)
+				if tt.params.LicenseId != "" {
+					assert.Equal(t, tt.params.LicenseId, r.URL.Query().Get("license_id"))
+				}
+				w.WriteHeader(tt.mockStatusCode)
+				w.Write([]byte(tt.mockResponse))
+			}))
+			defer server.Close()
+
+			mockTemplate := &template.MockTemplateRenderer{}
+			injector := buildInjector(mockTemplate, server.URL)
+			log := logrus.NewEntry(logrus.New())
+
 			svc, _ := NewDownloadService(injector, log, tt.locals)
 			svc.setMode(tt.mode)
 			script, req := svc.GetLinuxScript(tt.params)
@@ -239,43 +254,58 @@ func TestGetLinuxScript(t *testing.T) {
 }
 
 func TestGetWindowsScript(t *testing.T) {
-	mockTemplate := &template.MockTemplateRenderer{
-		GetScriptfunc: func(baseUrl string, params *omnitruck.RequestParams, filePath string) (string, error) {
-			return "# PowerShell install script", nil
-		},
-	}
-	injector := buildInjector(mockTemplate, "https://omnitruck.chef.io")
-
-	log := logrus.NewEntry(logrus.New())
-
 	tests := []struct {
-		name   string
-		mode   constants.ApiType
-		locals map[string]interface{}
-		params *omnitruck.RequestParams
+		name           string
+		mode           constants.ApiType
+		locals         map[string]interface{}
+		params         *omnitruck.RequestParams
+		omnitruckUrl   string
+		mockResponse   string
+		mockStatusCode int
 	}{
 		{
-			name:   "commercial mode with license_id",
-			mode:   constants.Commercial,
-			locals: map[string]interface{}{"base_url": "http://x", "license_id": "test-license"},
-			params: &omnitruck.RequestParams{},
+			name:           "commercial mode with license_id",
+			mode:           constants.Commercial,
+			locals:         map[string]interface{}{"base_url": "http://x"},
+			params:         &omnitruck.RequestParams{LicenseId: "test-license"},
+			mockResponse:   "# PowerShell install script\n# License ID provided via context - adding to install command\ninstall -license_id 'test-license'",
+			mockStatusCode: 200,
 		},
 		{
-			name:   "trial mode with license_id",
-			mode:   constants.Trial,
-			locals: map[string]interface{}{"base_url": "http://x", "license_id": "test-license"},
-			params: &omnitruck.RequestParams{},
+			name:           "trial mode with license_id",
+			mode:           constants.Trial,
+			locals:         map[string]interface{}{"base_url": "http://x"},
+			params:         &omnitruck.RequestParams{LicenseId: "trial-license"},
+			mockResponse:   "# PowerShell install script\n# License ID provided via context - adding to install command\ninstall -license_id 'trial-license'",
+			mockStatusCode: 200,
 		},
 		{
-			name:   "opensource mode with license_id",
-			mode:   constants.Opensource,
-			locals: map[string]interface{}{"base_url": "http://x", "license_id": "test-license"},
-			params: &omnitruck.RequestParams{},
+			name:           "opensource mode without license_id",
+			mode:           constants.Opensource,
+			locals:         map[string]interface{}{"base_url": "http://x"},
+			params:         &omnitruck.RequestParams{},
+			mockResponse:   "# PowerShell install script",
+			mockStatusCode: 200,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Create mock HTTP server
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "/install.ps1", r.URL.Path)
+				if tt.params.LicenseId != "" {
+					assert.Equal(t, tt.params.LicenseId, r.URL.Query().Get("license_id"))
+				}
+				w.WriteHeader(tt.mockStatusCode)
+				w.Write([]byte(tt.mockResponse))
+			}))
+			defer server.Close()
+
+			mockTemplate := &template.MockTemplateRenderer{}
+			injector := buildInjector(mockTemplate, server.URL)
+			log := logrus.NewEntry(logrus.New())
+
 			svc, _ := NewDownloadService(injector, log, tt.locals)
 			svc.setMode(tt.mode)
 			script, req := svc.GetWindowsScript(tt.params)
