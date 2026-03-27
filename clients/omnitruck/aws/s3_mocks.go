@@ -16,6 +16,7 @@ var (
 	MockNewS3SessionFunc     func(region string) (aws.Config, error)
 	MockNewS3CredentialsFunc func(cfg aws.Config, roleArn string) aws.CredentialsProvider
 	MockGetS3ObjectFunc      func(ctx context.Context, cfg aws.Config, creds aws.CredentialsProvider, bucket, key string) (*s3.GetObjectOutput, error)
+	MockGetS3PresignedURLFunc func(ctx context.Context, cfg aws.Config, creds aws.CredentialsProvider, bucket, key string, expirationMinutes int) (string, error)
 )
 
 func MockValidateS3Config(cfg omnitruckConfig.AWSConfig) error {
@@ -29,4 +30,7 @@ func MockNewS3Credentials(cfg aws.Config, roleArn string) aws.CredentialsProvide
 }
 func MockGetS3Object(ctx context.Context, cfg aws.Config, creds aws.CredentialsProvider, bucket, key string) (*s3.GetObjectOutput, error) {
 	return MockGetS3ObjectFunc(ctx, cfg, creds, bucket, key)
+}
+func MockGetS3PresignedURL(ctx context.Context, cfg aws.Config, creds aws.CredentialsProvider, bucket, key string, expirationMinutes int) (string, error) {
+	return MockGetS3PresignedURLFunc(ctx, cfg, creds, bucket, key, expirationMinutes)
 }
