@@ -906,14 +906,14 @@ func TestDownloadService_RelatedProducts_SupportInfra19(t *testing.T) {
 		{
 			name:               "SupportInfra19 true - includes infra products",
 			supportInfra19:     true,
-			expectedProducts:   []string{"chef", "chef-ice", "migrate-ice"},
+			expectedProducts:   []string{"chef", "chef-ice", "migrate-ice", "inspec-enterprise"},
 			unexpectedProducts: []string{},
 		},
 		{
 			name:               "SupportInfra19 false - excludes infra products",
 			supportInfra19:     false,
 			expectedProducts:   []string{"chef"},
-			unexpectedProducts: []string{"chef-ice", "migrate-ice"},
+			unexpectedProducts: []string{"chef-ice", "migrate-ice", "inspec-enterprise"},
 		},
 	}
 
@@ -928,10 +928,11 @@ func TestDownloadService_RelatedProducts_SupportInfra19(t *testing.T) {
 					return &models.RelatedProducts{
 						Bom: "test-bom",
 						Products: map[string]string{
-							"chef":        "Chef Infra Client",
-							"chef-ice":    "Chef Infra Client Enterprise",
-							"migrate-ice": "Migrate ICE",
-							"automate":    "Chef Automate",
+							"chef":              "Chef Infra Client",
+							"chef-ice":          "Chef Infra Client Enterprise",
+							"migrate-ice":       "Migrate ICE",
+							"inspec-enterprise": "InSpec Enterprise",
+							"automate":          "Chef Automate",
 						},
 					}, nil
 				},

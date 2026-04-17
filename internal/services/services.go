@@ -101,10 +101,10 @@ func (svc *DownloadService) Products(params *omnitruck.RequestParams) (data omni
 	data = svc.DynamoServices(svc.databaseService).Products(data, params.Eol)
 	// This a temporary fix to hide CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT when infra19Enabled is false
 	if !svc.config.SupportInfra19 {
-		// Remove CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT from the data array
+		// Remove CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT and CHEF_INSPEC_ENTERPRISE_PRODUCT from the data array
 		var filtered omnitruck.ItemList
 		for _, item := range data {
-			if item != constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT && item != constants.MIGRATE_ICE {
+			if item != constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT && item != constants.MIGRATE_ICE && item != constants.CHEF_INSPEC_ENTERPRISE_PRODUCT {
 				filtered = append(filtered, item)
 			}
 		}
@@ -263,9 +263,10 @@ func (svc *DownloadService) RelatedProducts(params *omnitruck.RequestParams) (da
 	}
 
 	if !svc.config.SupportInfra19 && relatedProducts != nil && relatedProducts.Products != nil {
-		// This a temporary fix to hide CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT when supportInfra19 is false
+		// This a temporary fix to hide CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT and CHEF_INSPEC_ENTERPRISE_PRODUCT when supportInfra19 is false
 		delete(relatedProducts.Products, constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT)
 		delete(relatedProducts.Products, constants.MIGRATE_ICE)
+		delete(relatedProducts.Products, constants.CHEF_INSPEC_ENTERPRISE_PRODUCT)
 	}
 
 	response := map[string]interface{}{
