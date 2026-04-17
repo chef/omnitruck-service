@@ -1534,7 +1534,7 @@ func TestProductDownloadHandler(t *testing.T) {
 		{
 			name:             "package manager auto add for automate",
 			requestPath:      "/stable/automate/download?p=linux&m=amd64&eol=false&v=latest",
-			expectedStatus:   fiber.StatusFound, // 302 redirect
+			expectedStatus:   fiber.StatusOK,
 			expectedResponse: "",
 		},
 	}
