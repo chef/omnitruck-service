@@ -341,7 +341,7 @@ func TestInfraProductStrategy_DownloadAndGetFileName(t *testing.T) {
 				DynamoService: mockDynamo,
 				Log:           logrus.NewEntry(logrus.New()),
 			}
-			params := &omnitruck.RequestParams{Product: "chef"}
+			params := &omnitruck.RequestParams{Product: "chef", Platform: "ubuntu"}
 
 			if tt.isDownload {
 				url, rc, hdr, msg, code, err := strategy.Download(params)
@@ -421,7 +421,7 @@ func TestInfraProductStrategy_GetMetadata(t *testing.T) {
 				DynamoService: mockDynamo,
 				Log:           logrus.NewEntry(logrus.New()),
 			}
-			params := &omnitruck.RequestParams{Product: "chef"}
+			params := &omnitruck.RequestParams{Product: "chef", Platform: "ubuntu"}
 
 			meta, req := strategy.GetMetadata(params)
 
@@ -451,4 +451,83 @@ func TestInfraProductStrategy_UpdatePackages(t *testing.T) {
 	strategy.UpdatePackages(&list, params, "http://myurl")
 	pkg := list["ubuntu"]["20.04"]["x86_64"]
 	assert.Contains(t, pkg.Url, "http://myurl")
+}
+
+func TestInfraProductStrategy_normalizePackageManager(t *testing.T) {
+	tests := []struct {
+		name        string
+		params      *omnitruck.RequestParams
+		expectErr   bool
+		expectedPM  string
+		expectedMsg string
+	}{
+		{
+			name:       "derive from platform",
+			params:     &omnitruck.RequestParams{Platform: "ubuntu"},
+			expectErr:  false,
+			expectedPM: "deb",
+		},
+		{
+			name:       "keep explicit package manager",
+			params:     &omnitruck.RequestParams{Platform: "ubuntu", PackageManager: "tar"},
+			expectErr:  false,
+			expectedPM: "tar",
+		},
+		{
+			name:       "normalize explicit package manager with spaces and case",
+			params:     &omnitruck.RequestParams{Platform: "ubuntu", PackageManager: " Tar "},
+			expectErr:  false,
+			expectedPM: "tar",
+		},
+		{
+			name:       "blank package manager after trim is treated as omitted",
+			params:     &omnitruck.RequestParams{Platform: "ubuntu", PackageManager: "   "},
+			expectErr:  false,
+			expectedPM: "deb",
+		},
+		{
+			name:       "keep explicit valid matched package manager",
+			params:     &omnitruck.RequestParams{Platform: "ubuntu", PackageManager: "deb"},
+			expectErr:  false,
+			expectedPM: "deb",
+		},
+		{
+			name:        "error when neither package manager nor platform is provided",
+			params:      &omnitruck.RequestParams{},
+			expectErr:   true,
+			expectedMsg: "Either Platform (p) or Package Manager (pm) params must be provided",
+		},
+		{
+			name:       "explicit zip is universal - always valid",
+			params:     &omnitruck.RequestParams{Platform: "windows", PackageManager: "zip"},
+			expectErr:  false,
+			expectedPM: "zip",
+		},
+		{
+			name:        "error for mismatched explicit package manager",
+			params:      &omnitruck.RequestParams{Platform: "ubuntu", PackageManager: "msi"},
+			expectErr:   true,
+			expectedMsg: "Package manager 'msi' is not valid for platform 'ubuntu'. Expected 'deb', 'tar', or 'zip'",
+		},
+		{
+			name:        "error for unknown platform",
+			params:      &omnitruck.RequestParams{Platform: "unknown"},
+			expectErr:   true,
+			expectedMsg: "Unable to derive package manager for platform 'unknown'",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &InfraProductStrategy{Log: logrus.NewEntry(logrus.New())}
+			err := s.normalizePackageManager(tt.params)
+			if tt.expectErr {
+				assert.Error(t, err)
+				assert.Equal(t, tt.expectedMsg, err.Error())
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedPM, tt.params.PackageManager)
+			}
+		})
+	}
 }
