@@ -315,8 +315,7 @@
                         "example": "tar",
                         "description": "Package Manager, valid values depend on the platform (e.g., Linux: deb, tar; Windows: msi).",
                         "name": "pm",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "type": "string",
@@ -417,8 +416,7 @@
                         "example": "tar",
                         "description": "Package Manager, valid values depend on the platform (e.g., Linux: deb, tar; Windows: msi).",
                         "name": "pm",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "type": "string",
@@ -516,8 +514,7 @@
                         "example": "tar",
                         "description": "Package Manager, valid values depend on the platform (e.g., Linux: deb, tar; Windows: msi).",
                         "name": "pm",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "type": "string",

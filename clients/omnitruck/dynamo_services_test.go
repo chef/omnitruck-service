@@ -396,12 +396,19 @@ func TestProductMetadata(t *testing.T) {
 			version_err:  nil,
 			want:         PackageMetadata{},
 			wantErr:      true,
-			errMsg:       "Platfrom (p) params cannot be empty",
+			errMsg:       "Platform (p) params cannot be empty",
 			metadata_err: nil,
 		},
 		{
-			name:     "failure validation for empty package manager",
-			metadata: &models.MetaData{},
+			name: "success for empty package manager",
+			metadata: &models.MetaData{
+				Architecture:    "x86_64",
+				Platform:        "linux",
+				PlatformVersion: "",
+				SHA1:            "",
+				SHA256:          "1234",
+				PackageManager:  "rpm",
+			},
 			args: args{
 				p: &RequestParams{
 					Channel:         "stable",
@@ -415,11 +422,15 @@ func TestProductMetadata(t *testing.T) {
 					LicenseId:       "",
 				},
 			},
-			version:      "latest",
-			version_err:  nil,
-			want:         PackageMetadata{},
-			wantErr:      true,
-			errMsg:       "Package Manager (pm) params cannot be empty",
+			version:     "latest",
+			version_err: nil,
+			want: PackageMetadata{
+				Sha1:    "",
+				Sha256:  "1234",
+				Url:     "",
+				Version: "1.2",
+			},
+			wantErr:      false,
 			metadata_err: nil,
 		},
 		{
@@ -1496,7 +1507,7 @@ func TestGetFilename(t *testing.T) {
 			version_err:  nil,
 		},
 		{
-			name: "failure validation package manager",
+			name: "success without package manager",
 			args: args{
 				params: &RequestParams{
 					Channel:         "stable",
@@ -1511,12 +1522,17 @@ func TestGetFilename(t *testing.T) {
 					PackageManager:  "",
 				},
 			},
-			want:         "",
-			wantErr:      true,
-			errMsg:       "Package Manager (pm) params cannot be empty",
-			metadata:     &models.MetaData{},
+			want:    "automate_cli.zip",
+			wantErr: false,
+			errMsg:  "",
+			metadata: &models.MetaData{
+				FileName:       "automate_cli.zip",
+				Architecture:   "m",
+				Platform:       "linux",
+				PackageManager: "",
+			},
 			metadata_err: nil,
-			version:      "",
+			version:      "latest",
 			version_err:  nil,
 		},
 	}

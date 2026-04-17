@@ -170,7 +170,7 @@ func TestValidateRequest(t *testing.T) {
 			},
 			want: &clients.Request{
 				Code:    400,
-				Message: "Platfrom (p) params cannot be empty",
+				Message: "Platform (p) params cannot be empty",
 				Ok:      false,
 			},
 		},

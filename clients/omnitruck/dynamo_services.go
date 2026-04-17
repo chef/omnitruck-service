@@ -98,10 +98,9 @@ func (svc *DynamoServices) ProductMetadata(params *RequestParams) (PackageMetada
 	version := params.Version
 
 	flags := RequestParamsFlags{
-		Channel:        true,
-		Platform:       true,
-		Architecture:   true,
-		PackageManager: true,
+		Channel:      true,
+		Platform:     true,
+		Architecture: true,
 	}
 
 	requestParams := ValidateRequest(params, flags)
@@ -326,10 +325,9 @@ func (svc *DynamoServices) GetFilename(params *RequestParams) (string, error) {
 	version := params.Version
 
 	flags := RequestParamsFlags{
-		Channel:        true,
-		Platform:       true,
-		Architecture:   true,
-		PackageManager: true,
+		Channel:      true,
+		Platform:     true,
+		Architecture: true,
 	}
 
 	requestParams := ValidateRequest(params, flags)
