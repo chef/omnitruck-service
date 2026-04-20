@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.104 -->
-## [0.0.104](https://github.com/chef/omnitruck-service/tree/0.0.104) (2026-03-23)
+<!-- latest_release 0.0.105 -->
+## [0.0.105](https://github.com/chef/omnitruck-service/tree/0.0.105) (2026-04-20)
 
 #### Merged Pull Requests
-- Fail trivy for h/c vulnerabilities [#139](https://github.com/chef/omnitruck-service/pull/139) ([sandhi18](https://github.com/sandhi18))
+- Changes for Inspec-Enterprise [#144](https://github.com/chef/omnitruck-service/pull/144) ([sandhi18](https://github.com/sandhi18))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Changes for Inspec-Enterprise [#144](https://github.com/chef/omnitruck-service/pull/144) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.105 -->
 - Fail trivy for h/c vulnerabilities [#139](https://github.com/chef/omnitruck-service/pull/139) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.104 -->
 - Fix blackduck [#138](https://github.com/chef/omnitruck-service/pull/138) ([sandhi18](https://github.com/sandhi18)) <!-- 0.0.103 -->
 - removed version restriction on supermarket [#134](https://github.com/chef/omnitruck-service/pull/134) ([vipin230](https://github.com/vipin230)) <!-- 0.0.102 -->
