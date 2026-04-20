@@ -149,7 +149,7 @@ func TestProductsHandler(t *testing.T) {
 			customMiddleware: testInjector(mockDb, constants.Commercial, &template.MockTemplateRenderer{}),
 			eolParam:         "false",
 			expectedStatus:   fiber.StatusOK,
-			expectedContains: []string{"chef-360", "chef-ice", "migrate-ice"},
+			expectedContains: []string{"chef-360", "chef-ice", "migrate-ice", "inspec-enterprise"},
 		},
 		{
 			name:             "constants.Trial mode with eol true includes Chef Infra Client Enterprise and automate-1",
@@ -157,7 +157,7 @@ func TestProductsHandler(t *testing.T) {
 			customMiddleware: testInjector(mockDb, constants.Trial, &template.MockTemplateRenderer{}),
 			eolParam:         "true",
 			expectedStatus:   fiber.StatusOK,
-			expectedContains: []string{"Chef Infra Client Enterprise", "automate-1"},
+			expectedContains: []string{"Chef Infra Client Enterprise", "InSpec Enterprise", "automate-1"},
 		},
 		{
 			name:             "constants.Commercial mode with eol true includes automate-1",
@@ -165,7 +165,7 @@ func TestProductsHandler(t *testing.T) {
 			customMiddleware: testInjector(mockDb, constants.Commercial, &template.MockTemplateRenderer{}),
 			eolParam:         "true",
 			expectedStatus:   fiber.StatusOK,
-			expectedContains: []string{"chef-360", "chef-ice", "migrate-ice", "automate-1"},
+			expectedContains: []string{"chef-360", "chef-ice", "migrate-ice", "inspec-enterprise", "automate-1"},
 		},
 		{
 			name:             "constants.Trial mode returns formatted products",
@@ -173,7 +173,7 @@ func TestProductsHandler(t *testing.T) {
 			customMiddleware: testInjector(mockDb, constants.Trial, &template.MockTemplateRenderer{}),
 			eolParam:         "false",
 			expectedStatus:   fiber.StatusOK,
-			expectedContains: []string{"automate:Chef Automate", "chef:Chef Infra Client (Legacy)", "chef-server:Chef Infra Server", "chef-workstation:Chef Workstation", "habitat:Chef Habitat", "inspec:InSpec", "chef-ice:Chef Infra Client Enterprise", "migrate-ice:Chef Infra Client Legacy Migration"},
+			expectedContains: []string{"automate:Chef Automate", "chef:Chef Infra Client (Legacy)", "chef-server:Chef Infra Server", "chef-workstation:Chef Workstation", "habitat:Chef Habitat", "inspec:InSpec (Legacy)", "chef-ice:Chef Infra Client Enterprise", "migrate-ice:Chef Infra Client Legacy Migration", "inspec-enterprise:InSpec Enterprise"},
 		},
 		{
 			name:             "constants.Commercial mode returns full product list",
@@ -181,7 +181,7 @@ func TestProductsHandler(t *testing.T) {
 			customMiddleware: testInjector(mockDb, constants.Commercial, &template.MockTemplateRenderer{}),
 			eolParam:         "false",
 			expectedStatus:   fiber.StatusOK,
-			expectedContains: []string{"automate", "chef", "chef-backend", "chef-server", "chef-workstation", "habitat", "inspec", "manage", "supermarket", "chef-360", "chef-ice", "migrate-ice"},
+			expectedContains: []string{"automate", "chef", "chef-backend", "chef-server", "chef-workstation", "habitat", "inspec", "manage", "supermarket", "chef-360", "chef-ice", "migrate-ice", "inspec-enterprise"},
 		},
 	}
 

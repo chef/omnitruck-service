@@ -54,7 +54,7 @@ var supportedProducts = map[string]Product{
 	},
 	"inspec": {
 		Name:              "inspec",
-		ProductName:       "InSpec",
+		ProductName:       "InSpec (Legacy)",
 		SupportedVersion:  NewConstraint(">= 4.0.0"),
 		OpensourceVersion: NewConstraint("<= 4.3.2"),
 	},
@@ -83,6 +83,11 @@ var supportedProducts = map[string]Product{
 	"migrate-ice": {
 		Name:             "migrate-ice",
 		ProductName:      "Chef Infra Client Legacy Migration",
+		SupportedVersion: NewConstraint(">= 0"),
+	},
+	"inspec-enterprise": {
+		Name:             "inspec-enterprise",
+		ProductName:      "InSpec Enterprise",
 		SupportedVersion: NewConstraint(">= 0"),
 	},
 }
