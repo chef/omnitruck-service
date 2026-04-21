@@ -27,6 +27,7 @@ type InfraProductStrategy struct {
 func (s *InfraProductStrategy) normalizePackageManager(params *omnitruck.RequestParams) error {
 	provided := strings.ToLower(strings.TrimSpace(params.PackageManager))
 	params.PackageManager = provided
+
 	if params.PackageManager == "" {
 		if params.Platform == "" {
 			return fmt.Errorf(utils.PackageManagerOrPlatformParamsError)
@@ -39,17 +40,10 @@ func (s *InfraProductStrategy) normalizePackageManager(params *omnitruck.Request
 			WithField("package_manager", derived).
 			Debug("Auto-derived package manager from platform")
 		params.PackageManager = derived
-		return nil
 	}
 
-	// Validate explicit pm is compatible with platform
-	if !omnitruck.IsUniversalPackageManager(params.PackageManager) {
-		expected := omnitruck.DerivePackageManager(params.Platform)
-		if expected != "" && params.PackageManager != expected {
-			return fmt.Errorf("Package manager '%s' is not valid for platform '%s'. Expected '%s', 'tar', or 'zip'",
-				params.PackageManager, params.Platform, expected)
-		}
-	}
+	// Normalize platform to DB key (e.g. ubuntu → linux) after pm is resolved
+	params.Platform = omnitruck.NormalizePlatformForDatabase(params.Platform)
 	return nil
 }
 
