@@ -455,59 +455,102 @@ func TestInfraProductStrategy_UpdatePackages(t *testing.T) {
 
 func TestInfraProductStrategy_normalizePackageManager(t *testing.T) {
 	tests := []struct {
-		name        string
-		params      *omnitruck.RequestParams
-		expectErr   bool
-		expectedPM  string
-		expectedMsg string
+		name             string
+		params           *omnitruck.RequestParams
+		expectErr        bool
+		expectedPM       string
+		expectedPlatform string
+		expectedMsg      string
 	}{
 		{
-			name:       "derive from platform",
-			params:     &omnitruck.RequestParams{Platform: "ubuntu"},
-			expectErr:  false,
-			expectedPM: "deb",
+			name:             "derive from platform - ubuntu normalizes to linux",
+			params:           &omnitruck.RequestParams{Platform: "ubuntu"},
+			expectErr:        false,
+			expectedPM:       "deb",
+			expectedPlatform: "linux",
 		},
 		{
-			name:       "keep explicit package manager",
-			params:     &omnitruck.RequestParams{Platform: "ubuntu", PackageManager: "tar"},
-			expectErr:  false,
-			expectedPM: "tar",
+			name:             "keep explicit package manager - ubuntu still normalizes to linux",
+			params:           &omnitruck.RequestParams{Platform: "ubuntu", PackageManager: "tar"},
+			expectErr:        false,
+			expectedPM:       "tar",
+			expectedPlatform: "linux",
 		},
 		{
-			name:       "normalize explicit package manager with spaces and case",
-			params:     &omnitruck.RequestParams{Platform: "ubuntu", PackageManager: " Tar "},
-			expectErr:  false,
-			expectedPM: "tar",
+			name:             "normalize explicit package manager with spaces and case",
+			params:           &omnitruck.RequestParams{Platform: "ubuntu", PackageManager: " Tar "},
+			expectErr:        false,
+			expectedPM:       "tar",
+			expectedPlatform: "linux",
 		},
 		{
-			name:       "blank package manager after trim is treated as omitted",
-			params:     &omnitruck.RequestParams{Platform: "ubuntu", PackageManager: "   "},
-			expectErr:  false,
-			expectedPM: "deb",
+			name:             "blank package manager after trim is treated as omitted",
+			params:           &omnitruck.RequestParams{Platform: "ubuntu", PackageManager: "   "},
+			expectErr:        false,
+			expectedPM:       "deb",
+			expectedPlatform: "linux",
 		},
 		{
-			name:       "keep explicit valid matched package manager",
-			params:     &omnitruck.RequestParams{Platform: "ubuntu", PackageManager: "deb"},
-			expectErr:  false,
-			expectedPM: "deb",
+			name:             "keep explicit valid matched package manager",
+			params:           &omnitruck.RequestParams{Platform: "ubuntu", PackageManager: "deb"},
+			expectErr:        false,
+			expectedPM:       "deb",
+			expectedPlatform: "linux",
 		},
 		{
 			name:        "error when neither package manager nor platform is provided",
 			params:      &omnitruck.RequestParams{},
 			expectErr:   true,
-			expectedMsg: "Either Platform (p) or Package Manager (pm) params must be provided",
+			expectedMsg: "Platform (p) params cannot be empty",
 		},
 		{
-			name:       "explicit zip is universal - always valid",
-			params:     &omnitruck.RequestParams{Platform: "windows", PackageManager: "zip"},
-			expectErr:  false,
-			expectedPM: "zip",
+			name:             "windows normalizes to windows",
+			params:           &omnitruck.RequestParams{Platform: "windows", PackageManager: "msi"},
+			expectErr:        false,
+			expectedPM:       "msi",
+			expectedPlatform: "windows",
 		},
 		{
-			name:        "error for mismatched explicit package manager",
-			params:      &omnitruck.RequestParams{Platform: "ubuntu", PackageManager: "msi"},
-			expectErr:   true,
-			expectedMsg: "Package manager 'msi' is not valid for platform 'ubuntu'. Expected 'deb', 'tar', or 'zip'",
+			name:             "explicit zip is honored as-is - windows normalizes to windows",
+			params:           &omnitruck.RequestParams{Platform: "windows", PackageManager: "zip"},
+			expectErr:        false,
+			expectedPM:       "zip",
+			expectedPlatform: "windows",
+		},
+		{
+			name:             "mac_os_x normalizes to darwin",
+			params:           &omnitruck.RequestParams{Platform: "mac_os_x"},
+			expectErr:        false,
+			expectedPM:       "dmg",
+			expectedPlatform: "darwin",
+		},
+		{
+			name:             "darwin normalizes to darwin",
+			params:           &omnitruck.RequestParams{Platform: "darwin"},
+			expectErr:        false,
+			expectedPM:       "dmg",
+			expectedPlatform: "darwin",
+		},
+		{
+			name:             "centos normalizes to linux",
+			params:           &omnitruck.RequestParams{Platform: "centos"},
+			expectErr:        false,
+			expectedPM:       "rpm",
+			expectedPlatform: "linux",
+		},
+		{
+			name:             "amazon normalizes to linux",
+			params:           &omnitruck.RequestParams{Platform: "amazon"},
+			expectErr:        false,
+			expectedPM:       "rpm",
+			expectedPlatform: "linux",
+		},
+		{
+			name:             "explicit package manager is always honored - platform still normalizes",
+			params:           &omnitruck.RequestParams{Platform: "ubuntu", PackageManager: "msi"},
+			expectErr:        false,
+			expectedPM:       "msi",
+			expectedPlatform: "linux",
 		},
 		{
 			name:        "error for unknown platform",
@@ -527,6 +570,7 @@ func TestInfraProductStrategy_normalizePackageManager(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expectedPM, tt.params.PackageManager)
+				assert.Equal(t, tt.expectedPlatform, tt.params.Platform)
 			}
 		})
 	}
