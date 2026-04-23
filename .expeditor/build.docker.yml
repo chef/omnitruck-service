@@ -1,4 +1,6 @@
 env:
   VERSION: "0.0.106"
+  DOCKER_API_VERSION: "1.44"
+
 
 image_registry: artifactory-internal.ps.chef.co/chefes
