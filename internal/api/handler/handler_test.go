@@ -313,7 +313,7 @@ func TestLatestVersionsHandler(t *testing.T) {
 				return h.LatestVersionHandler(c)
 			})
 
-			req := httptest.NewRequest(http.MethodGet, "http://example.com"+test.requestPath, nil)
+			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
 			resp, err := app.Test(req, 10_000)
 			assert.NoError(t, err)
 			assert.Equal(t, test.expectedStatus, resp.StatusCode)
@@ -403,7 +403,7 @@ func TestProductVersionsHandler(t *testing.T) {
 				return handler.ProductVersionsHandler(c)
 			})
 
-			req := httptest.NewRequest(http.MethodGet, "http://example.com"+test.requestPath, nil)
+			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
 			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
 
 			assert.NoError(t, err)
@@ -689,7 +689,7 @@ func TestProductMetadataHandler(t *testing.T) {
 				return handler.ProductMetadataHandler(c)
 			})
 
-			req := httptest.NewRequest(http.MethodGet, "http://example.com"+test.requestPath, nil)
+			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
 			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
 
 			assert.NoError(t, err)
@@ -991,7 +991,7 @@ func TestProductPackagesHandler(t *testing.T) {
 				return handler.ProductPackagesHandler(c)
 			})
 
-			req := httptest.NewRequest(http.MethodGet, "http://example.com"+test.requestPath, nil)
+			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
 			resp, err := app.Test(req, 100*1000) // 100 seconds timeout
 
 			assert.NoError(t, err)
@@ -1247,7 +1247,7 @@ func TestFileNameHandler(t *testing.T) {
 					return handler.FileNameHandler(c)
 				})
 
-				req := httptest.NewRequest(http.MethodGet, "http://example.com"+test.requestPath, nil)
+				req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
 				resp, err := app.Test(req, 100*1000) // 100 seconds timeout
 
 				assert.NoError(t, err)
@@ -1511,7 +1511,7 @@ func TestProductDownloadHandler(t *testing.T) {
 			app.Get("/:channel/:product/download", func(c *fiber.Ctx) error {
 				return handler.ProductDownloadHandler(c)
 			})
-			req := httptest.NewRequest(http.MethodGet, "http://example.com"+test.requestPath, nil)
+			req := httptest.NewRequest(http.MethodGet, test.requestPath, nil)
 			resp, err := app.Test(req, 100*1000)
 			assert.NoError(t, err)
 			assert.Equal(t, test.expectedStatus, resp.StatusCode)
