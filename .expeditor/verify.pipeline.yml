@@ -4,6 +4,8 @@ steps:
       - scripts/install_golang.sh
       - go version
       - make check
+    env:
+      DOCKER_API_VERSION: "1.44"
     expeditor:
       executor:
         docker:
