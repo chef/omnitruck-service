@@ -302,10 +302,7 @@ func ValidateRequest(p *RequestParams, flags RequestParamsFlags) *clients.Reques
 		}
 	}
 	if flags.PackageManager {
-		if p.PackageManager == "" {
-			request.Failure(fiber.StatusBadRequest, utils.PackageManagerParamsError)
-			return &request
-		}
+		// Package manager is now optional and can be derived from platform.
 	}
 
 	request.Success()

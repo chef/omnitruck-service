@@ -91,7 +91,6 @@ paths:
         example: tar
         in: query
         name: pm
-        required: true
         type: string
       - default: latest
         description: Version of the product to be installed. A version always takes
@@ -168,7 +167,6 @@ paths:
         example: tar
         in: query
         name: pm
-        required: true
         type: string
       - default: latest
         description: Version of the product to be installed. A version always takes
@@ -244,7 +242,6 @@ paths:
         example: tar
         in: query
         name: pm
-        required: true
         type: string
       - default: latest
         description: Version of the product to be installed. A version always takes
