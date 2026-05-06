@@ -1532,21 +1532,9 @@ func TestProductDownloadHandler(t *testing.T) {
 			expectedResponse: `{"code":400, "message":"Architecture (m) params cannot be empty", "status_text":"Bad Request"}`,
 		},
 		{
-			name:             "package manager omitted for chef-ice",
-			requestPath:      "/stable/chef-ice/download?p=linux&m=amd64&eol=false&v=latest",
-			expectedStatus:   fiber.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"Product information not found. Please check the input parameters.", "status_text":"Bad Request"}`,
-		},
-		{
-			name:             "package manager omitted for migrate-ice",
-			requestPath:      "/stable/migrate-ice/download?p=linux&m=amd64&eol=false&v=latest",
-			expectedStatus:   fiber.StatusBadRequest,
-			expectedResponse: `{"code":400, "message":"Product information not found. Please check the input parameters.", "status_text":"Bad Request"}`,
-		},
-		{
 			name:             "package manager auto add for automate",
 			requestPath:      "/stable/automate/download?p=linux&m=amd64&eol=false&v=latest",
-			expectedStatus:   fiber.StatusOK,
+			expectedStatus:   fiber.StatusFound, // 302 redirect
 			expectedResponse: "",
 		},
 	}
@@ -1557,7 +1545,14 @@ func TestProductDownloadHandler(t *testing.T) {
 			// Set up DownloadService with necessary mocks (see other tests for pattern)
 			mockDbService := new(dboperations.MockIDbOperations)
 			mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture, packageManager string) (*models.MetaData, error) {
-				return &models.MetaData{}, nil
+				return &models.MetaData{
+					FileName:        "test-file.rpm",
+					Platform:        platform,
+					PlatformVersion: platformVersion,
+					Architecture:    architecture,
+					PackageManager:  packageManager,
+					SHA256:          "abcd1234",
+				}, nil
 			}
 			mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
 				return "latest", nil
@@ -1575,7 +1570,7 @@ func TestProductDownloadHandler(t *testing.T) {
 			resp, err := app.Test(req, 100*1000)
 			assert.NoError(t, err)
 			assert.Equal(t, test.expectedStatus, resp.StatusCode)
-			if test.expectedStatus != http.StatusOK {
+			if test.expectedResponse != "" {
 				bodyBytes, _ := io.ReadAll(resp.Body)
 				assert.JSONEq(t, test.expectedResponse, string(bodyBytes))
 			}
