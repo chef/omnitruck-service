@@ -2,9 +2,11 @@ package strategy
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
@@ -12,6 +14,7 @@ import (
 	"github.com/chef/omnitruck-service/config"
 	"github.com/chef/omnitruck-service/constants"
 	helpers "github.com/chef/omnitruck-service/internal/helper"
+	"github.com/chef/omnitruck-service/utils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -19,6 +22,35 @@ type InfraProductStrategy struct {
 	DynamoService omnitruck.IDynamoServices
 	AWSConfig     config.AWSConfig
 	Log           *log.Entry
+}
+
+func (s *InfraProductStrategy) normalizePackageManager(params *omnitruck.RequestParams) error {
+	provided := strings.ToLower(strings.TrimSpace(params.PackageManager))
+	params.PackageManager = provided
+	if params.PackageManager == "" {
+		if params.Platform == "" {
+			return fmt.Errorf(utils.PackageManagerOrPlatformParamsError)
+		}
+		derived := omnitruck.DerivePackageManager(params.Platform)
+		if derived == "" {
+			return fmt.Errorf("Unable to derive package manager for platform '%s'", params.Platform)
+		}
+		s.Log.WithField("platform", params.Platform).
+			WithField("package_manager", derived).
+			Debug("Auto-derived package manager from platform")
+		params.PackageManager = derived
+		return nil
+	}
+
+	// Validate explicit pm is compatible with platform
+	if !omnitruck.IsUniversalPackageManager(params.PackageManager) {
+		expected := omnitruck.DerivePackageManager(params.Platform)
+		if expected != "" && params.PackageManager != expected {
+			return fmt.Errorf("Package manager '%s' is not valid for platform '%s'. Expected '%s', 'tar', or 'zip'",
+				params.PackageManager, params.Platform, expected)
+		}
+	}
+	return nil
 }
 
 func (s *InfraProductStrategy) GetLatestVersion(params *omnitruck.RequestParams) (omnitruck.ProductVersion, *clients.Request) {
@@ -52,6 +84,9 @@ func (s *InfraProductStrategy) GetAllVersions(params *omnitruck.RequestParams) (
 }
 
 func (s *InfraProductStrategy) Download(params *omnitruck.RequestParams) (url string, resp io.ReadCloser, header http.Header, msg string, code int, err error) {
+	if err = s.normalizePackageManager(params); err != nil {
+		return "", nil, nil, err.Error(), http.StatusBadRequest, err
+	}
 	fileName, err := s.DynamoService.GetFilename(params)
 	if err != nil {
 		s.Log.WithError(err).Error("Error while fetching download filename for "+params.Product+": ", err)
@@ -123,6 +158,10 @@ func (s *InfraProductStrategy) GetPackages(params *omnitruck.RequestParams) (omn
 
 func (s *InfraProductStrategy) GetMetadata(params *omnitruck.RequestParams) (omnitruck.PackageMetadata, *clients.Request) {
 	request := &clients.Request{}
+	if err := s.normalizePackageManager(params); err != nil {
+		request.Failure(http.StatusBadRequest, err.Error())
+		return omnitruck.PackageMetadata{}, request
+	}
 	data, err := s.DynamoService.ProductMetadata(params)
 	if err != nil {
 		s.Log.WithError(err).Error("Error while fetching metadata for "+params.Product+": ", err)
@@ -135,6 +174,9 @@ func (s *InfraProductStrategy) GetMetadata(params *omnitruck.RequestParams) (omn
 }
 
 func (s *InfraProductStrategy) GetFileName(params *omnitruck.RequestParams) (string, error) {
+	if err := s.normalizePackageManager(params); err != nil {
+		return "", err
+	}
 	fileName, err := s.DynamoService.GetFilename(params)
 	return fileName, err
 }

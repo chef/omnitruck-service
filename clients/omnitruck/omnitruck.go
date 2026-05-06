@@ -301,13 +301,6 @@ func ValidateRequest(p *RequestParams, flags RequestParamsFlags) *clients.Reques
 			return &request
 		}
 	}
-	if flags.PackageManager {
-		if p.PackageManager == "" {
-			request.Failure(fiber.StatusBadRequest, utils.PackageManagerParamsError)
-			return &request
-		}
-	}
-
 	request.Success()
 	return &request
 }
