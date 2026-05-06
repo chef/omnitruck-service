@@ -1543,8 +1543,6 @@ func TestProductDownloadHandler(t *testing.T) {
 			requestPath:      "/stable/automate/download?p=linux&m=amd64&eol=false&v=latest",
 			expectedStatus:   fiber.StatusOK,
 			expectedResponse: "",
-			expectedStatus:   fiber.StatusFound, // 302 redirect
-			expectedResponse: "",
 		},
 	}
 

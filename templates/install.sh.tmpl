@@ -607,7 +607,7 @@ if test "x$platform" = "xsolaris2"; then
   export PATH
 fi
 
-if [ "$project" = "chef-ice" ] && [ "$package_manager" = "tar" ]; then
+if ([ "$project" = "chef-ice" ] || [ "$project" = "inspec-enterprise" ]) && [ "$package_manager" = "tar" ]; then
   echo "Error: Script generation is not supported for package_manager 'tar'."
   exit 1
 fi
@@ -689,9 +689,9 @@ if test "x$download_url_override" = "x"; then
 
   metadata_filename="$tmp_dir/metadata.txt"
   if [ ${project} = "chef-ice" ] || [ ${project} = "inspec-enterprise" ]; then
-    metadata_url="{{.BaseUrl}}/$channel/$project/metadata?v=$version&p=$platform&m=$machine&pm=$package_manager{{if .LicenseId}}&license_id={{.LicenseId}}{{end}}"
+    metadata_url="{{.BaseUrl}}/$channel/$project/metadata?v=$version&p=$platform&m=$machine${pm_param}{{if .LicenseId}}&license_id={{.LicenseId}}{{end}}"
   else
-    metadata_url="{{.BaseUrl}}/$channel/$project/metadata?v=$version&p=$platform&pv=$platform_version&m=$machine${pm_param}{{if .LicenseId}}&license_id={{.LicenseId}}{{end}}"
+    metadata_url="{{.BaseUrl}}/$channel/$project/metadata?v=$version&p=$platform&pv=$platform_version&m=$machine{{if .LicenseId}}&license_id={{.LicenseId}}{{end}}"
   fi
 
   do_download "$metadata_url"  "$metadata_filename"
@@ -739,9 +739,9 @@ fi
 # $filetype: Type of the file downloaded.
 ############
 if [ ${project} = "chef-ice" ] || [ ${project} = "inspec-enterprise" ]; then
-  filenameurl="{{.BaseUrl}}/$channel/$project/fileName?v=$version&p=$platform&m=$machine&pm=$package_manager{{if .LicenseId}}&license_id={{.LicenseId}}{{end}}"
+  filenameurl="{{.BaseUrl}}/$channel/$project/fileName?v=$version&p=$platform&m=$machine${pm_param}{{if .LicenseId}}&license_id={{.LicenseId}}{{end}}"
 else
-  filenameurl="{{.BaseUrl}}/$channel/$project/fileName?v=$version&p=$platform&pv=$platform_version&m=$machine${pm_param}{{if .LicenseId}}&license_id={{.LicenseId}}{{end}}"
+  filenameurl="{{.BaseUrl}}/$channel/$project/fileName?v=$version&p=$platform&pv=$platform_version&m=$machine{{if .LicenseId}}&license_id={{.LicenseId}}{{end}}"
 fi
 
 filepath="$tmp_dir/filename.txt"
