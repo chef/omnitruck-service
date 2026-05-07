@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.108 -->
-## [0.0.108](https://github.com/chef/omnitruck-service/tree/0.0.108) (2026-05-06)
+<!-- latest_release 0.0.109 -->
+## [0.0.109](https://github.com/chef/omnitruck-service/tree/0.0.109) (2026-05-07)
 
 #### Merged Pull Requests
-- CHEF-30746: Make package manager optional via platform mapping for infra download flows [#145](https://github.com/chef/omnitruck-service/pull/145) ([swathi-s3](https://github.com/swathi-s3))
+- Added changes for install script with server-side platform normalization [#148](https://github.com/chef/omnitruck-service/pull/148) ([swathi-s3](https://github.com/swathi-s3))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Added changes for install script with server-side platform normalization [#148](https://github.com/chef/omnitruck-service/pull/148) ([swathi-s3](https://github.com/swathi-s3)) <!-- 0.0.109 -->
 - CHEF-30746: Make package manager optional via platform mapping for infra download flows [#145](https://github.com/chef/omnitruck-service/pull/145) ([swathi-s3](https://github.com/swathi-s3)) <!-- 0.0.108 -->
 - added the latest docker client version for build docker [#146](https://github.com/chef/omnitruck-service/pull/146) ([shanmugapriya-tr](https://github.com/shanmugapriya-tr)) <!-- 0.0.107 -->
 - Added Copyright file [#147](https://github.com/chef/omnitruck-service/pull/147) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.106 -->
