@@ -23,7 +23,6 @@ USER nobody:nobody
 FROM golang:1.26.2-alpine 
 
 COPY --from=stage1 /app/bin/omnitruck-service bin/omnitruck-service
-COPY --from=stage1 /app/templates/ templates/
 COPY --from=stage1 /app/docs docs/
 COPY --from=stage1 /app/omnitruck.yml omnitruck.yml
 
