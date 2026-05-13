@@ -536,3 +536,103 @@ func TestSortProductVersions(t *testing.T) {
 		})
 	}
 }
+
+func TestInstallSh(t *testing.T) {
+	tests := []struct {
+		name           string
+		licenseId      string
+		expectedPath   string
+		expectedQuery  string
+		mockResponse   string
+		mockStatusCode int
+	}{
+		{
+			name:           "with license_id",
+			licenseId:      "test-license-123",
+			expectedPath:   "/install.sh",
+			expectedQuery:  "license_id=test-license-123",
+			mockResponse:   "#!/bin/bash\ninstall script",
+			mockStatusCode: 200,
+		},
+		{
+			name:           "without license_id",
+			licenseId:      "",
+			expectedPath:   "/install.sh",
+			expectedQuery:  "",
+			mockResponse:   "#!/bin/bash\ninstall script",
+			mockStatusCode: 200,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, tt.expectedPath, r.URL.Path)
+				if tt.expectedQuery != "" {
+					assert.Equal(t, tt.expectedQuery, r.URL.RawQuery)
+				}
+				w.WriteHeader(tt.mockStatusCode)
+				w.Write([]byte(tt.mockResponse))
+			}))
+			defer server.Close()
+
+			log := logrus.NewEntry(logrus.New())
+			client := New(log, server.URL)
+			request := client.InstallSh(tt.licenseId)
+
+			assert.True(t, request.Ok)
+			assert.Equal(t, tt.mockStatusCode, request.Code)
+			assert.Equal(t, tt.mockResponse, string(request.Body))
+		})
+	}
+}
+
+func TestInstallPs1(t *testing.T) {
+	tests := []struct {
+		name           string
+		licenseId      string
+		expectedPath   string
+		expectedQuery  string
+		mockResponse   string
+		mockStatusCode int
+	}{
+		{
+			name:           "with license_id",
+			licenseId:      "trial-license-456",
+			expectedPath:   "/install.ps1",
+			expectedQuery:  "license_id=trial-license-456",
+			mockResponse:   "# PowerShell install script",
+			mockStatusCode: 200,
+		},
+		{
+			name:           "without license_id",
+			licenseId:      "",
+			expectedPath:   "/install.ps1",
+			expectedQuery:  "",
+			mockResponse:   "# PowerShell install script",
+			mockStatusCode: 200,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, tt.expectedPath, r.URL.Path)
+				if tt.expectedQuery != "" {
+					assert.Equal(t, tt.expectedQuery, r.URL.RawQuery)
+				}
+				w.WriteHeader(tt.mockStatusCode)
+				w.Write([]byte(tt.mockResponse))
+			}))
+			defer server.Close()
+
+			log := logrus.NewEntry(logrus.New())
+			client := New(log, server.URL)
+			request := client.InstallPs1(tt.licenseId)
+
+			assert.True(t, request.Ok)
+			assert.Equal(t, tt.mockStatusCode, request.Code)
+			assert.Equal(t, tt.mockResponse, string(request.Body))
+		})
+	}
+}
