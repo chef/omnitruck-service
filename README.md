@@ -27,7 +27,7 @@ To just build the service without updating the swagger documentation
 make build
 ```
 
-Copy example config and running the service
+Copy example config and running the service 
 
 ```bash
 $ cp omnitruck.yml.example omnitruck.yml
