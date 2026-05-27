@@ -244,7 +244,7 @@ new-module -name Omnitruck -scriptblock {
       $architecture = Get-PlatformArchitecture
     }
 
-    if ($project -eq 'chef-ice' -or $project -eq 'inspec-enterprise') {
+    if ($project -eq 'chef-ice' -or $project -eq 'inspec-enterprise' -or $project -eq 'chef-workstation-enterprise') {
       $metadata_array = @(
       "?v=$($version)",
       "p=$platform",
@@ -333,7 +333,7 @@ new-module -name Omnitruck -scriptblock {
       $architecture = Get-PlatformArchitecture
     }
 
-    if ($project -eq 'chef-ice' -or $project -eq 'inspec-enterprise') {
+    if ($project -eq 'chef-ice' -or $project -eq 'inspec-enterprise' -or $project -eq 'chef-workstation-enterprise') {
       $filename_array = @(
       "?v=$($version)",
       "p=$platform",
