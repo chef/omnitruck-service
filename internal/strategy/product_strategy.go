@@ -53,7 +53,7 @@ func SelectProductStrategy(product string, channel string, deps *ProductStrategy
 			Mode:              deps.Mode,
 			Locals:            deps.Locals,
 		}
-	case constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT, constants.MIGRATE_ICE, constants.CHEF_INSPEC_ENTERPRISE_PRODUCT:
+	case constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT, constants.MIGRATE_ICE, constants.CHEF_INSPEC_ENTERPRISE_PRODUCT, constants.CHEF_WORKSTATION_ENTERPRISE:
 		if !deps.Config.SupportInfra19 {
 			return &DefaultProductStrategy{OmnitruckService: deps.OmnitruckService}
 		}

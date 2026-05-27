@@ -119,6 +119,32 @@ func TestSelectProductStrategy(t *testing.T) {
 			},
 		},
 		{
+			name:         "chef-workstation-enterprise product current channel",
+			product:      constants.CHEF_WORKSTATION_ENTERPRISE,
+			channel:      constants.CURRENT_CHANNEL,
+			expectedType: reflect.TypeOf(&strategy.InfraProductStrategy{}),
+			expectDbInfo: &struct {
+				table string
+				model reflect.Type
+			}{
+				table: deps.Config.PackageDetailsCurrentTable,
+				model: reflect.TypeOf(models.PackageDetails{}),
+			},
+		},
+		{
+			name:         "chef-workstation-enterprise product stable channel",
+			product:      constants.CHEF_WORKSTATION_ENTERPRISE,
+			channel:      constants.STABLE_CHANNEL,
+			expectedType: reflect.TypeOf(&strategy.InfraProductStrategy{}),
+			expectDbInfo: &struct {
+				table string
+				model reflect.Type
+			}{
+				table: deps.Config.PackageDetailsStableTable,
+				model: reflect.TypeOf(models.PackageDetails{}),
+			},
+		},
+		{
 			name:         "default product",
 			product:      "something-else",
 			channel:      "",
@@ -198,6 +224,22 @@ func TestSelectProductStrategy_SupportInfra19(t *testing.T) {
 		{
 			name:           "inspec enterprise with SupportInfra19=false should return DefaultProductStrategy",
 			product:        constants.CHEF_INSPEC_ENTERPRISE_PRODUCT,
+			channel:        constants.CURRENT_CHANNEL,
+			supportInfra19: false,
+			expectedType:   reflect.TypeOf(&strategy.DefaultProductStrategy{}),
+			expectDbInfo:   false,
+		},
+		{
+			name:           "chef-workstation-enterprise with SupportInfra19=true should return InfraProductStrategy",
+			product:        constants.CHEF_WORKSTATION_ENTERPRISE,
+			channel:        constants.CURRENT_CHANNEL,
+			supportInfra19: true,
+			expectedType:   reflect.TypeOf(&strategy.InfraProductStrategy{}),
+			expectDbInfo:   true,
+		},
+		{
+			name:           "chef-workstation-enterprise with SupportInfra19=false should return DefaultProductStrategy",
+			product:        constants.CHEF_WORKSTATION_ENTERPRISE,
 			channel:        constants.CURRENT_CHANNEL,
 			supportInfra19: false,
 			expectedType:   reflect.TypeOf(&strategy.DefaultProductStrategy{}),
