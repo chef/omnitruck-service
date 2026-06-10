@@ -1,8 +1,8 @@
 steps:
   - label: ":go: build syntax"
     command: 
-      - scripts/install_golang.sh
-      - go version
+      # - scripts/install_golang.sh
+      # - go version
       - make check
     env:
       DOCKER_API_VERSION: "1.44"
