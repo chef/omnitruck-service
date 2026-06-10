@@ -11,6 +11,7 @@ const (
 	CHEF_INFRA_CLIENT_OLD_VALUE          = "chef:Chef Infra Client"
 	MIGRATE_ICE                          = "migrate-ice"
 	CHEF_INSPEC_ENTERPRISE_PRODUCT       = "inspec-enterprise"
+	CHEF_WORKSTATION_ENTERPRISE          = "chef-workstation-enterprise"
 	LATEST                               = "latest"
 	PLATFORM_SERVICE                     = "chef-360"
 	PLATFORM_SERVICE_PRODUCT             = "chef-360"

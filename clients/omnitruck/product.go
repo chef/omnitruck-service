@@ -90,6 +90,11 @@ var supportedProducts = map[string]Product{
 		ProductName:      "InSpec Enterprise",
 		SupportedVersion: NewConstraint(">= 0"),
 	},
+	"chef-workstation-enterprise": {
+		Name:             "chef-workstation-enterprise",
+		ProductName:      "Chef Workstation Enterprise",
+		SupportedVersion: NewConstraint(">= 0"),
+	},
 }
 
 func SupportedVersion(product string) string {

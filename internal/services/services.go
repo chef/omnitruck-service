@@ -104,7 +104,7 @@ func (svc *DownloadService) Products(params *omnitruck.RequestParams) (data omni
 		// Remove CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT and CHEF_INSPEC_ENTERPRISE_PRODUCT from the data array
 		var filtered omnitruck.ItemList
 		for _, item := range data {
-			if item != constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT && item != constants.MIGRATE_ICE && item != constants.CHEF_INSPEC_ENTERPRISE_PRODUCT {
+			if item != constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT && item != constants.MIGRATE_ICE && item != constants.CHEF_INSPEC_ENTERPRISE_PRODUCT && item != constants.CHEF_WORKSTATION_ENTERPRISE {
 				filtered = append(filtered, item)
 			}
 		}
@@ -267,6 +267,7 @@ func (svc *DownloadService) RelatedProducts(params *omnitruck.RequestParams) (da
 		delete(relatedProducts.Products, constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT)
 		delete(relatedProducts.Products, constants.MIGRATE_ICE)
 		delete(relatedProducts.Products, constants.CHEF_INSPEC_ENTERPRISE_PRODUCT)
+		delete(relatedProducts.Products, constants.CHEF_WORKSTATION_ENTERPRISE)
 	}
 
 	response := map[string]interface{}{
