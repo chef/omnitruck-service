@@ -1,11 +1,13 @@
 steps:
-  - label: ":go: build syntax"
+  - label: ":go: syntax"
     command: 
       # - scripts/install_golang.sh
       # - go version
+      - apk add --no-cache make
       - make check
     env:
       DOCKER_API_VERSION: "1.44"
     expeditor:
       executor:
         docker:
+          image: golang:1.26.4-alpine
