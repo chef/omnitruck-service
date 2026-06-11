@@ -31,10 +31,22 @@ func (svc *DynamoServices) SetDbInfo(table string, dbModelType reflect.Type) {
 }
 
 func (svc *DynamoServices) Products(products []string, eol string) []string {
-	products = append(products, constants.HABITAT_PRODUCT, constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT, constants.MIGRATE_ICE, constants.CHEF_INSPEC_ENTERPRISE_PRODUCT, constants.CHEF_WORKSTATION_ENTERPRISE)
-	if eol == "true" {
-		products = append(products, "automate-1")
+	productMap := make(map[string]bool)
+	for _, p := range products {
+		productMap[p] = true
 	}
+
+	toAdd := []string{constants.HABITAT_PRODUCT, constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT, constants.MIGRATE_ICE, constants.CHEF_INSPEC_ENTERPRISE_PRODUCT, constants.CHEF_WORKSTATION_ENTERPRISE}
+	if eol == "true" {
+		toAdd = append(toAdd, "automate-1")
+	}
+
+	for _, p := range toAdd {
+		if !productMap[p] {
+			products = append(products, p)
+		}
+	}
+
 	sort.Strings(products)
 	return products
 }
