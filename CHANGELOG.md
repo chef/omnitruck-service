@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.111 -->
-## [0.0.111](https://github.com/chef/omnitruck-service/tree/0.0.111) (2026-06-10)
+<!-- latest_release 0.0.112 -->
+## [0.0.112](https://github.com/chef/omnitruck-service/tree/0.0.112) (2026-06-15)
 
 #### Merged Pull Requests
-- Download flow changes [#151](https://github.com/chef/omnitruck-service/pull/151) ([shanmugapriya-tr](https://github.com/shanmugapriya-tr))
+- Removing the npm dependecies [#153](https://github.com/chef/omnitruck-service/pull/153) ([vviveksharma](https://github.com/vviveksharma))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Removing the npm dependecies [#153](https://github.com/chef/omnitruck-service/pull/153) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.112 -->
 - Download flow changes [#151](https://github.com/chef/omnitruck-service/pull/151) ([shanmugapriya-tr](https://github.com/shanmugapriya-tr)) <!-- 0.0.111 -->
 - Integration Wiz scan for Omnitruck-service [#150](https://github.com/chef/omnitruck-service/pull/150) ([VarshiSB](https://github.com/VarshiSB)) <!-- 0.0.110 -->
 - Added changes for install script with server-side platform normalization [#148](https://github.com/chef/omnitruck-service/pull/148) ([swathi-s3](https://github.com/swathi-s3)) <!-- 0.0.109 -->
