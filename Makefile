@@ -1,8 +1,7 @@
 TESTS = test_omnitruck_client test_services
 
-all: deps swagger build
-deps: 
-	npm install -g swagger2openapi
+all: swagger build
+
 swagger:
 	swag init -g httpserver/routes.go -d .,internal/api/handler --output ./docs --parseDependency --parseInternal --instanceName OmnitruckApi
 	swagger2openapi docs/OmnitruckApi_swagger.json -o docs/OmnitruckApi_openapi3.json 
