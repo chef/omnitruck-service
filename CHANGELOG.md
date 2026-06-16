@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.113 -->
-## [0.0.113](https://github.com/chef/omnitruck-service/tree/0.0.113) (2026-06-16)
+<!-- latest_release 0.0.114 -->
+## [0.0.114](https://github.com/chef/omnitruck-service/tree/0.0.114) (2026-06-16)
 
 #### Merged Pull Requests
-- Update Go version to 1.26.4 [#152](https://github.com/chef/omnitruck-service/pull/152) ([VarshiSB](https://github.com/VarshiSB))
+- Added fix for the product count [#154](https://github.com/chef/omnitruck-service/pull/154) ([vviveksharma](https://github.com/vviveksharma))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Added fix for the product count [#154](https://github.com/chef/omnitruck-service/pull/154) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.114 -->
 - Update Go version to 1.26.4 [#152](https://github.com/chef/omnitruck-service/pull/152) ([VarshiSB](https://github.com/VarshiSB)) <!-- 0.0.113 -->
 - Removing the npm dependecies [#153](https://github.com/chef/omnitruck-service/pull/153) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.112 -->
 - Download flow changes [#151](https://github.com/chef/omnitruck-service/pull/151) ([shanmugapriya-tr](https://github.com/shanmugapriya-tr)) <!-- 0.0.111 -->
