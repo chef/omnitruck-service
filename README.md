@@ -4,7 +4,7 @@ Omnitruck API service that provides license validation and entitlement checking 
 
 ## Requirements
 
-- golang 1.26.2+
+- golang 1.26.4+
 
 ## Getting Started
 
