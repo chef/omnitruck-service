@@ -144,6 +144,11 @@ func (s *PlatformServiceStrategy) GetFileName(params *omnitruck.RequestParams) (
 	return s.PlatformService.PlatformFilename(params, int(s.Mode))
 }
 
+// ParseTail is a null implementation — PlatformServiceStrategy does not use the /files path endpoint.
+func (s *PlatformServiceStrategy) ParseTail(_ []string) helpers.FilesPathParams {
+	return helpers.FilesPathParams{}
+}
+
 func (s *PlatformServiceStrategy) UpdatePackages(data *omnitruck.PackageList, params *omnitruck.RequestParams, baseUrl string) {
 	data.UpdatePackages(func(platform string, pv string, arch string, m omnitruck.PackageMetadata) omnitruck.PackageMetadata {
 		params.Version = m.Version

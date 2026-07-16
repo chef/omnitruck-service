@@ -24,6 +24,12 @@ type ProductStrategy interface {
 	UpdatePackages(data *omnitruck.PackageList, params *omnitruck.RequestParams, baseUrl string)
 }
 
+// FilesParamsValidator is implemented by each ProductStrategy to validate
+// the strategy-specific required parameters for the /files endpoint.
+type FilesParamsValidator interface {
+	ValidateFilesParams(params *omnitruck.RequestParams) error
+}
+
 type ProductStrategyDeps struct {
 	DynamoService     omnitruck.IDynamoServices
 	PlatformService   omnitruck.IPlatformServices
@@ -55,7 +61,10 @@ func SelectProductStrategy(product string, channel string, deps *ProductStrategy
 		}
 	case constants.CHEF_INFRA_CLIENT_ENTERPRISE_PRODUCT, constants.MIGRATE_ICE, constants.CHEF_INSPEC_ENTERPRISE_PRODUCT, constants.CHEF_WORKSTATION_ENTERPRISE:
 		if !deps.Config.SupportInfra19 {
-			return &DefaultProductStrategy{OmnitruckService: deps.OmnitruckService}
+			return &DefaultProductStrategy{
+				OmnitruckService: deps.OmnitruckService,
+				Log:              deps.Log,
+			}
 		}
 		if channel == constants.CURRENT_CHANNEL {
 			deps.DynamoService.SetDbInfo(deps.Config.PackageDetailsCurrentTable, reflect.TypeOf(models.PackageDetails{}))
@@ -63,9 +72,9 @@ func SelectProductStrategy(product string, channel string, deps *ProductStrategy
 			deps.DynamoService.SetDbInfo(deps.Config.PackageDetailsStableTable, reflect.TypeOf(models.PackageDetails{}))
 		}
 		return &InfraProductStrategy{
-			DynamoService: deps.DynamoService,
-			Log:           deps.Log,
-			AWSConfig:     deps.Config.AWSConfig,
+			DynamoService:    deps.DynamoService,
+			Log:              deps.Log,
+			AWSConfig:        deps.Config.AWSConfig,
 		}
 	default:
 		return &DefaultProductStrategy{

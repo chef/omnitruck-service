@@ -231,10 +231,22 @@ func (svc *DownloadService) ProductMetadata(params *omnitruck.RequestParams) (da
 	}
 
 	data, request = productStrategy.GetMetadata(params)
+	if request.Ok {
+		fileName := params.FileName
+		if fileName == "" && params.Direct == "true" {
+			if resolvedFileName, err := productStrategy.GetFileName(params); err == nil {
+				fileName = resolvedFileName
+			}
+		}
 
-	// Remap the package url to our download URL
-	url := helpers.GetDownloadUrl(params, svc.locals["base_url"].(string))
-	data.Url = url
+		// For chef-360 (platform service), ignore direct=true and always use /download URL
+		if params.Product == constants.PLATFORM_SERVICE_PRODUCT {
+			params.Direct = ""
+		}
+
+		// Remap the package url to our endpoint URL (download by default, files when direct=true).
+		data.Url = helpers.GetPackageUrl(params, svc.locals["base_url"].(string), fileName)
+	}
 
 	if request.Ok {
 		return data, &clients.Request{
@@ -322,6 +334,45 @@ func (svc *DownloadService) GetFileName(params *omnitruck.RequestParams) (string
 		Code:    fiber.StatusOK,
 		Message: "File name retrieved successfully",
 	}
+}
+
+func (svc *DownloadService) ProductFilesDownload(c omnitruck.FiberContext) (string, io.ReadCloser, http.Header, string, int, error) {
+	svc.logCtx().Infof("Received product files download request for %s", c.Params("product"))
+
+	// Parse params using strategy-specific parser
+	productStrategy := strategy.SelectProductStrategy(c.Params("product"), c.Params("channel"), svc.ProductStrategyDeps())
+	var params *omnitruck.RequestParams
+	if parser, ok := productStrategy.(helpers.TailParser); ok {
+		params = helpers.GetFilesRequestParamsWithStrategy(c, parser)
+	} else {
+		params = helpers.GetFilesRequestParamsWithStrategy(c, &strategy.DefaultProductStrategy{})
+	}
+
+	// Validate common required fields
+	if err := helpers.ValidateCommonRequiredFilesParams(params); err != nil {
+		return "", nil, nil, err.Error(), fiber.StatusBadRequest, err
+	}
+
+	// Resolve partial version (e.g., "19.1" -> "19.1.172")
+	filtered, req := svc.getFilteredVersions(params)
+	if req != nil && !req.Ok {
+		return "", nil, nil, req.Message, req.Code, fiber.NewError(req.Code, req.Message)
+	}
+	if len(filtered) > 0 {
+		if err := helpers.ValidateOrSetVersion(params, filtered); err != nil {
+			return "", nil, nil, err.Error(), fiber.StatusBadRequest, err
+		}
+	}
+
+	// Validate strategy-specific fields
+	if validator, ok := productStrategy.(strategy.FilesParamsValidator); ok {
+		if err := validator.ValidateFilesParams(params); err != nil {
+			return "", nil, nil, err.Error(), fiber.StatusBadRequest, err
+		}
+	}
+
+	// Download using the product strategy
+	return productStrategy.Download(params)
 }
 
 func (svc *DownloadService) GetLinuxScript(params *omnitruck.RequestParams) (string, *clients.Request) {

@@ -54,6 +54,7 @@ func (server *ApiServer) buildRouter() {
 	server.App.Get("/:channel/:product/packages", requestid.New(), handler.ProductPackagesHandler)
 	server.App.Get("/:channel/:product/metadata", requestid.New(), handler.ProductMetadataHandler)
 	server.App.Get("/:channel/:product/download", requestid.New(), handler.ProductDownloadHandler)
+	server.App.Get("/files/:channel/:product/:version/:platform/*", requestid.New(), handler.ProductFilesDownloadHandler)
 	server.App.Get("/relatedProducts", requestid.New(), handler.RelatedProductsHandler)
 	server.App.Get("/:channel/:product/fileName", requestid.New(), handler.FileNameHandler)
 	server.App.Get("/install.sh", requestid.New(), handler.DownloadLinuxScript)

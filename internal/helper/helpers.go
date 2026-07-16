@@ -13,6 +13,20 @@ import (
 
 const substring = ".metadata.json"
 
+// FilesPathParams holds the parsed components extracted from the /files URL path tail.
+type FilesPathParams struct {
+	PlatformVersion string
+	Architecture    string
+	PackageManager  string
+	FileName        string
+}
+
+// TailParser is implemented by each ProductStrategy to parse the /files URL path tail
+// according to that product's segment layout.
+type TailParser interface {
+	ParseTail(segments []string) FilesPathParams
+}
+
 func BuildEndpointUrl(baseUrl string, endpoint string, params *omnitruck.RequestParams) *url.URL {
 	clonedParams := *params
 	if clonedParams.PackageManager == constants.DUMMY_PACKAGE_MANAGER {
@@ -31,6 +45,70 @@ func GetDownloadUrl(params *omnitruck.RequestParams, baseUrl string) string {
 	return BuildEndpointUrl(baseUrl, "download", params).String()
 }
 
+// filesURLBuilder holds all components needed to construct a /files endpoint URL.
+type filesURLBuilder struct {
+	baseURL         string
+	channel         string
+	product         string
+	version         string
+	platform        string
+	platformVersion string
+	architecture    string
+	packageManager  string
+	fileName        string
+	licenseID       string
+}
+
+func (b filesURLBuilder) build() string {
+	u, _ := url.Parse(b.baseURL)
+	segments := []string{"files", b.channel, b.product, b.version, b.platform}
+	if b.platformVersion != "" {
+		segments = append(segments, b.platformVersion)
+	}
+	segments = append(segments, b.architecture)
+	if b.packageManager != "" && b.packageManager != constants.DUMMY_PACKAGE_MANAGER {
+		segments = append(segments, b.packageManager)
+	}
+	segments = append(segments, b.fileName)
+	path, _ := url.JoinPath("", segments...)
+	u.Path = path
+	q := url.Values{}
+	q.Set("license_id", b.licenseID)
+	u.RawQuery = q.Encode()
+	return u.String()
+}
+
+// GetFilesUrl constructs a /files endpoint URL. pathPackageManager should be non-empty
+// only when the package manager segment must appear in the path (e.g. infra products).
+func GetFilesUrl(params *omnitruck.RequestParams, baseUrl string, fileName string, pathPackageManager string) string {
+	return filesURLBuilder{
+		baseURL:         baseUrl,
+		channel:         params.Channel,
+		product:         params.Product,
+		version:         params.Version,
+		platform:        params.Platform,
+		platformVersion: params.PlatformVersion,
+		architecture:    params.Architecture,
+		packageManager:  pathPackageManager,
+		fileName:        fileName,
+		licenseID:       params.LicenseId,
+	}.build()
+}
+
+// GetPackageUrl routes to /files when direct=true, otherwise to /download.
+// For infra products, PM is included in the path when available (and not dummy value).
+func GetPackageUrl(params *omnitruck.RequestParams, baseUrl string, fileName string) string {
+	if strings.EqualFold(params.Direct, "true") && fileName != "" {
+		// Only pass PM if it's not the dummy placeholder
+		pm := ""
+		if params.PackageManager != "" && params.PackageManager != constants.DUMMY_PACKAGE_MANAGER {
+			pm = params.PackageManager
+		}
+		return GetFilesUrl(params, baseUrl, fileName, pm)
+	}
+	return GetDownloadUrl(params, baseUrl)
+}
+
 func GetRequestParams(c omnitruck.FiberContext) *omnitruck.RequestParams {
 	return &omnitruck.RequestParams{
 		Channel:         c.Params("channel"),
@@ -43,7 +121,50 @@ func GetRequestParams(c omnitruck.FiberContext) *omnitruck.RequestParams {
 		LicenseId:       c.Query("license_id"),
 		Eol:             c.Query("eol", "false"),
 		BOM:             c.Query(("bom")),
+		Direct:          c.Query("direct"),
 	}
+}
+
+// GetFilesRequestParamsWithStrategy parses the /files URL path tail using the
+// strategy-owned parser and returns a fully populated RequestParams.
+func GetFilesRequestParamsWithStrategy(c omnitruck.FiberContext, parser TailParser) *omnitruck.RequestParams {
+	segments := strings.Split(strings.Trim(c.Params("*"), "/"), "/")
+	parsed := parser.ParseTail(segments)
+
+	return &omnitruck.RequestParams{
+		Channel:         c.Params("channel"),
+		Product:         c.Params("product"),
+		Version:         c.Params("version"),
+		Platform:        c.Params("platform"),
+		PlatformVersion: parsed.PlatformVersion,
+		Architecture:    parsed.Architecture,
+		PackageManager:  parsed.PackageManager,
+		FileName:        parsed.FileName,
+		LicenseId:       c.Query("license_id"),
+		Eol:             c.Query("eol", "false"),
+	}
+}
+
+func ValidateCommonRequiredFilesParams(params *omnitruck.RequestParams) error {
+	if params == nil {
+		return errors.New("request params cannot be empty")
+	}
+	if strings.TrimSpace(params.Channel) == "" {
+		return errors.New("Channel path param cannot be empty")
+	}
+	if strings.TrimSpace(params.Product) == "" {
+		return errors.New("Product path param cannot be empty")
+	}
+	if strings.TrimSpace(params.Platform) == "" {
+		return errors.New("Platform path param cannot be empty")
+	}
+	if strings.TrimSpace(params.FileName) == "" {
+		return errors.New("Filename path param cannot be empty")
+	}
+	if strings.TrimSpace(params.Architecture) == "" {
+		return errors.New("Architecture (m) params cannot be empty")
+	}
+	return nil
 }
 
 func VerifyRequestType(params *omnitruck.RequestParams) bool {

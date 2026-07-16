@@ -19,9 +19,9 @@ import (
 )
 
 type InfraProductStrategy struct {
-	DynamoService omnitruck.IDynamoServices
-	AWSConfig     config.AWSConfig
-	Log           *log.Entry
+	DynamoService    omnitruck.IDynamoServices
+	AWSConfig        config.AWSConfig
+	Log              *log.Entry
 }
 
 func (s *InfraProductStrategy) normalizePackageManager(params *omnitruck.RequestParams) error {
@@ -175,6 +175,52 @@ func (s *InfraProductStrategy) GetFileName(params *omnitruck.RequestParams) (str
 	return fileName, err
 }
 
+// ValidateFilesParams ensures that PackageManager is set for infra products,
+// deriving from platform if not provided in URL.
+func (s *InfraProductStrategy) ValidateFilesParams(params *omnitruck.RequestParams) error {
+	// Normalize/derive package manager and platform
+	if err := s.normalizePackageManager(params); err != nil {
+		return fmt.Errorf(utils.PackageManagerParamsError)
+	}
+
+	s.Log.Infof("params after normalization: %+v", params)
+	// Validate filename matches what database expects (infra products only)
+	correctFileName, err := s.GetFileName(params)
+	if err != nil {
+		return err
+	}
+	if params.FileName != correctFileName {
+		s.Log.Info("Filename validation failed for /files endpoint")
+		return fmt.Errorf("invalid filename for the specified product parameters")
+	}
+
+	return nil
+}
+
+// ParseTail parses the /files URL tail in Infra format: {arch}/{pm}/{fileName}
+// Expected format: arch/pm/filename (exactly 3 segments)
+// PM is extracted from URL; normalizePackageManager will derive it if empty
+func (s *InfraProductStrategy) ParseTail(segments []string) helpers.FilesPathParams {
+	p := helpers.FilesPathParams{}
+
+	switch len(segments) {
+	case 0:
+		return p
+	case 1:
+		p.FileName = segments[0]
+	case 2:
+		p.Architecture = segments[0]
+		p.FileName = segments[1]
+	default:
+		// Expected: arch/pm/filename
+		p.Architecture = segments[0]
+		p.PackageManager = segments[1]
+		p.FileName = segments[2]
+	}
+
+	return p
+}
+
 func (s *InfraProductStrategy) UpdatePackages(data *omnitruck.PackageList, params *omnitruck.RequestParams, baseUrl string) {
 	data.UpdatePackages(func(platform string, arch string, packageManager string, m omnitruck.PackageMetadata) omnitruck.PackageMetadata {
 		params.Version = m.Version
@@ -182,7 +228,19 @@ func (s *InfraProductStrategy) UpdatePackages(data *omnitruck.PackageList, param
 		params.PackageManager = packageManager
 		params.Architecture = arch
 
-		m.Url = helpers.GetDownloadUrl(params, baseUrl)
+		fileName := ""
+		if params.Direct == "true" {
+			if resolvedFileName, err := s.GetFileName(params); err == nil {
+				fileName = resolvedFileName
+			}
+		}
+
+		if strings.EqualFold(params.Direct, "true") && fileName != "" {
+			// Infra products include the package manager segment in the /files URL path.
+			m.Url = helpers.GetFilesUrl(params, baseUrl, fileName, packageManager)
+		} else {
+			m.Url = helpers.GetDownloadUrl(params, baseUrl)
+		}
 		return m
 	})
 }

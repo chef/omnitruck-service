@@ -628,10 +628,14 @@ func TestDownloadService_ProductPackages(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`["16.0.0", "17.0.0"]`))
+		case strings.Contains(r.URL.Path, "/metadata"):
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"sha1":"","sha256":"","url":"https://packages.chef.io/files/stable/chef/16.0.0/el/7/chef-16.0.0-1.el7.x86_64.rpm","version":"16.0.0"}`))
 		case strings.Contains(r.URL.Path, "/packages"):
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"chef":{"16.0.0":{"x86_64":{"url":"http://example.com/download","version":"16.0.0"}}}}`))
+			w.Write([]byte(`{"linux":{"20.04":{"x86_64":{"url":"http://example.com/download","version":"16.0.0"}}}}`))
 		default:
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte(`not found`))
@@ -663,6 +667,17 @@ func TestDownloadService_ProductPackages(t *testing.T) {
 				Product: "chef",
 				Channel: "stable",
 				Version: "16.0.0",
+			},
+			expectSuccess: true,
+			expectCode:    fiber.StatusOK,
+		},
+		{
+			name: "success returns product packages with direct url",
+			params: &omnitruck.RequestParams{
+				Product: "chef",
+				Channel: "stable",
+				Version: "16.0.0",
+				Direct:  "true",
 			},
 			expectSuccess: true,
 			expectCode:    fiber.StatusOK,
@@ -707,6 +722,9 @@ func TestDownloadService_ProductPackages(t *testing.T) {
 				assert.True(t, req.Ok, "expected ok true")
 				assert.Equal(t, tt.expectCode, req.Code)
 				assert.NotNil(t, data)
+				if tt.params.Direct == "true" {
+					assert.Equal(t, "http://example.com/files/stable/chef/16.0.0/linux/20.04/x86_64/chef-16.0.0-1.el7.x86_64.rpm?license_id=", data["linux"]["20.04"]["x86_64"].Url)
+				}
 			} else {
 				assert.False(t, req.Ok, "expected ok false")
 				assert.Equal(t, tt.expectCode, req.Code)
@@ -730,7 +748,7 @@ func TestDownloadService_ProductMetadata(t *testing.T) {
 			w.Write([]byte(`{
 				"sha1":"fake-sha1",
 				"sha256":"fake-sha256",
-				"url":"http://original-download",
+				"url":"https://packages.chef.io/files/stable/chef/16.0.0/el/7/chef-16.0.0-1.el7.x86_64.rpm",
 				"version":"16.0.0"
 			}`))
 		case strings.Contains(r.URL.Path, "invalid-product"):
@@ -777,6 +795,20 @@ func TestDownloadService_ProductMetadata(t *testing.T) {
 			expectCode:    fiber.StatusOK,
 		},
 		{
+			name: "success returns metadata with direct files url",
+			params: &omnitruck.RequestParams{
+				Product:         "chef",
+				Channel:         "stable",
+				Version:         "16.0.0",
+				Platform:        "ubuntu",
+				PlatformVersion: "20.04",
+				Architecture:    "x86_64",
+				Direct:          "true",
+			},
+			expectSuccess: true,
+			expectCode:    fiber.StatusOK,
+		},
+		{
 			name: "invalid product returns error",
 			params: &omnitruck.RequestParams{
 				Product:         "invalid-product",
@@ -813,6 +845,9 @@ func TestDownloadService_ProductMetadata(t *testing.T) {
 				assert.Equal(t, tt.expectCode, req.Code)
 				assert.NotEmpty(t, data.Url, "expected a remapped download URL")
 				expectedUrl := "http://example.com/stable/chef/download?m=x86_64&p=ubuntu&pv=20.04&v=16.0.0"
+				if tt.params.Direct == "true" {
+					expectedUrl = "http://example.com/files/stable/chef/16.0.0/ubuntu/20.04/x86_64/chef-16.0.0-1.el7.x86_64.rpm?license_id="
+				}
 				assert.Equal(t, expectedUrl, data.Url, "should remap to local download")
 			} else {
 				assert.False(t, req.Ok, "expected ProductMetadata to fail")

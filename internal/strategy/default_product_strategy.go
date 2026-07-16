@@ -1,9 +1,11 @@
 package strategy
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/chef/omnitruck-service/clients"
 	"github.com/chef/omnitruck-service/clients/omnitruck"
@@ -78,6 +80,40 @@ func (s *DefaultProductStrategy) GetFileName(params *omnitruck.RequestParams) (s
 	return helpers.GetFileNameFromURL(data.Url), nil
 }
 
+// ValidateFilesParams enforces that PlatformVersion is provided for default products.
+func (s *DefaultProductStrategy) ValidateFilesParams(params *omnitruck.RequestParams) error {
+	if strings.TrimSpace(params.PlatformVersion) == "" {
+		return errors.New("Platform Version (pv) params cannot be empty")
+	}
+
+	// Validate filename matches what database expects
+	correctFileName, err := s.GetFileName(params)
+	if err != nil {
+		return err
+	}
+	if params.FileName != correctFileName {
+		return fmt.Errorf("invalid filename for the specified product parameters")
+	}
+
+	return nil
+}
+
+// ParseTail parses the /files URL tail in Default format: {platformVersion}/{arch}/{fileName}
+// Expected format: platformVersion/arch/filename (exactly 3 segments)
+func (s *DefaultProductStrategy) ParseTail(segments []string) helpers.FilesPathParams {
+	p := helpers.FilesPathParams{}
+
+	if len(segments) < 3 {
+		return p // Invalid format, will fail validation later
+	}
+
+	p.PlatformVersion = segments[0]
+	p.Architecture = segments[1]
+	p.FileName = segments[2]
+
+	return p
+}
+
 func (s *DefaultProductStrategy) UpdatePackages(data *omnitruck.PackageList, params *omnitruck.RequestParams, baseUrl string) {
 	data.UpdatePackages(func(platform string, pv string, arch string, m omnitruck.PackageMetadata) omnitruck.PackageMetadata {
 		params.Version = m.Version
@@ -85,7 +121,14 @@ func (s *DefaultProductStrategy) UpdatePackages(data *omnitruck.PackageList, par
 		params.PlatformVersion = pv
 		params.Architecture = arch
 
-		m.Url = helpers.GetDownloadUrl(params, baseUrl)
+		fileName := ""
+		if params.Direct == "true" {
+			if resolvedFileName, err := s.GetFileName(params); err == nil {
+				fileName = resolvedFileName
+			}
+		}
+
+		m.Url = helpers.GetPackageUrl(params, baseUrl, fileName)
 
 		return m
 	})

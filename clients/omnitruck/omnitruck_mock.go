@@ -1,4 +1,5 @@
 package omnitruck
+
 import "github.com/chef/omnitruck-service/clients"
 
 type MockOmnitruck struct {
@@ -7,6 +8,7 @@ type MockOmnitruck struct {
 	ProductPackagesFunc func(params *RequestParams) *clients.Request
 	ProductMetadataFunc func(params *RequestParams) *clients.Request
 	ProductDownloadFunc func(params *RequestParams) *clients.Request
+	ArchtechtureFunc    func() *clients.Request
 }
 
 func (m *MockOmnitruck) LatestVersion(params *RequestParams) *clients.Request {
@@ -36,6 +38,12 @@ func (m *MockOmnitruck) ProductMetadata(params *RequestParams) *clients.Request 
 func (m *MockOmnitruck) ProductDownload(params *RequestParams) *clients.Request {
 	if m.ProductDownloadFunc != nil {
 		return m.ProductDownloadFunc(params)
+	}
+	return nil
+}
+func (m *MockOmnitruck) Architectures() *clients.Request {
+	if m.ArchtechtureFunc != nil {
+		return m.ArchtechtureFunc()
 	}
 	return nil
 }
