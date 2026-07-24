@@ -1677,6 +1677,202 @@ func TestProductDownloadHandler(t *testing.T) {
 	}
 }
 
+func TestProductMetadataHandler_DirectUrl(t *testing.T) {
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("base_url", "http://example.com")
+		return c.Next()
+	})
+
+	mockDbService := new(dboperations.MockIDbOperations)
+	mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture, packageManager string) (*models.MetaData, error) {
+		return &models.MetaData{
+			Architecture: architecture,
+			Platform:     platform,
+			FileName:     "automate_4.7.52-1_amd64.deb",
+			SHA256:       "abcd",
+		}, nil
+	}
+	mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
+		return "latest", nil
+	}
+	mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
+		return []string{"latest"}, nil
+	}
+	mockDbService.SetDbInfofunc = func(tableName string, dbModel reflect.Type) {}
+
+	log := logrus.NewEntry(logrus.New())
+	handler := NewDownloadsHandler(log)
+	app.Use(testInjector(mockDbService, constants.Commercial, &template.MockTemplateRenderer{}))
+	app.Get("/:channel/:product/metadata", func(c *fiber.Ctx) error {
+		return handler.ProductMetadataHandler(c)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/stable/automate/metadata?p=linux&m=amd64&v=latest&direct=true&eol=false", nil)
+	resp, err := app.Test(req, 100*1000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	bodyBytes, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"sha1":"","sha256":"abcd","url":"http://example.com/files/stable/automate/latest/linux/amd64/automate_4.7.52-1_amd64.deb?license_id=","version":"latest"}`, string(bodyBytes))
+}
+
+func TestProductPackagesHandler_DirectUrl(t *testing.T) {
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("base_url", "http://example.com")
+		return c.Next()
+	})
+
+	mockDbService := new(dboperations.MockIDbOperations)
+	mockDbService.GetPackagesfunc = func(partitionValue, sortValue string) (interface{}, error) {
+		return &models.ProductDetails{
+			Product: "automate",
+			Version: "latest",
+			MetaData: []models.MetaData{{
+				Architecture: "amd64",
+				Platform:     "linux",
+				SHA256:       "abcd",
+			}},
+		}, nil
+	}
+	mockDbService.GetMetaDatafunc = func(partitionValue, sortValue, platform, platformVersion, architecture, packageManager string) (*models.MetaData, error) {
+		return &models.MetaData{
+			Architecture: architecture,
+			Platform:     platform,
+			FileName:     "automate_4.7.52-1_amd64.deb",
+			SHA256:       "abcd",
+		}, nil
+	}
+	mockDbService.GetVersionLatestfunc = func(partitionValue string) (string, error) {
+		return "latest", nil
+	}
+	mockDbService.GetVersionAllfunc = func(partitionValue string) ([]string, error) {
+		return []string{"latest"}, nil
+	}
+	mockDbService.SetDbInfofunc = func(tableName string, dbModel reflect.Type) {}
+
+	log := logrus.NewEntry(logrus.New())
+	handler := NewDownloadsHandler(log)
+	app.Use(testInjector(mockDbService, constants.Commercial, &template.MockTemplateRenderer{}))
+	app.Get("/:channel/:product/packages", func(c *fiber.Ctx) error {
+		return handler.ProductPackagesHandler(c)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/stable/automate/packages?v=latest&direct=true&eol=false", nil)
+	resp, err := app.Test(req, 100*1000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	bodyBytes, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"linux":{"pv":{"amd64":{"sha1":"","sha256":"abcd","url":"http://example.com/files/stable/automate/latest/linux/amd64/automate_4.7.52-1_amd64.deb?license_id=","version":"latest"}}}}`, string(bodyBytes))
+}
+
+func TestProductFilesHandler(t *testing.T) {
+	log := logrus.NewEntry(logrus.New())
+	handler := NewDownloadsHandler(log)
+
+	t.Run("files route redirects for automate", func(t *testing.T) {
+		app := fiber.New()
+		app.Use(testInjector(&dboperations.MockIDbOperations{
+			GetMetaDatafunc: func(partitionValue, sortValue, platform, platformVersion, architecture, packageManager string) (*models.MetaData, error) {
+				assert.Equal(t, "", packageManager)
+				assert.Equal(t, "amd64", architecture)
+				return &models.MetaData{FileName: "chef-automate_linux_amd64.zip"}, nil
+			},
+			GetVersionLatestfunc: func(partitionValue string) (string, error) {
+				return "latest", nil
+			},
+			GetVersionAllfunc: func(partitionValue string) ([]string, error) {
+				return []string{"latest"}, nil
+			},
+			SetDbInfofunc: func(tableName string, dbModel reflect.Type) {},
+		}, constants.Commercial, &template.MockTemplateRenderer{}))
+		app.Get("/files/:channel/:product/:version/:platform/*", handler.ProductFilesDownloadHandler)
+
+		req := httptest.NewRequest(http.MethodGet, "/files/current/automate/latest/linux/amd64/chef-automate_linux_amd64.zip?eol=false", nil)
+		resp, err := app.Test(req, 100*1000)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusFound, resp.StatusCode)
+	})
+
+	t.Run("files route validation fails when arch cannot be inferred", func(t *testing.T) {
+		app := fiber.New()
+		app.Use(testInjector(&dboperations.MockIDbOperations{
+			GetVersionAllfunc: func(partitionValue string) ([]string, error) {
+				return []string{"latest"}, nil
+			},
+			SetDbInfofunc: func(tableName string, dbModel reflect.Type) {},
+		}, constants.Commercial, &template.MockTemplateRenderer{}))
+		app.Get("/files/:channel/:product/:version/:platform/*", handler.ProductFilesDownloadHandler)
+
+		req := httptest.NewRequest(http.MethodGet, "/files/current/automate/latest/linux/chef-noarch.pkg?eol=false", nil)
+		resp, err := app.Test(req, 100*1000)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		bodyBytes, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"code":400, "message":"Architecture (m) params cannot be empty", "status_text":"Bad Request"}`, string(bodyBytes))
+	})
+
+	t.Run("files route validation fails when arch path and filename mismatch", func(t *testing.T) {
+		app := fiber.New()
+		app.Use(testInjector(&dboperations.MockIDbOperations{
+			GetVersionAllfunc: func(partitionValue string) ([]string, error) {
+				return []string{"latest"}, nil
+			},
+			SetDbInfofunc: func(tableName string, dbModel reflect.Type) {},
+		}, constants.Commercial, &template.MockTemplateRenderer{}))
+		app.Get("/files/:channel/:product/:version/:platform/*", handler.ProductFilesDownloadHandler)
+
+		req := httptest.NewRequest(http.MethodGet, "/files/current/automate/latest/linux/aarch64/chef-18.2.7-1.el6.x86_64.rpm?eol=false", nil)
+		resp, err := app.Test(req, 100*1000)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		bodyBytes, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"code":400, "message":"architecture path param does not match filename", "status_text":"Bad Request"}`, string(bodyBytes))
+	})
+
+	t.Run("files route validation fails when default strategy platform_version missing", func(t *testing.T) {
+		app := fiber.New()
+		app.Use(testInjector(&dboperations.MockIDbOperations{
+			GetVersionAllfunc: func(partitionValue string) ([]string, error) {
+				return []string{"latest"}, nil
+			},
+			SetDbInfofunc: func(tableName string, dbModel reflect.Type) {},
+		}, constants.Commercial, &template.MockTemplateRenderer{}))
+		app.Get("/files/:channel/:product/:version/:platform/*", handler.ProductFilesDownloadHandler)
+
+		req := httptest.NewRequest(http.MethodGet, "/files/current/chef/latest/linux/x86_64/chef-18.2.7-1.el6.x86_64.rpm?eol=false", nil)
+		resp, err := app.Test(req, 100*1000)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		bodyBytes, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"code":400, "message":"Platform Version (pv) params cannot be empty", "status_text":"Bad Request"}`, string(bodyBytes))
+	})
+
+	t.Run("files route validation fails when infra package manager missing", func(t *testing.T) {
+		app := fiber.New()
+		app.Use(testInjector(&dboperations.MockIDbOperations{
+			GetVersionAllfunc: func(partitionValue string) ([]string, error) {
+				return []string{"latest"}, nil
+			},
+			SetDbInfofunc: func(tableName string, dbModel reflect.Type) {},
+		}, constants.Commercial, &template.MockTemplateRenderer{}))
+		app.Get("/files/:channel/:product/:version/:platform/*", handler.ProductFilesDownloadHandler)
+
+		req := httptest.NewRequest(http.MethodGet, "/files/current/chef-ice/latest/linux/x86_64/chef-ice-19.2.106-1.amzn2.x86_64.rpm?eol=false", nil)
+		resp, err := app.Test(req, 100*1000)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		bodyBytes, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"code":400, "message":"Package Manager (pm) params cannot be empty", "status_text":"Bad Request"}`, string(bodyBytes))
+	})
+}
+
 func TestPlatformsHandler(t *testing.T) {
 	t.Parallel()
 

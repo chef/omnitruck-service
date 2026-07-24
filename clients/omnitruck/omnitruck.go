@@ -52,6 +52,8 @@ type RequestParams struct {
 	Eol             string
 	LicenseId       string
 	BOM             string
+	Direct          string
+	FileName        string
 }
 
 type RequestParamsFlags struct {
@@ -73,6 +75,7 @@ type IOmnitruck interface {
 	ProductPackages(params *RequestParams) *clients.Request
 	ProductMetadata(params *RequestParams) *clients.Request
 	ProductDownload(params *RequestParams) *clients.Request
+	Architectures() *clients.Request
 }
 
 type PackageListUpdater func(platform string, platformVersion string, arch string, meta PackageMetadata) PackageMetadata

@@ -3,12 +3,15 @@ package helpers
 import (
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/chef/omnitruck-service/clients/omnitruck"
+	"github.com/chef/omnitruck-service/constants"
 	_ "github.com/chef/omnitruck-service/docs"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_buildEndpointUrl(t *testing.T) {
@@ -179,6 +182,309 @@ func Test_getRequestParams(t *testing.T) {
 			if got := GetRequestParams(tt.ctx); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getRequestParams() = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+// Inline TailParser implementations used only in tests.
+type defaultTailParser struct{}
+
+func (p *defaultTailParser) ParseTail(segments []string) FilesPathParams {
+	result := FilesPathParams{}
+	switch len(segments) {
+	case 1:
+		result.FileName = segments[0]
+	case 2:
+		result.Architecture = segments[0]
+		result.FileName = segments[1]
+	default:
+		if len(segments) > 2 {
+			result.PlatformVersion = segments[0]
+			result.Architecture = segments[1]
+			result.FileName = strings.Join(segments[2:], "/")
+		}
+	}
+	return result
+}
+
+type infraTailParser struct{}
+
+func (p *infraTailParser) ParseTail(segments []string) FilesPathParams {
+	result := FilesPathParams{}
+	switch len(segments) {
+	case 1:
+		result.FileName = segments[0]
+	case 2:
+		result.Architecture = segments[0]
+		result.FileName = segments[1]
+	default:
+		if len(segments) > 2 {
+			result.Architecture = segments[0]
+			result.PackageManager = segments[1]
+			result.FileName = strings.Join(segments[2:], "/")
+		}
+	}
+	return result
+}
+
+type automateTailParser struct{}
+
+func (p *automateTailParser) ParseTail(segments []string) FilesPathParams {
+	result := FilesPathParams{}
+	switch len(segments) {
+	case 1:
+		result.FileName = segments[0]
+	case 2:
+		result.Architecture = segments[0]
+		result.FileName = segments[1]
+	default:
+		if len(segments) > 1 {
+			result.Architecture = segments[0]
+			result.FileName = strings.Join(segments[1:], "/")
+		}
+	}
+	return result
+}
+
+func TestGetFilesRequestParams(t *testing.T) {
+	tests := []struct {
+		name   string
+		ctx    omnitruck.FiberContext
+		parser TailParser
+		want   *omnitruck.RequestParams
+	}{
+		{
+			name:   "default path parses platformVersion and architecture",
+			parser: &defaultTailParser{},
+			ctx: &testContext{
+				params: map[string]string{
+					"channel":  "stable",
+					"product":  "chef",
+					"version":  "18.2.7",
+					"platform": "el",
+					"*":        "6/x86_64/chef-18.2.7-1.el6.x86_64.rpm",
+				},
+				query: map[string]string{
+					"license_id": "abc-123",
+					"eol":        "false",
+				},
+			},
+			want: &omnitruck.RequestParams{
+				Channel:         "stable",
+				Product:         "chef",
+				Version:         "18.2.7",
+				Platform:        "el",
+				PlatformVersion: "6",
+				FileName:        "chef-18.2.7-1.el6.x86_64.rpm",
+				Architecture:    "x86_64",
+				PackageManager:  "",
+				LicenseId:       "abc-123",
+				Eol:             "false",
+			},
+		},
+		{
+			name:   "infra path parses architecture and package manager",
+			parser: &infraTailParser{},
+			ctx: &testContext{
+				params: map[string]string{
+					"channel":  "stable",
+					"product":  "chef-ice",
+					"version":  "19.2.106",
+					"platform": "linux",
+					"*":        "x86_64/tar/chef-ice-19.2.106-1.amzn2.x86_64.rpm",
+				},
+				query: map[string]string{
+					"license_id": "52c218ef-3444-49f9-9c8b-28dfa204cd74",
+					"eol":        "false",
+				},
+			},
+			want: &omnitruck.RequestParams{
+				Channel:         "stable",
+				Product:         "chef-ice",
+				Version:         "19.2.106",
+				Platform:        "linux",
+				PlatformVersion: "",
+				FileName:        "chef-ice-19.2.106-1.amzn2.x86_64.rpm",
+				Architecture:    "x86_64",
+				PackageManager:  "tar",
+				LicenseId:       "52c218ef-3444-49f9-9c8b-28dfa204cd74",
+				Eol:             "false",
+			},
+		},
+		{
+			name:   "files path does not fallback to query m and pm",
+			parser: &infraTailParser{},
+			ctx: &testContext{
+				params: map[string]string{
+					"channel":  "stable",
+					"product":  "chef-ice",
+					"version":  "19.2.106",
+					"platform": "linux",
+					"*":        "chef-ice-19.2.106-1.amzn2.x86_64.rpm",
+				},
+				query: map[string]string{
+					"license_id": "52c218ef-3444-49f9-9c8b-28dfa204cd74",
+					"m":          "x86_64",
+					"pm":         "tar",
+					"eol":        "false",
+				},
+			},
+			want: &omnitruck.RequestParams{
+				Channel:         "stable",
+				Product:         "chef-ice",
+				Version:         "19.2.106",
+				Platform:        "linux",
+				PlatformVersion: "",
+				FileName:        "chef-ice-19.2.106-1.amzn2.x86_64.rpm",
+				Architecture:    "",
+				PackageManager:  "",
+				LicenseId:       "52c218ef-3444-49f9-9c8b-28dfa204cd74",
+				Eol:             "false",
+			},
+		},
+		{
+			name:   "automate path parses only required fields",
+			parser: &automateTailParser{},
+			ctx: &testContext{
+				params: map[string]string{
+					"channel":  "stable",
+					"product":  "automate",
+					"version":  "latest",
+					"platform": "linux",
+					"*":        "amd64/chef-automate_linux_amd64.zip",
+				},
+				query: map[string]string{
+					"license_id": "abc-123",
+					"eol":        "false",
+				},
+			},
+			want: &omnitruck.RequestParams{
+				Channel:         "stable",
+				Product:         "automate",
+				Version:         "latest",
+				Platform:        "linux",
+				PlatformVersion: "",
+				FileName:        "chef-automate_linux_amd64.zip",
+				Architecture:    "amd64",
+				PackageManager:  "",
+				LicenseId:       "abc-123",
+				Eol:             "false",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GetFilesRequestParamsWithStrategy(tt.ctx, tt.parser); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetFilesRequestParams() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestValidateCommonRequiredFilesParams(t *testing.T) {
+	tests := []struct {
+		name    string
+		params  *omnitruck.RequestParams
+		wantErr string
+	}{
+		{
+			name: "common required fields are enforced",
+			params: &omnitruck.RequestParams{
+				Channel:  "stable",
+				Product:  "automate",
+				Platform: "linux",
+			},
+			wantErr: "Filename path param cannot be empty",
+		},
+		{
+			name: "valid infra params pass",
+			params: &omnitruck.RequestParams{
+				Channel:         "stable",
+				Product:         "chef-ice",
+				Platform:        "linux",
+				Architecture:    "x86_64",
+				PackageManager:  "rpm",
+				FileName:        "chef-ice-19.2.106-1.amzn2.x86_64.rpm",
+				PlatformVersion: "",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateCommonRequiredFilesParams(tt.params)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Equal(t, tt.wantErr, err.Error())
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestGetPackageUrl(t *testing.T) {
+	tests := []struct {
+		name     string
+		params   *omnitruck.RequestParams
+		fileName string
+		baseUrl  string
+		want     string
+	}{
+		{
+			name: "direct=true with license_id",
+			params: &omnitruck.RequestParams{
+				Channel:         "stable",
+				Product:         "chef",
+				Version:         "18.8.46",
+				Platform:        "debian",
+				PlatformVersion: "9",
+				Architecture:    "amd64",
+				PackageManager:  constants.DUMMY_PACKAGE_MANAGER, // Default products use dummy PM
+				Direct:          "true",
+				LicenseId:       "abc-123",
+			},
+			fileName: "chef_18.8.46-1_amd64.deb",
+			baseUrl:  "https://commercial-acceptance.downloads.chef.co",
+			want:     "https://commercial-acceptance.downloads.chef.co/files/stable/chef/18.8.46/debian/9/amd64/chef_18.8.46-1_amd64.deb?license_id=abc-123",
+		},
+		{
+			name: "direct=true without license_id always appends empty param",
+			params: &omnitruck.RequestParams{
+				Channel:         "stable",
+				Product:         "chef",
+				Version:         "18.8.46",
+				Platform:        "debian",
+				PlatformVersion: "9",
+				Architecture:    "amd64",
+				Direct:          "true",
+			},
+			fileName: "chef_18.8.46-1_amd64.deb",
+			baseUrl:  "https://commercial-acceptance.downloads.chef.co",
+			want:     "https://commercial-acceptance.downloads.chef.co/files/stable/chef/18.8.46/debian/9/amd64/chef_18.8.46-1_amd64.deb?license_id=",
+		},
+		{
+			name: "direct=false falls back to download URL",
+			params: &omnitruck.RequestParams{
+				Channel:      "stable",
+				Product:      "chef",
+				Version:      "18.2.7",
+				Platform:     "el",
+				Architecture: "x86_64",
+				Direct:       "false",
+				LicenseId:    "abc-123",
+			},
+			fileName: "chef-18.2.7-1.el6.x86_64.rpm",
+			baseUrl:  "https://packages.chef.io",
+			want:     "https://packages.chef.io/stable/chef/download?license_id=abc-123&m=x86_64&p=el&v=18.2.7",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := GetPackageUrl(tt.params, tt.baseUrl, tt.fileName)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

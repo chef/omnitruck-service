@@ -344,6 +344,51 @@ func (h *DownloadsHandler) ProductDownloadHandler(c *fiber.Ctx) error {
 	if err != nil {
 		return h.SendErrorResponse(c, code, msg)
 	}
+	return h.sendDownloadResponse(c, url, downloadResp, header)
+}
+
+// @Summary Download a product package using path params
+// @description Path-param variant of download endpoint. Architecture is always passed in path; package manager is path-based only for infra products.
+// @description Tail formats:
+// @description Default: `{platformVersion}/{arch}/{fileName}`
+// @description Automate/Habitat: `{arch}/{fileName}`
+// @description Infra: `{arch}/{fileName}` or `{arch}/{pm}/{fileName}`
+// @Accept      json
+// @Produce     json
+// @Param       channel    path   string true  "Channel" Enums(current, stable)
+// @Param       product    path   string true  "Product" Example(chef)
+// @Param       version    path   string true  "Version" Example(latest)
+// @Param       platform   path   string true  "Platform" Example(linux)
+// @Param       tail       path   string true  "Path tail containing platformVersion/arch/pm/fileName by product strategy"
+// @Param       license_id query  string false "License ID"
+// @Param       eol        query  bool   false "EOL Products" Default(false)
+// @Success     302
+// @Failure     400 {object} ErrorResponse
+// @Failure     403 {object} ErrorResponse
+// @Router      /files/{channel}/{product}/{version}/{platform}/{tail} [get]
+func (h *DownloadsHandler) ProductFilesDownloadHandler(c *fiber.Ctx) error {
+	reqInjectorI := c.Locals("reqinjector")
+	reqInjector, ok := reqInjectorI.(*do.Injector)
+	if !ok {
+		return h.SendErrorResponse(c, http.StatusInternalServerError, "Not able to process the request.")
+	}
+
+	locals := setLocals(c)
+
+	downloadService, err := services.NewDownloadService(reqInjector, h.Log, locals)
+	if err != nil {
+		return h.SendErrorResponse(c, http.StatusInternalServerError, "Failed to create download service")
+	}
+
+	url, downloadResp, header, msg, code, err := downloadService.ProductFilesDownload(c)
+	if err != nil {
+		return h.SendErrorResponse(c, code, msg)
+	}
+
+	return h.sendDownloadResponse(c, url, downloadResp, header)
+}
+
+func (h *DownloadsHandler) sendDownloadResponse(c *fiber.Ctx, url string, downloadResp io.ReadCloser, header http.Header) error {
 	if downloadResp != nil {
 		// If the response is not nil, it means we are returning a file download
 

@@ -15,8 +15,8 @@ import (
 // ProductDynamoStrategy implements ProductStrategy for Automate and Habitat products
 // Uses DynamoDB for most operations
 type ProductDynamoStrategy struct {
-	DynamoService omnitruck.IDynamoServices
-	Log           *log.Entry
+	DynamoService    omnitruck.IDynamoServices
+	Log              *log.Entry
 }
 
 func (s *ProductDynamoStrategy) GetLatestVersion(params *omnitruck.RequestParams) (omnitruck.ProductVersion, *clients.Request) {
@@ -83,14 +83,50 @@ func (s *ProductDynamoStrategy) GetFileName(params *omnitruck.RequestParams) (st
 	return fileName, err
 }
 
+// ValidateFilesParams for Automate/Habitat has no strategy-specific required fields.
+func (s *ProductDynamoStrategy) ValidateFilesParams(params *omnitruck.RequestParams) error {
+	// Validate filename matches what database expects
+	correctFileName, err := s.GetFileName(params)
+	if err != nil {
+		return err
+	}
+	if params.FileName != correctFileName {
+		return fmt.Errorf("invalid filename for the specified product parameters")
+	}
+
+	return nil
+}
+
 func (s *ProductDynamoStrategy) UpdatePackages(data *omnitruck.PackageList, params *omnitruck.RequestParams, baseUrl string) {
 	data.UpdatePackages(func(platform string, pv string, arch string, m omnitruck.PackageMetadata) omnitruck.PackageMetadata {
 		params.Version = m.Version
 		params.Platform = platform
 		params.Architecture = arch
 
-		m.Url = helpers.GetDownloadUrl(params, baseUrl)
+		fileName := ""
+		if params.Direct == "true" {
+			if resolvedFileName, err := s.GetFileName(params); err == nil {
+				fileName = resolvedFileName
+			}
+		}
+
+		m.Url = helpers.GetPackageUrl(params, baseUrl, fileName)
 
 		return m
 	})
+}
+
+// ParseTail parses the /files URL tail in Automate/Habitat format: {arch}/{fileName}
+// Expected format: arch/filename (exactly 2 segments)
+func (s *ProductDynamoStrategy) ParseTail(segments []string) helpers.FilesPathParams {
+	p := helpers.FilesPathParams{}
+
+	if len(segments) < 2 {
+		return p // Invalid format, will fail validation later
+	}
+
+	p.Architecture = segments[0]
+	p.FileName = segments[1]
+
+	return p
 }
