@@ -321,7 +321,7 @@ const docTemplateOmnitruckApi = `{
                     {
                         "type": "string",
                         "example": "tar",
-                        "description": "Package Manager, valid values depend on the platform (e.g., Linux: deb, tar; Windows: msi).",
+                        "description": "Package Manager, valid values depend on the platform (e.g., Linux: deb, rpm, tar; Windows: msi; Darwin: dmg, tar).",
                         "name": "pm",
                         "in": "query",
                         "required": true
@@ -423,7 +423,7 @@ const docTemplateOmnitruckApi = `{
                     {
                         "type": "string",
                         "example": "tar",
-                        "description": "Package Manager, valid values depend on the platform (e.g., Linux: deb, tar; Windows: msi).",
+                        "description": "Package Manager, valid values depend on the platform (e.g., Linux: deb, rpm, tar; Windows: msi; Darwin: dmg, tar).",
                         "name": "pm",
                         "in": "query",
                         "required": true
@@ -522,7 +522,7 @@ const docTemplateOmnitruckApi = `{
                     {
                         "type": "string",
                         "example": "tar",
-                        "description": "Package Manager, valid values depend on the platform (e.g., Linux: deb, tar; Windows: msi).",
+                        "description": "Package Manager, valid values depend on the platform (e.g., Linux: deb, rpm, tar; Windows: msi; Darwin: dmg, tar).",
                         "name": "pm",
                         "in": "query",
                         "required": true

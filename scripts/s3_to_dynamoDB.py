@@ -10,7 +10,7 @@ logger.setLevel(logging.DEBUG)
 PACKAGE_MANAGER_TABLES = ['package-manager-production', 'package-manager-acceptance']
 ARCH_LIST = ["aarch64", "armv7l", "i386", "powerpc", "ppc64", "ppc64le", "s390x", "sparc", "universal", "x86_64"]
 ASSUME_ROLE_ARN = "arn:aws:iam::712624343120:role/cross-account-s3-role"
-PLATFORM_LIST = ["linux", "windows"]
+PLATFORM_LIST = ["linux", "windows", "darwin"]
 
 sts_client = boto3.client('sts')
 
