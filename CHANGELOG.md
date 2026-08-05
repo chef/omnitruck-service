@@ -1,16 +1,17 @@
 # Changelog
 
-<!-- latest_release 0.0.115 -->
-## [0.0.115](https://github.com/chef/omnitruck-service/tree/0.0.115) (2026-07-24)
+<!-- latest_release 0.0.116 -->
+## [0.0.116](https://github.com/chef/omnitruck-service/tree/0.0.116) (2026-08-05)
 
 #### Merged Pull Requests
-- Added the files api endpoint [#155](https://github.com/chef/omnitruck-service/pull/155) ([vviveksharma](https://github.com/vviveksharma))
+- Darwin/macOS platform support — pipeline and API documentation [#156](https://github.com/chef/omnitruck-service/pull/156) ([swathi-s3](https://github.com/swathi-s3))
 <!-- latest_release -->
 
 <!-- release_rollup -->
 ### Changes since latest stable release
 
 #### Merged Pull Requests
+- Darwin/macOS platform support — pipeline and API documentation [#156](https://github.com/chef/omnitruck-service/pull/156) ([swathi-s3](https://github.com/swathi-s3)) <!-- 0.0.116 -->
 - Added the files api endpoint [#155](https://github.com/chef/omnitruck-service/pull/155) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.115 -->
 - Added fix for the product count [#154](https://github.com/chef/omnitruck-service/pull/154) ([vviveksharma](https://github.com/vviveksharma)) <!-- 0.0.114 -->
 - Update Go version to 1.26.4 [#152](https://github.com/chef/omnitruck-service/pull/152) ([VarshiSB](https://github.com/VarshiSB)) <!-- 0.0.113 -->
