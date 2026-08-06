@@ -19,6 +19,8 @@ Chef recommends using the stable channel when installing any of these products o
   
 `p` is the platform. Possible values: debian, el (for RHEL derivatives), freebsd, mac_os_x, solaris2, sles, suse, ubuntu or windows.
 
+The platform is also accepted as the name Ohai reports in `node['platform']` (for example `almalinux`, `oracle`, `rocky`, `raspbian`) or as the raw `ID` field from `/etc/os-release` (for example `rhel`, `ol`, `amzn`, `opensuse-leap`). These are normalized server-side to the platform family that the artifact is published for, so callers do not need to remap the platform themselves.
+
 `pv` is the platform version. Possible values depend on the platform. For example, Ubuntu: 18.04, or 20.04 or for macOS: 10.15 or 11.
 
 `m` is the machine architecture for the machine on which the product will be installed. Possible values depend on the platform. For example, for Ubuntu  or Debian: i386 or x86_64 or for macOS: x86_64.
